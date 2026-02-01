@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,6 @@ import { createClient } from "@/lib/supbase/client";
 
 export default function SignupPage() {
   const supabase = createClient();
-  const router = useRouter();
 
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,43 +33,24 @@ export default function SignupPage() {
       return;
     }
 
-    // 1) Create user (email/password)
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // We'll verify via OTP code, then send them to login.
+        // This is where Supabase will redirect AFTER clicking the email verification link
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: { company_name: companyName },
       },
     });
 
-    if (signUpError) {
-      setLoading(false);
-      setMsg(signUpError.message);
-      return;
-    }
-
-    // 2) Send email OTP code (our "2FA code")
-    // shouldCreateUser=false ensures we are sending OTP to the user we just created.
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-      },
-    });
-
-    if (otpError) {
-      setLoading(false);
-      setMsg(otpError.message);
-      return;
-    }
-
     setLoading(false);
 
-    // Go to verify page; pass companyName along so we can create contractor_profiles after verification
-    router.push(
-      `/verify?email=${encodeURIComponent(email)}&company=${encodeURIComponent(companyName)}`
-    );
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+
+    setMsg("Check your email to verify your account, then come back to sign in.");
   }
 
   return (
@@ -80,7 +59,7 @@ export default function SignupPage() {
         <div className="space-y-1 mb-6">
           <div className="text-lg font-semibold">Create your account</div>
           <div className="text-sm text-muted-foreground">
-            Start managing projects and invoices.
+            We’ll email you a verification link.
           </div>
         </div>
 
@@ -109,7 +88,7 @@ export default function SignupPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="•••••••••••••"
             />
           </div>
 
@@ -119,7 +98,7 @@ export default function SignupPage() {
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              placeholder="••••••••"
+              placeholder="•••••••••••••"
             />
             {passwordError && (
               <p className="text-xs text-destructive">{passwordError}</p>

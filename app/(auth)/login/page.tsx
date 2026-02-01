@@ -18,22 +18,21 @@ export default function LoginPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [showVerified, setShowVerified] = useState(false);
 
-  
-  function getCookie(name:string) {
+
+  function getCookie(name: string) {
     if (typeof document === 'undefined') return null;
     const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
     return match ? decodeURIComponent(match[2]) : null;
   }
-  
+
   useEffect(() => {
-    const v = getCookie("bf_verified");
-    if (v === "1") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    const match = document.cookie.match(/(^| )bf_verified=([^;]+)/);
+    if (match?.[2] === "1") {
       setShowVerified(true);
-      // Clear the cookie
-      fetch("/api/auth/verified/clear", { method: "POST" }).catch(() => {});
+      fetch("/api/auth/verified/clear", { method: "POST" }).catch(() => { });
     }
-  },[]);
+  }, []);
+
   async function handlePasswordLogin() {
     setLoading(true);
     setMsg(null);
@@ -43,7 +42,7 @@ export default function LoginPage() {
     setLoading(false);
     if (error) return setMsg(error.message);
 
-    window.location.href = "/app";
+    window.location.href = "/";
   }
 
   return (
@@ -84,6 +83,12 @@ export default function LoginPage() {
           </Button>
 
           {msg && <p className="text-sm  text-destructive">{msg}</p>}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Don't have an account?{" "}
+          <a className="underline" href="/signup">
+            Sign up
+          </a>
         </div>
       </Card>
     </div>
