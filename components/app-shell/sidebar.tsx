@@ -14,13 +14,13 @@ export function Sidebar() {
 
 
             <nav className="p-3 text-sm space-y-1">
-                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/dashboard">
+                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/">
                     Dashboard
                 </Link>
                 <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/projects">
                     Projects
                 </Link>
-                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/tasks">
+                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/invoices">
                     Invoices
                 </Link>
                 <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/settings">

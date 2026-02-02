@@ -3,16 +3,21 @@ import { createClient } from "@/lib/supbase/server";
 import { redirect } from "next/navigation";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 
+type ProjectDashboardPageProps = {
+    params: Promise<{ id: string }>;
+};
 
-export default async function ProjectDashboardPage({ params }: { params: { id: string } }) {
+export default async function ProjectDashboardPage({ params }: ProjectDashboardPageProps) {
     const supabase = await createClient();
     const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) redirect("/login");
+    if (!auth.user) redirect("/login"); 
+    const { id } = await params;
+
 
     const { data: project, error } = await supabase
         .from("projects")
         .select("id, project_address, builder_name, subdivision, created_at")
-        .eq("id", params.id)
+        .eq("id", (await params).id)
         .single();
 
     if (error || !project) {
