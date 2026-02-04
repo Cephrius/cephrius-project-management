@@ -1,0 +1,133 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+
+function formatInvoiceNumber() {
+  // MVP-safe unique-ish number (no DB sequence needed)
+  const d = new Date();
+  const ymd = d.toISOString().slice(0, 10).replace(/-/g, "");
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `INV-${ymd}-${rand}`;
+}
+
+export async function createInvoice(projectId: string, formData: FormData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await (await supabase).auth.getUser();
+  if (userError || !user) redirect("/login");
+
+  // Contractor info (snapshots)
+  const contractor_name = String(formData.get("contractor_name") || "").trim();
+  const contractor_address = String(
+    formData.get("contractor_address") || "",
+  ).trim();
+  const contractor_phone = String(
+    formData.get("contractor_phone") || "",
+  ).trim();
+
+  // Bill-to
+  const bill_to_name = String(formData.get("bill_to_name") || "").trim();
+  const bill_to_address = String(formData.get("bill_to_address") || "").trim();
+
+  // Invoice dates
+  const invoice_date = String(formData.get("invoice_date") || "").trim(); // yyyy-mm-dd
+  const due_date = String(formData.get("due_date") || "").trim(); // optional
+
+  // Selected job ids
+  const jobIds = formData.getAll("job_ids").map(String).filter(Boolean);
+
+  if (!contractor_name)
+    return { ok: false, message: "Contractor company name is required." };
+  if (!bill_to_name)
+    return { ok: false, message: "Builder name (bill to) is required." };
+  if (!bill_to_address)
+    return { ok: false, message: "Billing address is required." };
+  if (!invoice_date) return { ok: false, message: "Invoice date is required." };
+  if (jobIds.length === 0)
+    return { ok: false, message: "Select at least one completed job." };
+
+  // Pull project + jobs for snapshots and totals
+  const { data: project, error: projectErr } = await (await supabase)
+    .from("projects")
+    .select("id, project_address, builder_name, subdivision")
+    .eq("id", projectId)
+    .single();
+
+  if (projectErr || !project)
+    return { ok: false, message: "Project not found." };
+
+  // Fetch selected jobs (ensure they belong to this project and are completed)
+  const { data: jobs, error: jobsErr } = await (await supabase)
+    .from("jobs")
+    .select("id, title, price_cents, is_completed")
+    .eq("project_id", projectId)
+    .in("id", jobIds);
+
+  if (jobsErr || !jobs)
+    return { ok: false, message: jobsErr?.message ?? "Failed to fetch jobs." };
+
+  const selected = jobs.filter((j) => j.is_completed);
+  if (selected.length !== jobIds.length) {
+    return { ok: false, message: "Only completed jobs can be invoiced." };
+  }
+
+  const subtotal_cents = selected.reduce(
+    (sum, j) => sum + (j.price_cents ?? 0),
+    0,
+  );
+
+  // Create invoice
+  const invoice_number = formatInvoiceNumber();
+
+  const { data: invoice, error: invErr } = await (
+    await supabase
+  )
+    .from("invoices")
+    .insert({
+      project_id: projectId,
+      user_id: user.id,
+      invoice_number,
+      invoice_date,
+      due_date: due_date || null,
+      contractor_name,
+      contractor_address: contractor_address || null,
+      contractor_phone: contractor_phone || null,
+      bill_to_name,
+      bill_to_address,
+      subtotal_cents,
+    })
+    .select("id")
+    .single();
+
+  if (invErr || !invoice)
+    return {
+      ok: false,
+      message: invErr?.message ?? "Failed to create invoice.",
+    };
+
+  // Insert invoice items (snapshots)
+  const items = selected.map((j) => ({
+    invoice_id: invoice.id,
+    job_id: j.id,
+    project_id_snapshot: project.id,
+    project_address_snapshot: project.project_address,
+    subdivision_name_raw_snapshot: project.subdivision ?? null,
+    builder_name_snapshot: project.builder_name,
+    job_title_snapshot: j.title,
+    job_price_cents_snapshot: j.price_cents,
+  }));
+
+  const { error: itemsErr } = await (await supabase)
+    .from("invoice_items")
+    .insert(items);
+
+  if (itemsErr) {
+    // If this fails due to unique constraint (job already invoiced), return a clear message.
+    return { ok: false, message: itemsErr.message };
+  }
+
+  return { ok: true, invoiceId: invoice.id as string };
+}

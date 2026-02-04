@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supbase/client";
+import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 
 type IdName = { id: string; name: string };

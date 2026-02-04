@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { NewProjectButton } from "@/components/projects/new-project-button";
-import { createClient } from "@/lib/supbase/server";
+import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 
 

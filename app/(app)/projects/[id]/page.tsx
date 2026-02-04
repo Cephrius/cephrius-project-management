@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/card";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { AddJobButton } from "@/components/jobs/add-job-button";
 import { JobsTable } from "@/components/jobs/jobs-table";
-import { createClient } from "@/lib/supbase/server
+import { createClient } from "@/lib/supabase/server";
+import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
 
 function formatMoney(cents: number) {
   const dollars = cents / 100;
@@ -16,9 +17,10 @@ function formatMoney(cents: number) {
 export default async function ProjectDashboardPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
 
   const {
     data: { user },
@@ -30,7 +32,7 @@ export default async function ProjectDashboardPage({
   const { data: project } = await supabase
     .from("projects")
     .select("id, project_address, builder_name, subdivision")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!project) {
@@ -49,6 +51,25 @@ export default async function ProjectDashboardPage({
   const totalJobs = allJobs.length;
   const completedJobs = allJobs.filter((j) => j.is_completed).length;
 
+  // invoice actions
+  const completedNotInvoiceCount = await (async () => {
+    const completed = allJobs.filter((j) => j.is_completed);
+    if (completed.length === 0) return 0;
+
+    const { data: invoiced } = await supabase
+      .from("invoices_jobs")
+      .select("job_id")
+      .in(
+        "job_id",
+        completed.map((j) => j.id),
+      );
+
+    const invoicedSet = new Set(
+      (invoiced ?? []).map((x: any) => x.job_id as string),
+    );
+    return completed.filter((j) => !invoicedSet.has(j.id)).length;
+  })();
+
   const totalValue = allJobs.reduce((sum, j) => sum + (j.price_cents ?? 0), 0);
   const completedValue = allJobs
     .filter((j) => j.is_completed)
@@ -61,7 +82,15 @@ export default async function ProjectDashboardPage({
           { label: "Projects", href: "/projects" },
           { label: project.project_address },
         ]}
-        rightSlot={<AddJobButton projectId={project.id} />}
+        rightSlot={
+          <div className="flex gap-2">
+            <CreateInvoiceButton
+              projectId={project.id}
+              disabled={completedNotInvoiceCount === 0}
+            />
+            <AddJobButton projectId={project.id} />
+          </div>
+        }
       />
 
       <div>

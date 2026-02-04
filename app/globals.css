@@ -124,3 +124,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  header, aside {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .print\:border-0 {
+    border: 0 !important;
+  }
+}

@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { useBreadcrumbs } from "./breadcrumb-context";
-import { createClient } from "@/lib/supbase/client";
+import { createClient } from "@/lib/supabase/client";
 
 
 export function Header() {

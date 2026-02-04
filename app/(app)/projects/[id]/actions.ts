@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supbase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 function parsePriceToCents(input: string) {
@@ -17,7 +17,7 @@ export async function createJob(projectId: string, formData: FormData) {
   const {
     data: { user },
     error: userError,
-  } = (await supabase).auth.getUser();
+  } = await (await supabase).auth.getUser();
 
   if (userError || !user) redirect("/login");
 
@@ -35,7 +35,7 @@ export async function createJob(projectId: string, formData: FormData) {
   if (price_cents === null)
     return { ok: false, message: "Enter a valid price." };
 
-  const { error } = await supabase.from("jobs").insert({
+  const { error } = await (await supabase).from("jobs").insert({
     project_id: projectId,
     title,
     price_cents,
@@ -48,14 +48,17 @@ export async function createJob(projectId: string, formData: FormData) {
 
 export async function toggleJobComplete(jobId: string, nextCompleted: boolean) {
   const supabase = createClient();
+
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
+  } = await (await supabase).auth.getUser();
 
   if (userError || !user) redirect("/login");
 
-  const { error } = await supabase
+  const { error } = await (
+    await supabase
+  )
     .from("jobs")
     .update({
       is_completed: nextCompleted,
@@ -72,11 +75,14 @@ export async function deleteJob(jobId: string) {
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
+  } = await (await supabase).auth.getUser();
 
   if (userError || !user) redirect("/login");
 
-  const { error } = await supabase.from("jobs").delete().eq("id", jobId);
+  const { error } = await (await supabase)
+    .from("jobs")
+    .delete()
+    .eq("id", jobId);
 
   if (error) return { ok: false, message: error.message };
   return { ok: true };

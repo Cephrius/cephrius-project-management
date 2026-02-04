@@ -16,6 +16,7 @@ import {
   toggleJobComplete,
   deleteJob,
 } from "@/app/(app)/projects/[id]/actions";
+import { DeleteJobDialog } from "@/components/jobs/delete-job-dialog";
 
 export type JobRow = {
   id: string;
@@ -78,7 +79,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
           <TableRow>
             <TableHead>Job Title</TableHead>
             <TableHead className="w-[140px]">Price</TableHead>
-            <TableHead className="w-[180px]">Scheduled</TableHead>
+            <TableHead className="w-[180px]">Scheduled For</TableHead>
             <TableHead className="w-[140px]">Status</TableHead>
             <TableHead className="w-[220px] text-right">Actions</TableHead>
           </TableRow>
@@ -122,14 +123,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                     <Button
                       variant="outline"
                       disabled={isPending}
-                      onClick={() => {
-                        const ok = confirm("Delete this job?");
-                        if (!ok) return;
-                        startTransition(async () => {
-                          await deleteJob(job.id);
-                          router.refresh();
-                        });
-                      }}
+                      onClick={DeleteJobDialog}
                     >
                       Delete
                     </Button>
