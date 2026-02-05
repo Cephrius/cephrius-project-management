@@ -2,12 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,7 +55,6 @@ export function CreateInvoiceDialog({
   const [invoiceDate, setInvoiceDate] = useState(today);
   const [dueDate, setDueDate] = useState("");
 
-  // query useState
   const [query, setQuery] = useState("");
 
   // Load contractor profile + eligible jobs when opened
@@ -68,11 +62,14 @@ export function CreateInvoiceDialog({
     if (!open) return;
 
     setError(null);
+    setQuery("");
+    setSelected({});
 
     (async () => {
       // Profile
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth.user?.id;
+
       if (userId) {
         const { data: profile } = await supabase
           .from("contractor_profiles")
@@ -85,8 +82,6 @@ export function CreateInvoiceDialog({
         setContractorPhone(profile?.phone ?? "");
       }
 
-      // Jobs: completed AND not already invoiced
-      // We can’t do a join easily client-side with RLS, so we do a simple approach:
       // 1) Fetch completed jobs for project
       const { data: completed } = await supabase
         .from("jobs")
@@ -96,42 +91,38 @@ export function CreateInvoiceDialog({
         .order("created_at", { ascending: false });
 
       const comp = (completed ?? []) as Job[];
-
-      // 2) Fetch invoice_items for those job IDs to exclude them
       const ids = comp.map((j) => j.id);
+
       if (ids.length === 0) {
         setJobs([]);
         setSelected({});
         return;
       }
 
+      // 2) Exclude jobs already invoiced
       const { data: invoicedItems } = await supabase
         .from("invoice_items")
         .select("job_id")
         .in("job_id", ids);
 
       const invoicedSet = new Set(
-        (invoicedItems ?? []).map((x: any) => x.job_id as string),
+        (invoicedItems ?? []).map((x: any) => x.job_id as string)
       );
-      const eligible = comp.filter((j) => !invoicedSet.has(j.id));
 
+      const eligible = comp.filter((j) => !invoicedSet.has(j.id));
       setJobs(eligible);
 
-      // Default: select all eligible jobs
-      const initial: Record<string, boolean> = {};
-      eligible.forEach((j) => (initial[j.id] = true));
-      setSelected(initial);
+      // ✅ Default: select none (user must choose)
+      setSelected({});
     })();
   }, [open, projectId, supabase]);
 
-  // searching
+  // Search
   const filteredJobs = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return jobs;
 
     return jobs.filter((j) => {
-      // For single-project dialog you likely only have title + scheduled + price
-      // If you later add address/subdivision in this dialog, include them too
       return (
         j.title.toLowerCase().includes(q) ||
         (j.scheduled_completion ?? "").toLowerCase().includes(q)
@@ -141,16 +132,12 @@ export function CreateInvoiceDialog({
 
   const selectedJobs = useMemo(
     () => filteredJobs.filter((j) => selected[j.id]),
-    [filteredJobs, selected],
+    [filteredJobs, selected]
   );
-  // const selectedJobs = useMemo(
-  //   () => filteredJobs.filter((j) => selected[j.id]),
-  //   [filteredJobs, selected],
-  // );
 
   const subtotal = useMemo(
     () => selectedJobs.reduce((sum, j) => sum + (j.price_cents ?? 0), 0),
-    [selectedJobs],
+    [selectedJobs]
   );
 
   const canSubmit =
@@ -275,9 +262,7 @@ export function CreateInvoiceDialog({
                   Only jobs not previously invoiced appear here.
                 </div>
               </div>
-              <div className="text-sm font-semibold">
-                Subtotal: {money(subtotal)}
-              </div>
+              <div className="text-sm font-semibold">Subtotal: {money(subtotal)}</div>
             </div>
 
             <div className="space-y-2">
@@ -291,7 +276,9 @@ export function CreateInvoiceDialog({
 
             {filteredJobs.length === 0 ? (
               <div className="rounded-md border p-4 text-sm text-muted-foreground">
-                No completed jobs available to invoice.
+                {jobs.length === 0
+                  ? "No completed jobs available to invoice."
+                  : "No jobs match your search."}
               </div>
             ) : (
               <div className="rounded-md border">
@@ -315,9 +302,7 @@ export function CreateInvoiceDialog({
                           </div>
                         </div>
                       </div>
-                      <div className="text-sm font-medium">
-                        {money(j.price_cents)}
-                      </div>
+                      <div className="text-sm font-medium">{money(j.price_cents)}</div>
                     </label>
                   ))}
                 </div>
@@ -328,11 +313,7 @@ export function CreateInvoiceDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              disabled={isPending}
-              onClick={() => onOpenChange(false)}
-            >
+            <Button variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button disabled={isPending || !canSubmit} onClick={submit}>

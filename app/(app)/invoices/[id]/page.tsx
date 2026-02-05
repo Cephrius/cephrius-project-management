@@ -40,7 +40,7 @@ export default async function InvoiceViewPage({
   const { data: items } = await (await supabase)  
     .from("invoice_items")
     .select(
-      "id, job_title_snapshot, job_price_cents_snapshot, project_address_snapshot, subdivision_snapshot, builder_name_snapshot",
+      "id, job_title_snapshot, job_price_cents_snapshot, project_address_snapshot, subdivision_name_raw_snapshot, builder_name_snapshot",
     )
     .eq("invoice_id", invoice.id)
     .order("created_at", { ascending: true });
