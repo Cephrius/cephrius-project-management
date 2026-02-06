@@ -28,6 +28,7 @@ export default function LoginPage() {
   useEffect(() => {
     const match = document.cookie.match(/(^| )bf_verified=([^;]+)/);
     if (match?.[2] === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowVerified(true);
       fetch("/api/auth/verified/clear", { method: "POST" }).catch(() => { });
     }
