@@ -62,7 +62,8 @@ export async function createInvoiceForBuilder(formData: FormData) {
   const { data: jobs, error: jobsErr } = await (await supabase)
     .from("jobs")
     .select("id, title, price_cents, is_completed, project_id")
-    .in("id", jobIds);
+    .in("id", jobIds)
+    .is("deleted_at", null);
 
   if (jobsErr || !jobs)
     return { ok: false, message: jobsErr?.message ?? "Failed to fetch jobs." };

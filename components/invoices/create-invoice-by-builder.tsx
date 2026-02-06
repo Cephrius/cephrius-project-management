@@ -102,7 +102,8 @@ export function CreateInvoiceByBuilder({
         .from("jobs")
         .select("id, title, price_cents, project_id")
         .in("project_id", projectIds)
-        .eq("is_completed", true);
+        .eq("is_completed", true)
+        .is("deleted_at", null);
 
       if (jobsErr) throw new Error(jobsErr.message);
 

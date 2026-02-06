@@ -45,6 +45,7 @@ export default async function ProjectDashboardPage({
     .from("jobs")
     .select("id, title, price_cents, scheduled_completion, is_completed")
     .eq("project_id", project.id)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   const allJobs = jobs ?? [];
@@ -125,7 +126,7 @@ export default async function ProjectDashboardPage({
       </div>
 
       <Card className="p-4">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-sm font-semibold">Jobs</div>
             <div className="text-xs text-muted-foreground">

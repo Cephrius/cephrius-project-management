@@ -79,11 +79,15 @@ export async function deleteJob(jobId: string) {
 
   if (userError || !user) redirect("/login");
 
-  const { error } = await (await supabase)
+  const { data, error } = await (await supabase)
     .from("jobs")
-    .delete()
-    .eq("id", jobId);
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", jobId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, message: error.message };
+  if (!data) return { ok: true, message: "Job already deleted." };
   return { ok: true };
 }

@@ -64,6 +64,7 @@ export async function createInvoice(projectId: string, formData: FormData) {
     .from("jobs")
     .select("id, title, price_cents, is_completed")
     .eq("project_id", projectId)
+    .is("deleted_at", null)
     .in("id", jobIds);
 
   if (jobsErr || !jobs)

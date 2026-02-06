@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,6 +93,7 @@ export function CreateInvoiceDialog({
         .select("id, title, price_cents, scheduled_completion, is_completed")
         .eq("project_id", projectId)
         .eq("is_completed", true)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       const comp = (completed ?? []) as Job[];
@@ -106,13 +112,13 @@ export function CreateInvoiceDialog({
         .in("job_id", ids);
 
       const invoicedSet = new Set(
-        (invoicedItems ?? []).map((x: any) => x.job_id as string)
+        (invoicedItems ?? []).map((x: any) => x.job_id as string),
       );
 
       const eligible = comp.filter((j) => !invoicedSet.has(j.id));
       setJobs(eligible);
 
-      // ✅ Default: select none (user must choose)
+      // Default: select none (user must choose)
       setSelected({});
     })();
   }, [open, projectId, supabase]);
@@ -132,12 +138,12 @@ export function CreateInvoiceDialog({
 
   const selectedJobs = useMemo(
     () => filteredJobs.filter((j) => selected[j.id]),
-    [filteredJobs, selected]
+    [filteredJobs, selected],
   );
 
   const subtotal = useMemo(
     () => selectedJobs.reduce((sum, j) => sum + (j.price_cents ?? 0), 0),
-    [selectedJobs]
+    [selectedJobs],
   );
 
   const canSubmit =
@@ -176,12 +182,12 @@ export function CreateInvoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Create New Invoice</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           {/* Contractor */}
           <div className="space-y-3">
             <div className="text-sm font-semibold">Contractor Info</div>
@@ -193,14 +199,14 @@ export function CreateInvoiceDialog({
                   onChange={(e) => setContractorName(e.target.value)}
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-1 md:col-span-2">
                 <div className="text-sm font-light">Address</div>
-                <Textarea
+                <Input
                   value={contractorAddress}
                   onChange={(e) => setContractorAddress(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <div className="text-sm font-light">Phone</div>
                 <Input
                   value={contractorPhone}
@@ -213,8 +219,8 @@ export function CreateInvoiceDialog({
           {/* Bill to */}
           <div className="space-y-3">
             <div className="text-sm font-semibold">Bill To</div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="space-y-1 md:col-span-2">
                 <div className="text-sm font-light">Builder Name</div>
                 <Input
                   value={billToName}
@@ -222,9 +228,9 @@ export function CreateInvoiceDialog({
                   placeholder="Builder name"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-1 md:col-span-2">
                 <div className="text-sm font-light">Billing Address</div>
-                <Textarea
+                <Input
                   value={billToAddress}
                   onChange={(e) => setBillToAddress(e.target.value)}
                   placeholder="Bill to address"
@@ -234,7 +240,7 @@ export function CreateInvoiceDialog({
           </div>
 
           {/* Dates */}
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <div className="text-sm font-light">Invoice Date</div>
               <Input
@@ -255,18 +261,20 @@ export function CreateInvoiceDialog({
 
           {/* Jobs */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              {/* <div>
                 <div className="text-sm font-semibold">Completed Jobs</div>
                 <div className="text-xs text-muted-foreground">
                   Only jobs not previously invoiced appear here.
                 </div>
+              </div> */}
+              <div className="text-sm font-semibold">
+                Subtotal: {money(subtotal)}
               </div>
-              <div className="text-sm font-semibold">Subtotal: {money(subtotal)}</div>
             </div>
 
             <div className="space-y-2">
-              <div className="text-sm font-medium">Search jobs</div>
+              <div className="text-sm font-medium">Search Completed jobs</div>
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -282,11 +290,11 @@ export function CreateInvoiceDialog({
               </div>
             ) : (
               <div className="rounded-md border">
-                <div className="max-h-64 overflow-auto">
+                <div className="h-25 md:h-30 overflow-y-auto">
                   {filteredJobs.map((j) => (
                     <label
                       key={j.id}
-                      className="flex items-center justify-between gap-3 border-b p-3 last:border-b-0"
+                      className="flex flex-col items-start justify-between gap-2 border-b p-3 last:border-b-0 sm:flex-row sm:items-center"
                     >
                       <div className="flex items-start gap-3">
                         <Checkbox
@@ -298,11 +306,13 @@ export function CreateInvoiceDialog({
                         <div>
                           <div className="text-sm font-medium">{j.title}</div>
                           <div className="text-xs text-muted-foreground">
-                            Scheduled: {j.scheduled_completion ?? "—"}
+                            Scheduled: {j.scheduled_completion ?? "â€”"}
                           </div>
                         </div>
                       </div>
-                      <div className="text-sm font-medium">{money(j.price_cents)}</div>
+                      <div className="text-sm font-medium">
+                        {money(j.price_cents)}
+                      </div>
                     </label>
                   ))}
                 </div>
@@ -312,11 +322,20 @@ export function CreateInvoiceDialog({
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              className="w-full sm:w-auto"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button disabled={isPending || !canSubmit} onClick={submit}>
+            <Button
+              className="w-full sm:w-auto"
+              disabled={isPending || !canSubmit}
+              onClick={submit}
+            >
               {isPending ? "Creating..." : "Create Invoice"}
             </Button>
           </div>

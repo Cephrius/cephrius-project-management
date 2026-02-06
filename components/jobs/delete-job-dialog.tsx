@@ -10,45 +10,55 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import type { ReactNode } from "react";
 
 export function DeleteJobDialog({
   open,
   onOpenChange,
   jobId,
+  trigger,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   jobId: string;
+  trigger?: ReactNode;
 }) {
+  const router = useRouter();
+
   async function onDelete() {
     // TODO: Implement delete job action
     const res = await deleteJob(jobId);
     if (!res.ok) {
       // Handle error (e.g. show toast)
-      toast.success
-      
+      toast.error("Failed to delete job");
+      console.error("Failed to delete job:", res.message);
+    } else {
+      toast.success("Job deleted");
+      router.refresh();
     }
     // Success - close dialog and refresh page
     onOpenChange(false);
   }
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline">Show Dialog</Button>
-      </AlertDialogTrigger>
+      {trigger ? (
+        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Delete this job?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete your
-            account from our servers.
+            This action cannot be undone. This will remove the job from your
+            project list and invoices will keep their history.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onDelete}>Continue</AlertDialogAction>
+          <AlertDialogAction variant="destructive" onClick={onDelete}>
+            Continue
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

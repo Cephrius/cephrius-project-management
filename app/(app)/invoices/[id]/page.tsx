@@ -98,38 +98,40 @@ export default async function InvoiceViewPage({
           </div>
         </div>
 
-        <div className="mt-6 rounded-md border">
-          <div className="grid grid-cols-14 gap-2 border-b p-3 text-xs font-semibold text-muted-foreground">
-            <div className="col-span-7">Description</div>
-            <div className="col-span-2">Project</div>
-            <div className="col-span-4">Subdivision</div>
-            <div className="col-span-1 text-right">Amount</div>
-          </div>
-
-          {(items ?? []).map((it) => (
-            <div
-              key={it.id}
-              className="grid grid-cols-14 gap-2 border-b p-3 last:border-b-0"
-            >
-              <div className="col-span-7">
-                <div className="text-sm font-medium">
-                  {it.job_title_snapshot}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {it.builder_name_snapshot}
-                </div>
-              </div>
-              <div className="col-span-2 text-sm text-muted-foreground">
-                {it.project_address_snapshot}
-              </div>
-              <div className="col-span-1 text-xs text-muted-foreground">
-                {it.subdivision_name_raw_snapshot}
-              </div>
-              <div className="col-span-4 text-right text-sm font-medium">
-                {money(it.job_price_cents_snapshot)}
-              </div>
+        <div className="mt-6 overflow-x-auto rounded-md border">
+          <div className="min-w-[720px]">
+            <div className="grid grid-cols-14 gap-2 border-b p-3 text-xs font-semibold text-muted-foreground">
+              <div className="col-span-7">Description</div>
+              <div className="col-span-2">Project</div>
+              <div className="col-span-4">Subdivision</div>
+              <div className="col-span-1 text-right">Amount</div>
             </div>
-          ))}
+
+            {(items ?? []).map((it) => (
+              <div
+                key={it.id}
+                className="grid grid-cols-14 gap-2 border-b p-3 last:border-b-0"
+              >
+                <div className="col-span-7">
+                  <div className="text-sm font-medium">
+                    {it.job_title_snapshot}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {it.builder_name_snapshot}
+                  </div>
+                </div>
+                <div className="col-span-2 text-sm text-muted-foreground">
+                  {it.project_address_snapshot}
+                </div>
+                <div className="col-span-1 text-xs text-muted-foreground">
+                  {it.subdivision_name_raw_snapshot}
+                </div>
+                <div className="col-span-4 text-right text-sm font-medium">
+                  {money(it.job_price_cents_snapshot)}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end">
