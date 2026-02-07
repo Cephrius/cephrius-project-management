@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/server";
+import { SidebarNav } from "./sidebar-nav";
 
 function formatCompanyName(name: string): string {
     const trimmed = name.trim();
@@ -31,7 +31,7 @@ export async function Sidebar() {
     const companyName = formatCompanyName(rawCompanyName);
 
     return (
-        <aside className="hidden md:flex md:w-64 md:flex-col border-r bg-background">
+        <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col border-r bg-background">
             <div className="p-4">
                 <div className="text-sm font-semibold">{companyName}</div>
                 <div className="text-xs text-muted-foreground">JobSyte Portal</div>
@@ -39,21 +39,7 @@ export async function Sidebar() {
 
             <Separator />
 
-
-            <nav className="p-3 text-sm space-y-1">
-                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/">
-                    Dashboard
-                </Link>
-                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/projects">
-                    Projects
-                </Link>
-                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/invoices">
-                    Invoices
-                </Link>
-                <Link className="block rounded-md px-3 py-2 hover:bg-muted" href="/settings">
-                    Settings
-                </Link>
-            </nav>
+            <SidebarNav />
 
             <div className="mt-auto p-3 text-xs text-muted-foreground">
                 v0.1 MVP

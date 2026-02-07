@@ -2,15 +2,9 @@
 
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import type { ProjectListItem } from "@/components/projects/types";
 
-type ProjectRow = {
-  id: string;
-  project_address: string;
-  builder_name: string | null;
-  subdivision: string | null;
-};
-
-export function ProjectsList({ projects }: { projects: ProjectRow[] }) {
+export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
   if (projects.length === 0) {
     return (
       <Card className="p-8">
@@ -22,13 +16,13 @@ export function ProjectsList({ projects }: { projects: ProjectRow[] }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,20rem))] justify-start gap-4">
       {projects.map((p) => (
-        <Link key={p.id} href={`/projects/${p.id}`}>
-          <Card className="p-4 hover:bg-muted/40 transition">
+        <Link key={p.id} href={`/projects/${p.id}`} className="block">
+          <Card className="h-full p-4 hover:bg-muted/40 transition">
             <div className="font-medium">{p.project_address}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              Builder: {p.builder_name}
+              Builder: {p.builder_name ?? "Unassigned"}
             </div>
             {p.subdivision && (
               <div className="text-sm text-muted-foreground">

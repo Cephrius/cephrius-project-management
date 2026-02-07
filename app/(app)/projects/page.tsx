@@ -3,45 +3,45 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { ProjectsPageClient } from "@/components/projects/projects-page";
+import type { LookupItem, ProjectListItem } from "@/components/projects/types";
 
+async function getProjectsPageData(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const [projectsRes, buildersRes, subdivisionsRes] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, project_address, builder_name, subdivision, created_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("builders").select("id, name").order("name"),
+    supabase.from("subdivisions").select("id, name").order("name"),
+  ]);
+
+  return {
+    projects: (projectsRes.data ?? []) as ProjectListItem[],
+    builders: (buildersRes.data ?? []) as LookupItem[],
+    subdivisions: (subdivisionsRes.data ?? []) as LookupItem[],
+  };
+}
 
 export default async function ProjectsPage() {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-    if (userError || !user) redirect("/login");
+  if (userError || !user) redirect("/login");
 
-    const { data: projects } = await supabase
-        .from("projects")
-        .select("id, project_address, builder_name, subdivision, created_at")
-        .order("created_at", { ascending: false });
+  const { projects, builders, subdivisions } = await getProjectsPageData(supabase);
 
-    const { data: builders } = await supabase
-        .from("builders")
-        .select("id, name")
-        .order("name");
-
-    const { data: subdivisions } = await supabase
-        .from("subdivisions")
-        .select("id, name")
-        .order("name");
-
-    return (
-
-        <div className="space-y-6">
-            <BreadcrumbSetter
-                crumbs={[{ label: "Projects", href: "/projects" }]}
-            />
-
-            <ProjectsPageClient
-                projects={projects ?? []}
-                builders={builders ?? []}
-                subdivisions={subdivisions ?? []}
-            />
-        </div>
-    );
+  return (
+    <div className="space-y-6">
+      <BreadcrumbSetter crumbs={[{ label: "Projects", href: "/projects" }]} />
+      <ProjectsPageClient
+        projects={projects}
+        builders={builders}
+        subdivisions={subdivisions}
+      />
+    </div>
+  );
 }
