@@ -6,7 +6,6 @@ import type { ProjectListItem } from "@/components/projects/types";
 
 
 
-
 export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
   if (projects.length === 0) {
     return (
