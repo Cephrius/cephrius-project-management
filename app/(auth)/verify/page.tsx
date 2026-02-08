@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-export default function VerifyPage() {
+function VerifyPageContent() {
   const supabase = createClient();
   const router = useRouter();
   const params = useSearchParams();
@@ -135,5 +135,21 @@ export default function VerifyPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+          <Card className="w-full max-w-md p-6">
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          </Card>
+        </div>
+      }
+    >
+      <VerifyPageContent />
+    </Suspense>
   );
 }
