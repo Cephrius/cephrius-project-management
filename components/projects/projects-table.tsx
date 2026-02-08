@@ -28,15 +28,15 @@ export function ProjectsTable({ projects }: { projects: ProjectListItem[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="px-4 py-3">Project Address</TableHead>
-            <TableHead className="px-4 py-3">Builder</TableHead>
-            <TableHead className="px-4 py-3">Subdivision</TableHead>
+            <TableHead className="px-2 py-3">Project Address</TableHead>
+            <TableHead className="px-2 py-3">Builder</TableHead>
+            <TableHead className="px-2 py-3">Subdivision</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.map((project) => (
             <TableRow key={project.id}>
-              <TableCell className="px-4 py-3">
+              <TableCell className="px-2 py-3">
                 <Link
                   href={`/projects/${project.id}`}
                   className="font-medium hover:underline"
@@ -44,10 +44,10 @@ export function ProjectsTable({ projects }: { projects: ProjectListItem[] }) {
                   {project.project_address}
                 </Link>
               </TableCell>
-              <TableCell className="px-4 py-3">
+              <TableCell className="px-2 py-3">
                 {project.builder_name ?? "Unassigned"}
               </TableCell>
-              <TableCell className="px-4 py-3">
+              <TableCell className="px-2 py-3">
                 {project.subdivision ?? "-"}
               </TableCell>
             </TableRow>

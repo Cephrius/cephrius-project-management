@@ -3,6 +3,7 @@ export type ProjectListItem = {
   project_address: string;
   builder_name: string | null;
   subdivision: string | null;
+  job_count?: number;
 };
 
 export type LookupItem = {

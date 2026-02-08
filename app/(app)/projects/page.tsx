@@ -9,14 +9,17 @@ async function getProjectsPageData(supabase: Awaited<ReturnType<typeof createCli
   const [projectsRes, buildersRes, subdivisionsRes] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, project_address, builder_name, subdivision, created_at")
+      .select("id, project_address, builder_name, subdivision, created_at, jobs(count)")
       .order("created_at", { ascending: false }),
     supabase.from("builders").select("id, name").order("name"),
     supabase.from("subdivisions").select("id, name").order("name"),
   ]);
 
   return {
-    projects: (projectsRes.data ?? []) as ProjectListItem[],
+    projects: (projectsRes.data ?? []).map((p: any) => ({
+      ...p,
+      job_count: Array.isArray(p.jobs) ? p.jobs.length : 0,
+    })) as ProjectListItem[],
     builders: (buildersRes.data ?? []) as LookupItem[],
     subdivisions: (subdivisionsRes.data ?? []) as LookupItem[],
   };

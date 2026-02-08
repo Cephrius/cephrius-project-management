@@ -86,9 +86,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
             placeholder="Search jobs..."
             className="w-full sm:w-64"
           />
-          {isPending && (
-            <span className="text-xs text-muted-foreground">Updatingâ€¦</span>
-          )}
+
         </div>
       </div>
 
@@ -137,7 +135,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                           })
                         }
                       >
-                        {job.is_completed ? "Unmark" : "Mark complete"}
+                        {job.is_completed ? "Unmark Completed" : "Mark Completed"}
                       </Button>
 
                       <DeleteJobDialog
