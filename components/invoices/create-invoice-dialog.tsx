@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
 import { createInvoice } from "@/app/(app)/projects/[id]/invoice-actions";
+import { SelectSeparator } from "../ui/select";
 
 type Job = {
   id: string;
@@ -182,9 +182,10 @@ export function CreateInvoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl p-4 sm:p-6">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto p-4 sm:w-[calc(100vw-2rem)] sm:p-6">
         <DialogHeader>
           <DialogTitle>Create New Invoice</DialogTitle>
+            {/* <SelectSeparator className=" max-w-4xl"/> */}
         </DialogHeader>
 
         <div className="space-y-5 sm:space-y-6">
@@ -240,7 +241,7 @@ export function CreateInvoiceDialog({
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <div className="text-sm font-light">Invoice Date</div>
               <Input
@@ -290,7 +291,7 @@ export function CreateInvoiceDialog({
               </div>
             ) : (
               <div className="rounded-md border">
-                <div className="h-25 md:h-30 overflow-y-auto">
+                <div className="max-h-56 overflow-y-auto sm:max-h-72">
                   {filteredJobs.map((j) => (
                     <label
                       key={j.id}
@@ -310,7 +311,7 @@ export function CreateInvoiceDialog({
                           </div>
                         </div>
                       </div>
-                      <div className="text-sm font-medium">
+                      <div className="text-sm font-medium sm:text-right">
                         {money(j.price_cents)}
                       </div>
                     </label>
