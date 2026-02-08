@@ -69,7 +69,7 @@ export default function SignupPage() {
             <Input
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="Cephrius Steel LLC"
+              placeholder="Cephrius LLC"
             />
           </div>
 
