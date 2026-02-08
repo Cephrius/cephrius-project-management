@@ -18,9 +18,9 @@ export function ProjectsList({ projects }: { projects: ProjectListItem[] }) {
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,20rem))] justify-start gap-5">
+    <div className="grid grid-cols-1 gap-5 sm:w-full sm:grid-cols-[repeat(auto-fill,minmax(14rem,20rem))] sm:justify-start">
       {projects.map((p) => (
-        <Link key={p.id} href={`/projects/${p.id}`} className="block">
+        <Link key={p.id} href={`/projects/${p.id}`} className="block w-full">
           <Card className="h-full p-4 hover:bg-muted/40 transition">
             <div className="font-medium">{p.project_address}</div>
             <div className=" text-sm text-muted-foreground">

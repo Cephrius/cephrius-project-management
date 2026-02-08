@@ -59,7 +59,7 @@ export default async function InvoicesPage() {
           <div className="text-sm text-muted-foreground">No invoices yet.</div>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(14rem,20rem))]">
           {invoices.map((inv) => (
             <Link key={inv.id} href={`/invoices/${inv.id}`}>
               <Card className="p-4 hover:bg-muted/40 transition">
