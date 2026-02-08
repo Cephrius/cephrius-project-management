@@ -26,6 +26,8 @@ export async function createJob(projectId: string, formData: FormData) {
   const scheduled_completion = String(
     formData.get("scheduled_completion") || "",
   ).trim();
+  const superintendentRaw = String(formData.get("superintendent") || "").trim();
+  const superintendent = superintendentRaw || null;
 
   if (!title) return { ok: false, message: "Job title is required." };
   if (!scheduled_completion)
@@ -40,6 +42,7 @@ export async function createJob(projectId: string, formData: FormData) {
     title,
     price_cents,
     scheduled_completion,
+    superintendent,
   });
 
   if (error) return { ok: false, message: error.message };

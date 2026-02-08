@@ -28,6 +28,7 @@ export function AddJobDialog({
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [scheduled, setScheduled] = useState("");
+  const [superintendent, setSuperintendent] = useState("");
 
   function submit() {
     setError(null);
@@ -36,6 +37,7 @@ export function AddJobDialog({
     fd.set("title", title);
     fd.set("price", price);
     fd.set("scheduled_completion", scheduled);
+    fd.set("superintendent", superintendent);
 
     startTransition(async () => {
       const res = await createJob(projectId, fd);
@@ -47,6 +49,7 @@ export function AddJobDialog({
       setTitle("");
       setPrice("");
       setScheduled("");
+      setSuperintendent("");
       router.refresh();
     });
   }
@@ -86,6 +89,17 @@ export function AddJobDialog({
               type="date"
               value={scheduled}
               onChange={(e) => setScheduled(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-medium">
+              Superintendent / General Contractor (Optional)
+            </div>
+            <Input
+              value={superintendent}
+              onChange={(e) => setSuperintendent(e.target.value)}
+              placeholder="John Doe"
             />
           </div>
 
