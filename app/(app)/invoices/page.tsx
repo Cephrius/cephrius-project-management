@@ -38,11 +38,7 @@ export default async function InvoicesPage() {
     <div className="space-y-6">
       <BreadcrumbSetter
         crumbs={[{ label: "Invoices", href: "/invoices" }]}
-        rightSlot={
-          <Link href="/invoices/new">
-            <Button>New Invoice</Button>
-          </Link>
-        }
+       
       />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -52,6 +48,9 @@ export default async function InvoicesPage() {
             View and print invoices.
           </p>
         </div>
+        <Link href="/invoices/new" className="sm:ml-auto">
+          <Button className="w-full sm:w-auto">Create Invoice</Button>
+        </Link>
       </div>
 
       {!invoices || invoices.length === 0 ? (
