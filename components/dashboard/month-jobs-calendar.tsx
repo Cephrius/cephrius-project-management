@@ -127,7 +127,7 @@ export function MonthJobsCalendar({
                   {job.is_completed ? (
                     <Badge>Completed</Badge>
                   ) : (
-                    <Badge variant="secondary">Open</Badge>
+                    <Badge variant="secondary">Incomplete</Badge>
                   )}
                 </div>
               </div>

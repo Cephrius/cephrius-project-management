@@ -42,7 +42,8 @@ export function Header() {
           {rightSlot}
 
           <Button
-            variant="outline"
+            variant="destructive"
+            className="cursor-pointer"
             onClick={async () => {
               await supabase.auth.signOut();
               window.location.href = "/login";

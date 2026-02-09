@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { addDays, addMonths, endOfMonth, format, startOfMonth } from "date-fns";
+import {
+  addMonths,
+  endOfMonth,
+  endOfWeek,
+  format,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import { redirect } from "next/navigation";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { MonthJobsCalendar } from "@/components/dashboard/month-jobs-calendar";
@@ -48,8 +55,9 @@ export default async function AppHome() {
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
-  const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
-  const weekEndDate = addDays(now, daysUntilSaturday);
+  const weekStartDate = startOfWeek(now, { weekStartsOn: 0 });
+  const weekEndDate = endOfWeek(now, { weekStartsOn: 0 });
+  const weekStart = format(weekStartDate, "yyyy-MM-dd");
   const weekEnd = format(weekEndDate, "yyyy-MM-dd");
 
   const monthStartDate = startOfMonth(now);
@@ -62,7 +70,7 @@ export default async function AppHome() {
   const [
     projectsRes,
     dueTodayRes,
-    upcomingWeekRes,
+    currentWeekJobsRes,
     monthJobsRes,
     openJobsCountRes,
     completedMonthCountRes,
@@ -82,7 +90,7 @@ export default async function AppHome() {
       .select("id")
       .eq("is_completed", false)
       .is("deleted_at", null)
-      .gt("scheduled_completion", today)
+      .gte("scheduled_completion", weekStart)
       .lte("scheduled_completion", weekEnd),
     supabase
       .from("jobs")
@@ -120,15 +128,15 @@ export default async function AppHome() {
       .select("id, title, scheduled_completion, project_id, superintendent")
       .eq("is_completed", false)
       .is("deleted_at", null)
-      .gte("scheduled_completion", today)
-      .order("scheduled_completion", { ascending: true })
-      .limit(6),
+      .gte("scheduled_completion", weekStart)
+      .lte("scheduled_completion", weekEnd)
+      .order("scheduled_completion", { ascending: true }),
   ]);
 
   const firstError =
     projectsRes.error ??
     dueTodayRes.error ??
-    upcomingWeekRes.error ??
+    currentWeekJobsRes.error ??
     monthJobsRes.error ??
     openJobsCountRes.error ??
     completedMonthCountRes.error ??
@@ -164,12 +172,13 @@ export default async function AppHome() {
     }));
 
   const dueTodayCount = (dueTodayRes.data ?? []).length;
-  const upcomingWeekCount = (upcomingWeekRes.data ?? []).length;
+  const currentWeekJobsCount = (currentWeekJobsRes.data ?? []).length;
   const openJobsCount = openJobsCountRes.count ?? 0;
   const completedThisMonth = completedMonthCountRes.count ?? 0;
 
-  const monthInvoices = (monthInvoicesRes.data ??
-    []) as Array<{ subtotal_cents: number | null }>;
+  const monthInvoices = (monthInvoicesRes.data ?? []) as Array<{
+    subtotal_cents: number | null;
+  }>;
   const invoiceMonthCount = monthInvoices.length;
   const invoiceMonthTotal = monthInvoices.reduce(
     (sum, inv) => sum + (inv.subtotal_cents ?? 0),
@@ -202,21 +211,20 @@ export default async function AppHome() {
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Schedule Focus</div>
           <div className="mt-2 text-3xl font-semibold">{dueTodayCount}</div>
-          <div className="text-xs text-muted-foreground">
-            jobs due today
-          </div>
+          <div className="text-xs text-muted-foreground">jobs due today</div>
           <div className="mt-3 text-sm">
-            <span className="font-medium">{upcomingWeekCount}</span> upcoming by{" "}
-            {format(weekEndDate, "EEE, MMM d")}
+            <span className="font-medium">{currentWeekJobsCount}</span>{" "}
+            incomplete this week ({format(weekStartDate, "MMM d")} -{" "}
+            {format(weekEndDate, "MMM d")})
           </div>
         </Card>
 
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Work Pipeline</div>
           <div className="mt-2 text-3xl font-semibold">{openJobsCount}</div>
-          <div className="text-xs text-muted-foreground">open jobs</div>
+          <div className="text-xs text-muted-foreground">Open Jobs</div>
           <div className="mt-3 text-sm">
-            <span className="font-medium">{completedThisMonth}</span> completed
+            <span className="font-medium">{completedThisMonth}</span> Completed
             in {format(monthStartDate, "MMMM")}
           </div>
         </Card>
@@ -224,7 +232,7 @@ export default async function AppHome() {
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Projects</div>
           <div className="mt-2 text-3xl font-semibold">{projects.length}</div>
-          <div className="text-xs text-muted-foreground">active projects</div>
+          <div className="text-xs text-muted-foreground">Active Projects</div>
           <div className="mt-3">
             <Link href="/projects">
               <Button variant="outline" size="sm">
@@ -235,19 +243,26 @@ export default async function AppHome() {
         </Card>
 
         <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Invoices ({monthName})</div>
+          <div className="text-xs text-muted-foreground">
+            Invoices ({monthName})
+          </div>
           <div className="mt-2 text-3xl font-semibold">{invoiceMonthCount}</div>
-          <div className="text-xs text-muted-foreground">invoices issued</div>
-          <div className="mt-3 text-sm font-medium">{money(invoiceMonthTotal)}</div>
+          <div className="text-xs text-muted-foreground">Invoices Issued</div>
+          <div className="mt-3 text-sm font-medium">
+            {money(invoiceMonthTotal)}
+          </div>
         </Card>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2 p-4 sm:p-6">
           <div className="mb-4">
-            <div className="text-sm font-semibold">Jobs Calendar (Next 12 Months)</div>
+            <div className="text-sm font-semibold">
+              Jobs Calendar (Next 12 Months)
+            </div>
             <div className="text-xs text-muted-foreground">
-              Browse future months to view scheduled jobs, then select a date for details.
+              Browse future months to view scheduled jobs, then select a date
+              for details.
             </div>
           </div>
           <MonthJobsCalendar
@@ -256,13 +271,13 @@ export default async function AppHome() {
             calendarEnd={calendarEnd}
           />
         </Card>
-
+        {/* WEEKS UPCOMING JOBS */}
         <Card className="p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold">Upcoming Jobs</div>
+              <div className="text-sm font-semibold">Jobs This Week</div>
               <div className="text-xs text-muted-foreground">
-                Next six scheduled incomplete jobs.
+                All incomplete jobs scheduled for this week.
               </div>
             </div>
             <Badge variant="secondary">{upcomingJobs.length}</Badge>
@@ -270,10 +285,16 @@ export default async function AppHome() {
 
           {upcomingJobs.length === 0 ? (
             <div className="rounded-md border p-3 text-sm text-muted-foreground">
-              No upcoming jobs scheduled.
+              No incomplete jobs scheduled for this week.
             </div>
           ) : (
-            <div className="space-y-2">
+            <div
+              className={
+                upcomingJobs.length >= 4
+                  ? "space-y-2 max-h-[22rem] overflow-y-auto pr-1"
+                  : "space-y-2"
+              }
+            >
               {upcomingJobs.map((job) => (
                 <div key={job.id} className="rounded-md border p-3">
                   <div className="text-sm font-medium">{job.title}</div>

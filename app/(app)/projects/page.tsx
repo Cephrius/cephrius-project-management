@@ -5,32 +5,107 @@ import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { ProjectsPageClient } from "@/components/projects/projects-page";
 import type { LookupItem, ProjectListItem } from "@/components/projects/types";
 
-function getRelatedJobsCount(jobs: unknown): number {
-  if (!Array.isArray(jobs) || jobs.length === 0) return 0;
-  const first = jobs[0] as { count?: number | string | null };
-  const rawCount = first?.count;
-  const parsed = typeof rawCount === "number" ? rawCount : Number(rawCount);
-  return Number.isFinite(parsed) ? parsed : 0;
+type ProjectRow = {
+  id: string;
+  project_address: string;
+  builder_name: string | null;
+  subdivision: string | null;
+  created_at: string;
+};
+
+type ProjectJobRow = {
+  id: string;
+  project_id: string;
+  is_completed: boolean | null;
+  superintendent: string | null;
+  created_at: string | null;
+};
+
+function normalizeName(value: string | null): string {
+  return (value ?? "").trim().replace(/\s+/g, " ");
 }
 
-type ProjectRow = Omit<ProjectListItem, "job_count"> & { jobs?: unknown };
+function toStatus(
+  jobCount: number,
+  openJobCount: number,
+): ProjectListItem["status"] {
+  if (jobCount === 0) return "not-started";
+  if (openJobCount === 0) return "completed";
+  return "active";
+}
 
 async function getProjectsPageData(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const [projectsRes, buildersRes, subdivisionsRes] = await Promise.all([
+  const [projectsRes, buildersRes, subdivisionsRes, jobsRes] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, project_address, builder_name, subdivision, created_at, jobs(count)")
-      .is("jobs.deleted_at", null)
+      .select("id, project_address, builder_name, subdivision, created_at")
       .order("created_at", { ascending: false }),
     supabase.from("builders").select("id, name").order("name"),
     supabase.from("subdivisions").select("id, name").order("name"),
+    supabase
+      .from("jobs")
+      .select("id, project_id, is_completed, superintendent, created_at")
+      .is("deleted_at", null),
   ]);
 
+  const jobs = (jobsRes.data ?? []) as ProjectJobRow[];
+  const projectStats = new Map<
+    string,
+    {
+      job_count: number;
+      open_job_count: number;
+      last_activity_at: string | null;
+      crew_names: Set<string>;
+    }
+  >();
+
+  for (const job of jobs) {
+    const projectId = job.project_id;
+    if (!projectId) continue;
+
+    const stat =
+      projectStats.get(projectId) ??
+      {
+        job_count: 0,
+        open_job_count: 0,
+        last_activity_at: null,
+        crew_names: new Set<string>(),
+      };
+
+    stat.job_count += 1;
+    if (job.is_completed !== true) stat.open_job_count += 1;
+
+    if (job.created_at) {
+      if (!stat.last_activity_at || job.created_at > stat.last_activity_at) {
+        stat.last_activity_at = job.created_at;
+      }
+    }
+
+    const crewName = normalizeName(job.superintendent);
+    if (crewName) stat.crew_names.add(crewName);
+
+    projectStats.set(projectId, stat);
+  }
+
+  const projects = ((projectsRes.data ?? []) as ProjectRow[]).map((project) => {
+    const stat = projectStats.get(project.id);
+    const jobCount = stat?.job_count ?? 0;
+    const openJobCount = stat?.open_job_count ?? 0;
+
+    return {
+      ...project,
+      job_count: jobCount,
+      open_job_count: openJobCount,
+      last_activity_at: stat?.last_activity_at ?? project.created_at ?? null,
+      status: toStatus(jobCount, openJobCount),
+      crew_names: Array.from(stat?.crew_names ?? []).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    };
+  });
+
   return {
-    projects: ((projectsRes.data ?? []) as ProjectRow[]).map((p) => ({
-      ...p,
-      job_count: getRelatedJobsCount(p.jobs),
-    })) as ProjectListItem[],
+    projects: projects as ProjectListItem[],
     builders: (buildersRes.data ?? []) as LookupItem[],
     subdivisions: (subdivisionsRes.data ?? []) as LookupItem[],
   };

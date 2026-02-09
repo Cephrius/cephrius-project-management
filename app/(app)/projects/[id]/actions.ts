@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+type ProjectStatus = "not-started" | "active" | "completed";
+
 function parsePriceToCents(input: string) {
   // accepts "1200"  "1200.50" "$1,200.50"  " $ 1,200 "
   const cleaned = input.replace(/[^0-9.]/g, "");
@@ -12,12 +14,60 @@ function parsePriceToCents(input: string) {
   return Math.round(num * 100);
 }
 
+function isMissingStatusColumnError(message: string | undefined) {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("column") && normalized.includes("status");
+}
+
+async function syncProjectStatus(projectId: string) {
+  const supabase = await createClient();
+  const [allJobsRes, completedJobsRes] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .is("deleted_at", null),
+    supabase
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .is("deleted_at", null)
+      .eq("is_completed", true),
+  ]);
+
+  if (allJobsRes.error) {
+    return { ok: false, message: allJobsRes.error.message };
+  }
+
+  if (completedJobsRes.error) {
+    return { ok: false, message: completedJobsRes.error.message };
+  }
+
+  const totalJobs = allJobsRes.count ?? 0;
+  const completedJobs = completedJobsRes.count ?? 0;
+
+  let status: ProjectStatus = "active";
+  if (totalJobs === 0) status = "not-started";
+  else if (completedJobs === totalJobs) status = "completed";
+
+  const { error: projectUpdateError } = await supabase
+    .from("projects")
+    .update({ status })
+    .eq("id", projectId);
+
+  if (projectUpdateError && !isMissingStatusColumnError(projectUpdateError.message)) {
+    return { ok: false, message: projectUpdateError.message };
+  }
+
+  return { ok: true };
+}
+
 export async function createJob(projectId: string, formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
     error: userError,
-  } = await (await supabase).auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (userError || !user) redirect("/login");
 
@@ -37,7 +87,7 @@ export async function createJob(projectId: string, formData: FormData) {
   if (price_cents === null)
     return { ok: false, message: "Enter a valid price." };
 
-  const { error } = await (await supabase).from("jobs").insert({
+  const { error } = await supabase.from("jobs").insert({
     project_id: projectId,
     title,
     price_cents,
@@ -46,51 +96,65 @@ export async function createJob(projectId: string, formData: FormData) {
   });
 
   if (error) return { ok: false, message: error.message };
+
+  const syncStatus = await syncProjectStatus(projectId);
+  if (!syncStatus.ok) return syncStatus;
+
   return { ok: true };
 }
 
 export async function toggleJobComplete(jobId: string, nextCompleted: boolean) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user },
     error: userError,
-  } = await (await supabase).auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (userError || !user) redirect("/login");
 
-  const { error } = await (
-    await supabase
-  )
+  const { data, error } = await supabase
     .from("jobs")
     .update({
       is_completed: nextCompleted,
       completed_at: nextCompleted ? new Date().toISOString() : null,
     })
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .is("deleted_at", null)
+    .select("project_id")
+    .maybeSingle();
 
   if (error) return { ok: false, message: error.message };
+  if (!data?.project_id) return { ok: false, message: "Job not found." };
+
+  const syncStatus = await syncProjectStatus(data.project_id);
+  if (!syncStatus.ok) return syncStatus;
+
   return { ok: true };
 }
 
 export async function deleteJob(jobId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
     error: userError,
-  } = await (await supabase).auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (userError || !user) redirect("/login");
 
-  const { data, error } = await (await supabase)
+  const { data, error } = await supabase
     .from("jobs")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", jobId)
     .is("deleted_at", null)
-    .select("id")
+    .select("id, project_id")
     .maybeSingle();
 
   if (error) return { ok: false, message: error.message };
   if (!data) return { ok: true, message: "Job already deleted." };
+
+  const syncStatus = await syncProjectStatus(data.project_id);
+  if (!syncStatus.ok) return syncStatus;
+
   return { ok: true };
 }
