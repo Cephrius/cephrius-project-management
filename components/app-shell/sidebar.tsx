@@ -42,7 +42,7 @@ export async function Sidebar() {
             <SidebarNav />
 
             <div className="mt-auto p-3 text-xs text-muted-foreground">
-                v0.1 MVP
+                v0.1.0 - Built by <a href="https://cephrius.com" className="underline">Cephrius Technologies</a>
             </div>
         </aside>
     )
