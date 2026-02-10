@@ -318,7 +318,7 @@ export function InvoicesPageClient({
                     <div className="flex justify-end">
                       <Link
                         href={`/invoices/${invoice.id}`}
-                        className="inline-flex items-center gap-1 text-lg font-medium text-primary"
+                        className="inline-flex items-center gap-1 text-lg font-medium text-primary dark:text-white dark:hover:text-muted-foreground/90 transition delay-100"
                       >
                         Open Invoice
                         <ArrowRight className="size-5" />
@@ -374,7 +374,7 @@ export function InvoicesPageClient({
               <div className="border-t pt-4">
                 <Link
                   href={`/invoices/${selectedInvoice.id}`}
-                  className="inline-flex items-center gap-1 text-lg font-medium text-muted-foreground hover:text-primary"
+                  className="inline-flex items-center gap-1 text-lg font-medium text-muted-foreground hover:text-primary dark:text-white dark:hover:text-muted-foreground/90 transition delay-100"
                 >
                   View Invoice
                   <ArrowRight className="size-4" />
