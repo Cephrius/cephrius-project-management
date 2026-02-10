@@ -19,7 +19,15 @@ import {
   CreatableCombobox,
   type ComboboxItem,
 } from "@/components/projects/createable-combobox";
-import { sub } from "date-fns";
+
+function toTitleCase(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[A-Za-z]+/g, (segment) => {
+      return segment[0].toUpperCase() + segment.slice(1).toLowerCase();
+    });
+}
 
 type Item = { id: string; name: string };
 
@@ -78,7 +86,7 @@ export function NewProjectDialog({
     setError(null);
 
     const fd = new FormData();
-    fd.set("project_address", projectAddress);
+    fd.set("project_address", toTitleCase(projectAddress));
 
     // We submit IDs when selected.
     if (builder?.id) fd.set("builder_id", builder.id);
@@ -112,6 +120,9 @@ export function NewProjectDialog({
             <Input
               value={projectAddress}
               onChange={(e) => setProjectAddress(e.target.value)}
+              onBlur={() =>
+                setProjectAddress((current) => toTitleCase(current))
+              }
               placeholder="1234 Main St, Houston TX"
             />
           </div>

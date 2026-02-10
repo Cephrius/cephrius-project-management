@@ -17,8 +17,21 @@ import {
   type ComboboxItem,
 } from "@/components/projects/createable-combobox";
 
-function normalizeName(value: string) {
+function normalizeWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function toTitleCase(value: string) {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return "";
+
+  return normalized.replace(/[A-Za-z]+/g, (segment) => {
+    return segment[0].toUpperCase() + segment.slice(1).toLowerCase();
+  });
+}
+
+function normalizeName(value: string) {
+  return toTitleCase(value);
 }
 
 function upsertOptions(
@@ -116,10 +129,10 @@ export function AddJobDialog({
     setError(null);
 
     const fd = new FormData();
-    fd.set("title", title?.name ?? "");
+    fd.set("title", toTitleCase(title?.name ?? ""));
     fd.set("price", price);
     fd.set("scheduled_completion", scheduled);
-    fd.set("superintendent", superintendent?.name ?? "");
+    fd.set("superintendent", toTitleCase(superintendent?.name ?? ""));
 
     startTransition(async () => {
       const res = await createJob(projectId, fd);

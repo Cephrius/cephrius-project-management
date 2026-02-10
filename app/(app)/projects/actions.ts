@@ -1,12 +1,28 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 
 type IdName = { id: string; name: string };
 
-function normalizeName(value: string) {
+function normalizeWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function toTitleCase(value: string) {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return "";
+
+  return normalized.replace(/[A-Za-z]+/g, (segment) => {
+    return segment[0].toUpperCase() + segment.slice(1).toLowerCase();
+  });
+}
+
+function normalizeName(value: string) {
+  return toTitleCase(value);
+}
+
+function normalizeProjectAddress(value: string) {
+  return toTitleCase(value);
 }
 
 export async function createBuilder(
@@ -110,7 +126,9 @@ export async function createProject(formData: FormData) {
     return { ok: false, message: "Session expired. Please log in again." };
   }
 
-  const project_address = String(formData.get("project_address") || "").trim();
+  const project_address = normalizeProjectAddress(
+    String(formData.get("project_address") || ""),
+  );
 
   // We will accept either selected IDs or typed names.
   const builder_id = String(formData.get("builder_id") || "").trim() || null;

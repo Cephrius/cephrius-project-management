@@ -5,6 +5,19 @@ import { redirect } from "next/navigation";
 
 type ProjectStatus = "not-started" | "active" | "completed";
 
+function normalizeWhitespace(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function toTitleCase(value: string) {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return "";
+
+  return normalized.replace(/[A-Za-z]+/g, (segment) => {
+    return segment[0].toUpperCase() + segment.slice(1).toLowerCase();
+  });
+}
+
 function parsePriceToCents(input: string) {
   // accepts "1200"  "1200.50" "$1,200.50"  " $ 1,200 "
   const cleaned = input.replace(/[^0-9.]/g, "");
@@ -71,12 +84,14 @@ export async function createJob(projectId: string, formData: FormData) {
 
   if (userError || !user) redirect("/login");
 
-  const title = String(formData.get("title") || "").trim();
+  const title = toTitleCase(String(formData.get("title") || ""));
   const priceRaw = String(formData.get("price") || "").trim();
   const scheduled_completion = String(
     formData.get("scheduled_completion") || "",
   ).trim();
-  const superintendentRaw = String(formData.get("superintendent") || "").trim();
+  const superintendentRaw = toTitleCase(
+    String(formData.get("superintendent") || ""),
+  );
   const superintendent = superintendentRaw || null;
 
   if (!title) return { ok: false, message: "Job title is required." };
