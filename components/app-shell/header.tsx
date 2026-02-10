@@ -1,15 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { LogOutIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useBreadcrumbs } from "./breadcrumb-context";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
+const mobileNavItems = [
+  { href: "/", label: "Dashboard" },
+  { href: "/projects", label: "Projects" },
+  { href: "/invoices", label: "Invoices" },
+  { href: "/settings", label: "Settings" },
+];
+
 export function Header() {
   const supabase = createClient();
+  const pathname = usePathname();
   const { crumbs, rightSlot } = useBreadcrumbs();
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
 
   return (
     <header className="border-b bg-background px-4 py-3">
@@ -45,11 +60,18 @@ export function Header() {
 
           <Button
             variant="destructive"
-            className="cursor-pointer"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              window.location.href = "/login";
-            }}
+            size="icon"
+            className="cursor-pointer sm:hidden"
+            aria-label="Sign out"
+            onClick={handleSignOut}
+          >
+            <LogOutIcon className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="destructive"
+            className="hidden cursor-pointer sm:inline-flex"
+            onClick={handleSignOut}
           >
             Sign out
           </Button>
@@ -57,30 +79,27 @@ export function Header() {
       </div>
 
       <nav className="mt-3 flex flex-wrap gap-2 md:hidden">
-        <Link
-          className="rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
-          href="/"
-        >
-          Dashboard
-        </Link>
-        <Link
-          className="rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
-          href="/projects"
-        >
-          Projects
-        </Link>
-        <Link
-          className="rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
-          href="/invoices"
-        >
-          Invoices
-        </Link>
-        <Link
-          className="rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
-          href="/settings"
-        >
-          Settings
-        </Link>
+        {mobileNavItems.map((item) => {
+          const isActive =
+            item.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.href);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-xs font-medium transition",
+                isActive
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
     </header>
   );
