@@ -78,6 +78,7 @@ export function MonthJobsCalendar({
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="flex justify-center lg:justify-start">
         <Calendar
+          className="rounded-xl"
           mode="single"
           required
           defaultMonth={monthDate}
