@@ -211,7 +211,7 @@ export default async function AppHome() {
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Schedule Focus</div>
           <div className="mt-2 text-3xl font-semibold">{dueTodayCount}</div>
-          <div className="text-xs text-muted-foreground">jobs due today</div>
+          <div className="text-xs text-muted-foreground">Jobs due today</div>
           <div className="mt-3 text-sm">
             <span className="font-medium">{currentWeekJobsCount}</span>{" "}
             incomplete this week ({format(weekStartDate, "MMM d")} -{" "}
