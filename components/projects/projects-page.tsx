@@ -226,7 +226,7 @@ export function ProjectsPageClient({
 
           <div className="flex flex-wrap items-center gap-2">
             {hasActiveFilters && (
-              <div className="flex items-center gap-2 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+              <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary dark:text-white">
                 <Filter className="size-3" />
                 Filters Active
                 <Button
