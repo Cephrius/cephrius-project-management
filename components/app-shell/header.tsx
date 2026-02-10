@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useBreadcrumbs } from "./breadcrumb-context";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export function Header() {
   const supabase = createClient();
@@ -40,6 +41,7 @@ export function Header() {
 
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {rightSlot}
+          <ThemeSwitcher />
 
           <Button
             variant="destructive"
