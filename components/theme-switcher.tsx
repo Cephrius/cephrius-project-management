@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { MonitorIcon, MoonIcon, SunIcon, WindArrowDown } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,25 @@ export function ThemeSwitcher() {
     theme === "light" || theme === "dark" || theme === "system"
       ? theme
       : "system";
+
+  const THEME_DELAY_MS = 100;
+  const THEME_TRANSITION_MS = 350;
+
+  function setThemeSmooth(next: ThemeMode) {
+    const root = document.documentElement;
+    root.classList.add("theme-transitioning");
+
+    window.setTimeout(() => {
+      setTheme(next);
+    }, THEME_DELAY_MS);
+
+    window.setTimeout(
+      () => {
+        root.classList.remove("theme-transitioning");
+      },
+      THEME_DELAY_MS + THEME_TRANSITION_MS + 30,
+    );
+  }
 
   const ActiveIcon = useMemo(() => {
     if (selectedTheme === "light") return SunIcon;
@@ -48,8 +67,8 @@ export function ThemeSwitcher() {
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup
           value={selectedTheme}
-          onValueChange={(value) => setTheme(value as ThemeMode)}
-        >
+          onValueChange={(value) => setThemeSmooth(value as ThemeMode)}
+          >
           <DropdownMenuRadioItem value="light">
             <SunIcon />
             Light
