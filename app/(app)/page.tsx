@@ -249,7 +249,7 @@ export default async function AppHome() {
           <div className="mt-2 text-3xl font-semibold">{invoiceMonthCount}</div>
           <div className="text-xs text-muted-foreground">Invoices Issued</div>
           <div className="mt-3 text-sm font-medium">
-            {money(invoiceMonthTotal)}
+            Total Amount Issued: {money(invoiceMonthTotal)}
           </div>
         </Card>
       </div>
