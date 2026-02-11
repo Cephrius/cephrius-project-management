@@ -1,4 +1,3 @@
-
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
@@ -34,19 +33,23 @@ function toStatus(
   return "active";
 }
 
-async function getProjectsPageData(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const [projectsRes, buildersRes, subdivisionsRes, jobsRes] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, project_address, builder_name, subdivision, created_at")
-      .order("created_at", { ascending: false }),
-    supabase.from("builders").select("id, name").order("name"),
-    supabase.from("subdivisions").select("id, name").order("name"),
-    supabase
-      .from("jobs")
-      .select("id, project_id, is_completed, superintendent, created_at")
-      .is("deleted_at", null),
-  ]);
+async function getProjectsPageData(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  const [projectsRes, buildersRes, subdivisionsRes, jobsRes] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, project_address, builder_name, subdivision, created_at")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false }),
+      supabase.from("builders").select("id, name").order("name"),
+      supabase.from("subdivisions").select("id, name").order("name"),
+      supabase
+        .from("jobs")
+        .select("id, project_id, is_completed, superintendent, created_at")
+        .is("deleted_at", null),
+    ]);
 
   const jobs = (jobsRes.data ?? []) as ProjectJobRow[];
   const projectStats = new Map<
@@ -63,14 +66,12 @@ async function getProjectsPageData(supabase: Awaited<ReturnType<typeof createCli
     const projectId = job.project_id;
     if (!projectId) continue;
 
-    const stat =
-      projectStats.get(projectId) ??
-      {
-        job_count: 0,
-        open_job_count: 0,
-        last_activity_at: null,
-        crew_names: new Set<string>(),
-      };
+    const stat = projectStats.get(projectId) ?? {
+      job_count: 0,
+      open_job_count: 0,
+      last_activity_at: null,
+      crew_names: new Set<string>(),
+    };
 
     stat.job_count += 1;
     if (job.is_completed !== true) stat.open_job_count += 1;
@@ -121,7 +122,8 @@ export default async function ProjectsPage() {
 
   if (userError || !user) redirect("/login");
 
-  const { projects, builders, subdivisions } = await getProjectsPageData(supabase);
+  const { projects, builders, subdivisions } =
+    await getProjectsPageData(supabase);
 
   return (
     <div className="space-y-6">

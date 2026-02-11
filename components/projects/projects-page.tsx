@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { DeleteProjectButton } from "./delete-project-button";
 
 const PROJECTS_VIEW_STORAGE_KEY = "projects:view";
 const UNASSIGNED_BUILDER = "__unassigned_builder__";
@@ -368,7 +369,8 @@ export function ProjectsPageClient({
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">
-                          {project.job_count} Jobs
+                          {project.job_count}{" "}
+                          {project.job_count === 1 ? " Job" : " Jobs"}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -432,31 +434,7 @@ export function ProjectsPageClient({
                           />
                         </div>
                         <div onClick={(event) => event.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                aria-label="More actions"
-                              >
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/projects/${project.id}`}>
-                                  Open Project
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  setSelectedProjectId(project.id)
-                                }
-                              >
-                                Select Project
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <DeleteProjectButton projectId={project.id} />
                         </div>
                       </div>
                     </div>
@@ -477,7 +455,7 @@ export function ProjectsPageClient({
           )}
         </div>
 
-        <Card className="h-fit p-5 xl:sticky xl:top-4">
+        <Card className="hidden xl:block h-fit p-5 xl:sticky xl:top-4">
           {selectedProject ? (
             <div className="space-y-5">
               <div>

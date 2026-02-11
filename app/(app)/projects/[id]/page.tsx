@@ -32,6 +32,7 @@ export default async function ProjectDashboardPage({
   const { data: project } = await supabase
     .from("projects")
     .select("id, project_address, builder_name, subdivision")
+    .is("deleted_at", null)
     .eq("id", id)
     .single();
 

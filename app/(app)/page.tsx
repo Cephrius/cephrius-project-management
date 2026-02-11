@@ -78,7 +78,7 @@ export default async function AppHome() {
     recentInvoicesRes,
     upcomingJobsRes,
   ] = await Promise.all([
-    supabase.from("projects").select("id, project_address"),
+    supabase.from("projects").select("id, project_address").is("deleted_at", null),
     supabase
       .from("jobs")
       .select("id")
@@ -116,12 +116,14 @@ export default async function AppHome() {
     supabase
       .from("invoices")
       .select("id, subtotal_cents")
+      .is("deleted_at", null)
       .gte("invoice_date", monthStart)
       .lte("invoice_date", monthEnd),
     supabase
       .from("invoices")
       .select("id, invoice_number, invoice_date, subtotal_cents")
       .order("created_at", { ascending: false })
+      .is("deleted_at", null)
       .limit(5),
     supabase
       .from("jobs")

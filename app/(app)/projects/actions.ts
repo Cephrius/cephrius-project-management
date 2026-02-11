@@ -25,6 +25,11 @@ function normalizeProjectAddress(value: string) {
   return toTitleCase(value);
 }
 
+function isMissingDeletedAtColumnError(message: string | undefined) {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("column") && normalized.includes("deleted_at");
+}
+
 export async function createBuilder(
   nameRaw: string,
 ): Promise<{ ok: boolean; data?: IdName; message?: string }> {
@@ -221,5 +226,58 @@ export async function createProject(formData: FormData) {
 
   return { ok: true, projectId: data.id as string };
   // Reload window
+}
+
+export async function deleteProject(projectId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { ok: false, message: "Session expired. Please log in again." };
+  }
+
+  const id = projectId.trim();
+  if (!id) return { ok: false, message: "Invalid project ID." };
+
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("id, user_id")
+    .eq("id", id)
+    .maybeSingle();
   
+  if (projectError) return { ok: false, message: "Failed to find project." };
+  if (!project) return { ok: false, message: "Project not found." };
+
+  const deletedAt = new Date().toISOString();
+
+  // Soft delete project
+  const { error: jobsError } = await supabase
+    .from("jobs")
+    .update({ deleted_at: deletedAt })
+    .eq("project_id", id)
+    .is("deleted_at", null); // only delete non-deleted jobs
+
+  if (jobsError)
+    return { ok: false, message: "Failed to delete project jobs." };
+
+  const { error: projectDeleteError } = await supabase
+    .from("projects")
+    .update({ deleted_at: deletedAt })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (projectDeleteError) {
+    if (isMissingDeletedAtColumnError(projectDeleteError.message)) {
+      return {
+        ok: false,
+        message:
+          "Projects table is missing deleted_at. Add that column before enabling project deletion.",
+      };
+    }
+    return { ok: false, message: "Failed to delete project." };
+  }
+  return { ok: true };
 }

@@ -83,7 +83,8 @@ export function CreateInvoiceByBuilder({
       const { data: projects, error: projErr } = await supabase
         .from("projects")
         .select("id, project_address, subdivision")
-        .eq("builder_id", builderId);
+        .eq("builder_id", builderId)
+        .is("deleted_at", null);
 
       if (projErr) throw new Error(projErr.message);
 
