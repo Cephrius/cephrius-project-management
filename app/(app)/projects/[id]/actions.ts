@@ -68,7 +68,10 @@ async function syncProjectStatus(projectId: string) {
     .update({ status })
     .eq("id", projectId);
 
-  if (projectUpdateError && !isMissingStatusColumnError(projectUpdateError.message)) {
+  if (
+    projectUpdateError &&
+    !isMissingStatusColumnError(projectUpdateError.message)
+  ) {
     return { ok: false, message: projectUpdateError.message };
   }
 

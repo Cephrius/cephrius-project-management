@@ -31,27 +31,25 @@ export function Header() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           {crumbs.map((c, idx) => {
-              const isLast = idx === crumbs.length - 1;
-              return (
-                <div
-                  key={`${c.label}-${idx}`}
-                  className="flex items-center gap-2"
-                >
-                  {c.href && !isLast ? (
-                    <Link className="hover:underline" href={c.href}>
-                      {c.label}
-                    </Link>
-                  ) : (
-                    <span
-                      className={isLast ? "text-foreground font-medium" : ""}
-                    >
-                      {c.label}
-                    </span>
-                  )}
-                  {!isLast && <span>&gt;</span>}
-                </div>
-              );
-            })}
+            const isLast = idx === crumbs.length - 1;
+            return (
+              <div
+                key={`${c.label}-${idx}`}
+                className="flex items-center gap-2"
+              >
+                {c.href && !isLast ? (
+                  <Link className="hover:underline" href={c.href}>
+                    {c.label}
+                  </Link>
+                ) : (
+                  <span className={isLast ? "text-foreground font-medium" : ""}>
+                    {c.label}
+                  </span>
+                )}
+                {!isLast && <span>&gt;</span>}
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -93,7 +91,7 @@ export function Header() {
                 "rounded-md border px-3 py-1.5 text-xs font-medium transition",
                 isActive
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "text-muted-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
               {item.label}

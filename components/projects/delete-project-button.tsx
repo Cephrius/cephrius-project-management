@@ -1,5 +1,4 @@
 import { deleteProject } from "@/app/(app)/projects/actions";
-import { set } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { useState } from "react";
@@ -14,8 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../ui/alert-dialog";
-import { Button } from "../ui/button";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 
 export function DeleteProjectButton({ projectId }: { projectId: string }) {

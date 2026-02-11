@@ -198,3 +198,80 @@ export async function deleteInvoice(invoiceId: string) {
   }
   return { ok: true };
 }
+
+
+export async function editInvoice(formData: FormData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) return { ok: false, message: "Session expired." };
+
+  const invoiceId = String(formData.get("invoice_id") || "").trim();
+  const contractor_name = String(formData.get("contractor_name") || "").trim();
+  const contractor_address = String(formData.get("contractor_address") || "").trim();
+  const contractor_phone = String(formData.get("contractor_phone") || "").trim();
+  const bill_to_name = String(formData.get("bill_to_name") || "").trim();
+  const bill_to_address = String(formData.get("bill_to_address") || "").trim();
+  const invoice_date = String(formData.get("invoice_date") || "").trim();
+  const due_date = String(formData.get("due_date") || "").trim();
+
+  if (!invoiceId) return { ok: false, message: "Invoice id is required." };
+  if (!contractor_name) return { ok: false, message: "Contractor name is required." };
+  if (!bill_to_name) return { ok: false, message: "Bill to name is required." };
+  if (!bill_to_address) return { ok: false, message: "Bill to address is required." };
+  if (!invoice_date) return { ok: false, message: "Invoice date is required." };
+
+  const { data: existing, error: existingErr } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (existingErr) return { ok: false, message: existingErr.message };
+  if (!existing) return { ok: false, message: "Invoice not found." };
+
+  const { error: updateErr } = await supabase
+    .from("invoices")
+    .update({
+      contractor_name,
+      contractor_address: contractor_address || null,
+      contractor_phone: contractor_phone || null,
+      bill_to_name,
+      bill_to_address,
+      invoice_date,
+      due_date: due_date || null,
+    })
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
+
+  if (updateErr) return { ok: false, message: updateErr.message };
+  return { ok: true };
+}
+
+//  invoice line-item snapshots
+
+// // const project_address_snapshot = String(formData.get("project_address_snapshot") || "").trim();
+// const builder_name_snapshot = String(formData.get("builder_name_snapshot") || "").trim();
+// const subdivision_snapshot = String(formData.get("subdivision_snapshot") || "").trim();
+
+// if (project_address_snapshot || builder_name_snapshot || subdivision_snapshot) {
+//   const { error: itemsErr } = await supabase
+//     .from("invoice_items")
+//     .update({
+//       ...(project_address_snapshot ? { project_address_snapshot } : {}),
+//       ...(builder_name_snapshot ? { builder_name_snapshot } : {}),
+//       // use ONE key based on your schema:
+//       // subdivision_name_raw_snapshot OR subdivision_snapshot
+//       ...(subdivision_snapshot ? { subdivision_name_raw_snapshot: subdivision_snapshot } : {}),
+//     })
+//     .eq("invoice_id", invoiceId);
+
+//   if (itemsErr) return { ok: false, message: itemsErr.message };
+// }
