@@ -164,3 +164,37 @@ export async function createInvoiceForBuilder(formData: FormData) {
 
   return { ok: true, invoiceId: invoice.id as string };
 }
+
+export async function deleteInvoice(invoiceId: string) {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await (await supabase).auth.getUser();
+
+  if (userError || !user) return { ok: false, message: "Session Expired." };
+
+  const { data: invoice, error: invoiceCheckErr } = await (await supabase)
+    .from("invoices")
+    .select("id")
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (invoiceCheckErr) return { ok: false, message: invoiceCheckErr.message };
+  if (!invoice) return { ok: false, message: "Invoice not found." };
+
+  const { error } = await (await supabase)
+    .from("invoices")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+  return { ok: true };
+}

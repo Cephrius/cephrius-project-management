@@ -21,6 +21,7 @@ export default async function InvoicesPage() {
     .select(
       "id, invoice_number, invoice_date, due_date, subtotal_cents, bill_to_name, contractor_name, created_at",
     )
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (invErr) {

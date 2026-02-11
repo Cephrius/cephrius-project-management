@@ -93,12 +93,11 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
             placeholder="Search jobs..."
             className="w-full sm:w-64"
           />
-
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <Table className="min-w-[720px]">
+        <Table className="min-w-180">
           <TableHeader>
             <TableRow>
               <TableHead>Job Title</TableHead>
@@ -151,7 +150,9 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                           })
                         }
                       >
-                        {job.is_completed ? "Unmark Completed" : "Mark Completed"}
+                        {job.is_completed
+                          ? "Unmark Completed"
+                          : "Mark Completed"}
                       </Button>
 
                       <DeleteJobDialog
