@@ -231,7 +231,7 @@ export function Header() {
             type="button"
             variant="outline"
             size="icon"
-            className="hidden md:inline-flex"
+            className="hidden md:inline-flex cursor-pointer"
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >

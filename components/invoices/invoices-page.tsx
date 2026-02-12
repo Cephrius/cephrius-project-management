@@ -333,7 +333,7 @@ export function InvoicesPageClient({
           )}
         </div>
 
-        <Card className="h-fit border-primary/20 p-5 xl:sticky xl:top-4">
+        <Card className="hidden h-fit border-primary/20 p-5 xl:block xl:sticky xl:top-4">
           {selectedInvoice ? (
             <div className="space-y-5">
               <div>
