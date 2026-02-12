@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createInvoiceForBuilder } from "@/app/(app)/invoices/actions";
 import { cn } from "@/lib/utils";
@@ -120,6 +119,7 @@ export function CreateInvoiceByBuilder({
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobs, setJobs] = useState<EligibleJob[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [jobQuery, setJobQuery] = useState("");
 
   const builderItems: ComboboxItem[] = useMemo(
     () => builders.map((b) => ({ id: b.id, name: b.name })),
@@ -246,6 +246,7 @@ export function CreateInvoiceByBuilder({
   async function loadEligibleJobs(builderId: string) {
     setLoadingJobs(true);
     setError(null);
+    setJobQuery("");
 
     try {
       // 1) Projects for builder
@@ -331,6 +332,18 @@ export function CreateInvoiceByBuilder({
     () => jobs.filter((j) => selected[j.id]),
     [jobs, selected],
   );
+  const filteredJobs = useMemo(() => {
+    const q = jobQuery.trim().toLowerCase();
+    if (!q) return jobs;
+
+    return jobs.filter((job) => {
+      return (
+        job.title.toLowerCase().includes(q) ||
+        job.project_address.toLowerCase().includes(q) ||
+        (job.subdivision ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [jobs, jobQuery]);
   const selectedJobsCount = selectedJobs.length;
   const totalJobsCount = jobs.length;
   const subtotal = useMemo(
@@ -415,6 +428,7 @@ export function CreateInvoiceByBuilder({
                 setBuilder(b);
                 setJobs([]);
                 setSelected({});
+                setJobQuery("");
                 if (b?.id) {
                   setBillToName(b.name);
                   loadEligibleJobs(b.id);
@@ -605,9 +619,23 @@ export function CreateInvoiceByBuilder({
             </div>
 
             {builder && !loadingJobs && jobs.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Search Jobs</div>
+                <Input
+                  value={jobQuery}
+                  onChange={(event) => setJobQuery(event.target.value)}
+                  placeholder="Search by title, project, or subdivision..."
+                />
+              </div>
+            )}
+
+            {builder && !loadingJobs && jobs.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 p-2">
                 <div className="text-xs text-muted-foreground">
                   {selectedJobsCount} of {totalJobsCount} selected
+                  {jobQuery.trim().length > 0
+                    ? ` | ${filteredJobs.length} shown`
+                    : ""}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -642,10 +670,14 @@ export function CreateInvoiceByBuilder({
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
                 No completed jobs available to invoice for this builder.
               </div>
+            ) : filteredJobs.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                No jobs match your search.
+              </div>
             ) : (
               <div className="overflow-hidden rounded-md border">
                 <div className="max-h-96 overflow-auto">
-                  {jobs.map((job) => (
+                  {filteredJobs.map((job) => (
                     <label
                       key={job.id}
                       className={cn(
