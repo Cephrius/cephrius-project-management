@@ -62,7 +62,7 @@ export async function Sidebar() {
         <SidebarNav />
 
         <div className="mt-auto border-t border-primary/10 p-2 text-xs text-muted-foreground">
-          <p>v0.1.0 </p>
+          <p>v0.1.1 </p>
           Powered by{" "}
           <a href="https://cephrius.com" className="underline hover:text-primary">
             Cephrius Technologies{" "}
