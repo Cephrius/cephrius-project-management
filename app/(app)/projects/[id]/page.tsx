@@ -32,6 +32,7 @@ export default async function ProjectDashboardPage({
   const { data: project } = await supabase
     .from("projects")
     .select("id, project_address, builder_name, subdivision")
+    .is("deleted_at", null)
     .eq("id", id)
     .single();
 
@@ -43,7 +44,9 @@ export default async function ProjectDashboardPage({
 
   const { data: jobs } = await supabase
     .from("jobs")
-    .select("id, title, price_cents, scheduled_completion, is_completed")
+    .select(
+      "id, title, price_cents, scheduled_completion, is_completed, superintendent",
+    )
     .eq("project_id", project.id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -66,7 +69,7 @@ export default async function ProjectDashboardPage({
       );
 
     const invoicedSet = new Set(
-      (invoiced ?? []).map((x: any) => x.job_id as string),
+      (invoiced ?? []).map((x: { job_id: string | null }) => x.job_id ?? ""),
     );
     return completed.filter((j) => !invoicedSet.has(j.id)).length;
   })();

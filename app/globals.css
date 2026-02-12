@@ -136,3 +136,18 @@
     border: 0 !important;
   }
 }
+
+
+html.theme-transitioning,
+html.theme-transitioning * {
+  transition-property: background-color, color, border-color, fill, stroke, box-shadow;
+  transition-duration: 350ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning,
+  html.theme-transitioning * {
+    transition: none !important;
+  }
+}

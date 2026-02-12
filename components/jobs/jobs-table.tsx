@@ -22,6 +22,7 @@ export type JobRow = {
   price_cents: number;
   scheduled_completion: string | null;
   is_completed: boolean;
+  superintendent: string | null;
 };
 
 function formatMoney(cents: number) {
@@ -50,10 +51,16 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
     return list.filter((j) => {
       return (
         j.title.toLowerCase().includes(q) ||
+        (j.superintendent ?? "").toLowerCase().includes(q) ||
         (j.scheduled_completion ?? "").toLowerCase().includes(q)
       );
     });
   }, [jobs, filter, query]);
+
+  const showSuperintendent = useMemo(
+    () => jobs.some((j) => (j.superintendent ?? "").trim().length > 0),
+    [jobs],
+  );
 
   return (
     <div className="space-y-3">
@@ -86,17 +93,19 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
             placeholder="Search jobs..."
             className="w-full sm:w-64"
           />
-
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <Table className="min-w-[720px]">
+        <Table className="min-w-180">
           <TableHeader>
             <TableRow>
               <TableHead>Job Title</TableHead>
               <TableHead className="w-35">Price</TableHead>
               <TableHead className="w-45">Scheduled For</TableHead>
+              {showSuperintendent && (
+                <TableHead className="w-56">Superintendent / GC</TableHead>
+              )}
               <TableHead className="w-35">Status</TableHead>
               <TableHead className="w-55 text-right">Actions</TableHead>
             </TableRow>
@@ -105,7 +114,10 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={showSuperintendent ? 6 : 5}
+                  className="text-sm text-muted-foreground"
+                >
                   No jobs match this filter.
                 </TableCell>
               </TableRow>
@@ -114,7 +126,10 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                 <TableRow key={job.id}>
                   <TableCell className="font-medium">{job.title}</TableCell>
                   <TableCell>{formatMoney(job.price_cents)}</TableCell>
-                  <TableCell>{job.scheduled_completion ?? "â€”"}</TableCell>
+                  <TableCell>{job.scheduled_completion ?? "”"}</TableCell>
+                  {showSuperintendent && (
+                    <TableCell>{job.superintendent ?? ""}</TableCell>
+                  )}
                   <TableCell>
                     {job.is_completed ? (
                       <Badge>Completed</Badge>
@@ -135,7 +150,9 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                           })
                         }
                       >
-                        {job.is_completed ? "Unmark Completed" : "Mark Completed"}
+                        {job.is_completed
+                          ? "Unmark Completed"
+                          : "Mark Completed"}
                       </Button>
 
                       <DeleteJobDialog
