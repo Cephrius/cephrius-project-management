@@ -6,18 +6,20 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Building2,
+  ChevronDown,
+  FileText,
   Filter,
-  Grid2X2,
   Hammer,
   Home,
   List,
   MoreHorizontal,
+  Pencil,
+  Plus,
   UserRound,
 } from "lucide-react";
-import { AddJobButton } from "@/components/jobs/add-job-button";
-import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
+import { AddJobDialog } from "@/components/jobs/add-job-dialog";
+import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog";
 import { NewProjectButton } from "@/components/projects/new-project-button";
-import { ProjectsList } from "@/components/projects/projects-list";
 import type { LookupItem, ProjectListItem } from "@/components/projects/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +41,30 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { DeleteProjectButton } from "./delete-project-button";
+import { EditProjectDialog } from "./edit-project-dialog";
 
 const PROJECTS_VIEW_STORAGE_KEY = "projects:view";
 const UNASSIGNED_BUILDER = "__unassigned_builder__";
 const UNASSIGNED_SUBDIVISION = "__unassigned_subdivision__";
 
-type ViewMode = "list" | "grid";
+type ViewMode = "list" | "grouped";
 type StatusFilter = "all" | ProjectListItem["status"];
+type BuilderGroup = {
+  key: string;
+  label: string;
+  projects: ProjectListItem[];
+  totalJobCount: number;
+  openJobCount: number;
+};
+
+type SubdivisionGroup = {
+  key: string;
+  label: string;
+  builders: BuilderGroup[];
+  projectCount: number;
+  totalJobCount: number;
+  openJobCount: number;
+};
 
 function formatRelativeTime(value: string | null): string {
   if (!value) return "No activity yet";
@@ -72,6 +91,95 @@ function toInitials(name: string): string {
     .join("");
 }
 
+function ProjectCardActionsDropdown({
+  project,
+  builders,
+  subdivisions,
+}: {
+  project: ProjectListItem;
+  builders: LookupItem[];
+  subdivisions: LookupItem[];
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [addJobOpen, setAddJobOpen] = useState(false);
+  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu >
+        <DropdownMenuTrigger asChild>
+          <Button 
+            type="button"
+            variant="outline"
+            size="sm"
+            className="cursor-pointer gap-2 border-primary/30 hover:bg-primary/10"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <MoreHorizontal className="size-4" />
+            Actions
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem className="cursor-pointer"
+            onSelect={(event) => {
+              event.preventDefault();
+              setEditOpen(true);
+            }}
+          >
+            <Pencil className="size-4" />
+            Edit Project
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer"
+            onSelect={(event) => {
+              event.preventDefault();
+              setAddJobOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            New Job
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer">
+            <Link
+              href={`/projects/${project.id}`}
+              className="flex w-full items-center gap-2"
+            >
+              <ArrowRight className="size-4" />
+              View Jobs
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer"
+            onSelect={(event) => {
+              event.preventDefault();
+              setCreateInvoiceOpen(true);
+            }}
+          >
+            <FileText className="size-4" />
+            New Invoice
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <EditProjectDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        project={project}
+        initialBuilders={builders}
+        initialSubdivisions={subdivisions}
+      />
+      <AddJobDialog
+        projectId={project.id}
+        open={addJobOpen}
+        onOpenChange={setAddJobOpen}
+      />
+      <CreateInvoiceDialog
+        projectId={project.id}
+        open={createInvoiceOpen}
+        onOpenChange={setCreateInvoiceOpen}
+      />
+    </>
+  );
+}
+
 export function ProjectsPageClient({
   projects,
   builders,
@@ -89,11 +197,17 @@ export function ProjectsPageClient({
   const [view, setView] = useState<ViewMode>(() => {
     if (typeof window === "undefined") return "list";
     const savedView = window.localStorage.getItem(PROJECTS_VIEW_STORAGE_KEY);
-    if (savedView === "list" || savedView === "grid") return savedView;
-    if (savedView === "cards") return "grid";
+    if (savedView === "list" || savedView === "grouped") return savedView;
+    if (savedView === "grid" || savedView === "cards") return "list";
     if (savedView === "table") return "list";
     return "list";
   });
+  const [expandedSubdivisions, setExpandedSubdivisions] = useState<
+    string[] | null
+  >(null);
+  const [expandedBuilders, setExpandedBuilders] = useState<string[] | null>(
+    null,
+  );
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     projects[0]?.id ?? null,
   );
@@ -160,6 +274,113 @@ export function ProjectsPageClient({
     statusFilter,
   ]);
 
+  const groupedProjects = useMemo<SubdivisionGroup[]>(() => {
+    const subdivisionMap = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        builders: Map<
+          string,
+          {
+            key: string;
+            label: string;
+            projects: ProjectListItem[];
+          }
+        >;
+      }
+    >();
+
+    for (const project of filteredProjects) {
+      const subdivisionLabel = project.subdivision?.trim() || "Unassigned Subdivision";
+      const subdivisionKey = subdivisionLabel.toLowerCase();
+      const builderLabel = project.builder_name?.trim() || "Unassigned Builder";
+      const builderKey = `${subdivisionKey}::${builderLabel.toLowerCase()}`;
+
+      const subdivisionGroup = subdivisionMap.get(subdivisionKey) ?? {
+        key: subdivisionKey,
+        label: subdivisionLabel,
+        builders: new Map(),
+      };
+
+      const builderGroup = subdivisionGroup.builders.get(builderKey) ?? {
+        key: builderKey,
+        label: builderLabel,
+        projects: [],
+      };
+
+      builderGroup.projects.push(project);
+      subdivisionGroup.builders.set(builderKey, builderGroup);
+      subdivisionMap.set(subdivisionKey, subdivisionGroup);
+    }
+
+    return Array.from(subdivisionMap.values())
+      .map((subdivisionGroup) => {
+        const builders = Array.from(subdivisionGroup.builders.values())
+          .map((builderGroup) => {
+            const sortedProjects = [...builderGroup.projects].sort((a, b) =>
+              a.project_address.localeCompare(b.project_address),
+            );
+
+            return {
+              key: builderGroup.key,
+              label: builderGroup.label,
+              projects: sortedProjects,
+              totalJobCount: sortedProjects.reduce(
+                (sum, project) => sum + project.job_count,
+                0,
+              ),
+              openJobCount: sortedProjects.reduce(
+                (sum, project) => sum + project.open_job_count,
+                0,
+              ),
+            };
+          })
+          .sort((a, b) => a.label.localeCompare(b.label));
+
+        return {
+          key: subdivisionGroup.key,
+          label: subdivisionGroup.label,
+          builders,
+          projectCount: builders.reduce(
+            (sum, builderGroup) => sum + builderGroup.projects.length,
+            0,
+          ),
+          totalJobCount: builders.reduce(
+            (sum, builderGroup) => sum + builderGroup.totalJobCount,
+            0,
+          ),
+          openJobCount: builders.reduce(
+            (sum, builderGroup) => sum + builderGroup.openJobCount,
+            0,
+          ),
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [filteredProjects]);
+
+  const effectiveExpandedSubdivisions = useMemo(() => {
+    const subdivisionKeys = new Set(groupedProjects.map((group) => group.key));
+    const defaultExpanded = groupedProjects[0] ? [groupedProjects[0].key] : [];
+    const currentExpanded = expandedSubdivisions ?? defaultExpanded;
+
+    return currentExpanded.filter((key) => subdivisionKeys.has(key));
+  }, [expandedSubdivisions, groupedProjects]);
+
+  const effectiveExpandedBuilders = useMemo(() => {
+    const builderKeys = new Set(
+      groupedProjects.flatMap((group) =>
+        group.builders.map((builderGroup) => builderGroup.key),
+      ),
+    );
+    const defaultExpanded = groupedProjects[0]?.builders[0]
+      ? [groupedProjects[0].builders[0].key]
+      : [];
+    const currentExpanded = expandedBuilders ?? defaultExpanded;
+
+    return currentExpanded.filter((key) => builderKeys.has(key));
+  }, [expandedBuilders, groupedProjects]);
+
   const effectiveSelectedProjectId = useMemo(() => {
     if (filteredProjects.length === 0) return null;
     if (!selectedProjectId) return filteredProjects[0].id;
@@ -194,6 +415,34 @@ export function ProjectsPageClient({
     setStatusFilter("all");
   }
 
+  function toggleSubdivision(subdivisionKey: string) {
+    setExpandedSubdivisions((prev) => {
+      const defaultExpanded = groupedProjects[0] ? [groupedProjects[0].key] : [];
+      const currentExpanded = prev ?? defaultExpanded;
+
+      if (currentExpanded.includes(subdivisionKey)) {
+        return currentExpanded.filter((key) => key !== subdivisionKey);
+      }
+
+      return [...currentExpanded, subdivisionKey];
+    });
+  }
+
+  function toggleBuilder(builderKey: string) {
+    setExpandedBuilders((prev) => {
+      const defaultExpanded = groupedProjects[0]?.builders[0]
+        ? [groupedProjects[0].builders[0].key]
+        : [];
+      const currentExpanded = prev ?? defaultExpanded;
+
+      if (currentExpanded.includes(builderKey)) {
+        return currentExpanded.filter((key) => key !== builderKey);
+      }
+
+      return [...currentExpanded, builderKey];
+    });
+  }
+
   if (projects.length === 0) {
     return (
       <div className="space-y-4">
@@ -218,7 +467,7 @@ export function ProjectsPageClient({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Projects</h1>
+            <h1 className="text-2xl font-semibold text-primary">Projects</h1>
             <p className="text-sm text-muted-foreground">
               {filteredProjects.length} Project
               {filteredProjects.length === 1 ? "" : "s"} shown
@@ -245,24 +494,26 @@ export function ProjectsPageClient({
             )}
 
             <div className="inline-flex overflow-hidden rounded-md border bg-background">
-              {/* <Button
+              <Button
                 type="button"
                 variant={view === "list" ? "secondary" : "ghost"}
                 size="sm"
-                className="rounded-none border-0"
+                className="rounded-none border-0 cursor-pointer"
                 onClick={() => setView("list")}
+                aria-label="List view"
               >
                 <List className="size-4" />
-              </Button> */}
-              {/* <Button
+              </Button>
+              <Button
                 type="button"
-                variant={view === "grid" ? "secondary" : "ghost"}
+                variant={view === "grouped" ? "secondary" : "ghost"}
                 size="sm"
-                className="rounded-none border-0 border-l"
-                onClick={() => setView("grid")}
+                className="rounded-none border-0 border- cursor-pointer"
+                onClick={() => setView("grouped")}
+                aria-label="Grouped view"
               >
-                <Grid2X2 className="size-4" />
-              </Button> */}
+                <Building2 className="size-4" />
+              </Button>
             </div>
 
             <Input
@@ -350,8 +601,165 @@ export function ProjectsPageClient({
                 No projects match the current filters.
               </div>
             </Card>
-          ) : view === "grid" ? (
-            <ProjectsList projects={filteredProjects} />
+          ) : view === "grouped" ? (
+            <div className="space-y-3">
+              {groupedProjects.map((subdivisionGroup) => {
+                const isSubdivisionExpanded = effectiveExpandedSubdivisions.includes(
+                  subdivisionGroup.key,
+                );
+
+                return (
+                  <Card
+                    key={subdivisionGroup.key}
+                    className="overflow-hidden border-primary/20"
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/30 cursor-pointer"
+                      onClick={() => toggleSubdivision(subdivisionGroup.key)}
+                    >
+                      <div className="flex items-center gap-2 cursor-pointer">
+                        <ChevronDown
+                          className={cn(
+                            "size-4 shrink-0 transition-transform cursor-pointer",
+                            isSubdivisionExpanded && "rotate-180",
+                          )}
+                        />
+                        <div className="text-base font-semibold ">
+                          {subdivisionGroup.label}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {subdivisionGroup.projectCount}{" "}
+                        {subdivisionGroup.projectCount === 1
+                          ? "project"
+                          : "projects"}{" "}
+                        • {subdivisionGroup.totalJobCount} jobs •{" "}
+                        {subdivisionGroup.openJobCount} open
+                      </div>
+                    </button>
+
+                    {isSubdivisionExpanded && (
+                      <div className="space-y-3 border-t p-3 sm:p-4">
+                        {subdivisionGroup.builders.map((builderGroup) => {
+                          const isBuilderExpanded = effectiveExpandedBuilders.includes(
+                            builderGroup.key,
+                          );
+
+                          return (
+                            <div key={builderGroup.key} className="space-y-2">
+                              <button
+                                type="button"
+                                className="flex w-full items-center justify-between gap-3 rounded-md border bg-background p-3 text-left transition-colors hover:bg-muted/20 cursor-pointer"
+                                onClick={() => toggleBuilder(builderGroup.key)}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <ChevronDown
+                                    className={cn(
+                                      "size-4 shrink-0 transition-transform cursor-pointer",
+                                      isBuilderExpanded && "rotate-180",
+                                    )}
+                                  />
+                                  <div className="font-medium">
+                                    {builderGroup.label}
+                                  </div>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {builderGroup.projects.length}{" "}
+                                  {builderGroup.projects.length === 1
+                                    ? "project"
+                                    : "projects"}{" "}
+                                  • {builderGroup.totalJobCount} jobs •{" "}
+                                  {builderGroup.openJobCount} open
+                                </div>
+                              </button>
+
+                              {isBuilderExpanded && (
+                                <div className="space-y-2 pl-2 sm:pl-5">
+                                  {builderGroup.projects.map((project) => {
+                                    const isSelected =
+                                      effectiveSelectedProjectId === project.id;
+
+                                    return (
+                                      <Card
+                                        key={project.id}
+                                        className={cn(
+                                          "border-primary/10 p-3 transition-colors",
+                                          isSelected
+                                            ? "bg-primary/[0.03] ring-2 ring-primary/20"
+                                            : "hover:bg-primary/5",
+                                        )}
+                                        onClick={() =>
+                                          setSelectedProjectId(project.id)
+                                        }
+                                      >
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                          <div className="space-y-1">
+                                            <div className="font-medium">
+                                              {project.project_address}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              {project.job_count} jobs •{" "}
+                                              {project.open_job_count} open •
+                                              Last activity{" "}
+                                              {formatRelativeTime(
+                                                project.last_activity_at,
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            {project.status === "completed" ? (
+                                              <Badge
+                                                variant="outline"
+                                                className="border-green-300 bg-green-100 text-green-800"
+                                              >
+                                                Completed
+                                              </Badge>
+                                            ) : (
+                                              <Badge
+                                                variant="outline"
+                                                className="border-blue-300 bg-blue-100 text-blue-800"
+                                              >
+                                                {statusLabel(project.status)}
+                                              </Badge>
+                                            )}
+                                            <div
+                                              onClick={(event) =>
+                                                event.stopPropagation()
+                                              }
+                                            >
+                                              <ProjectCardActionsDropdown
+                                                project={project}
+                                                builders={builders}
+                                                subdivisions={subdivisions}
+                                              />
+                                            </div>
+                                            <div
+                                              onClick={(event) =>
+                                                event.stopPropagation()
+                                              }
+                                            >
+                                              <DeleteProjectButton
+                                                projectId={project.id}
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </Card>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
             filteredProjects.map((project) => {
               const isSelected = effectiveSelectedProjectId === project.id;
@@ -360,8 +768,10 @@ export function ProjectsPageClient({
                 <Card
                   key={project.id}
                   className={cn(
-                    "p-4 transition-colors sm:p-5",
-                    isSelected ? "ring-2 ring-primary/20" : "hover:bg-muted/30",
+                    "border-primary/10 p-4 transition-colors sm:p-5",
+                    isSelected
+                      ? "bg-primary/[0.03] ring-2 ring-primary/20"
+                      : "hover:bg-primary/5",
                   )}
                   onClick={() => setSelectedProjectId(project.id)}
                 >
@@ -412,25 +822,10 @@ export function ProjectsPageClient({
 
                       <div className="flex flex-wrap items-center gap-2">
                         <div onClick={(event) => event.stopPropagation()}>
-                          <AddJobButton
-                            projectId={project.id}
-                            label=" New Job"
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                          />
-                        </div>
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/projects/${project.id}`}>
-                            View Jobs
-                          </Link>
-                        </Button>
-                        <div onClick={(event) => event.stopPropagation()}>
-                          <CreateInvoiceButton
-                            projectId={project.id}
-                            label=" New Invoice"
-                            variant="outline"
-                            size="sm"
+                          <ProjectCardActionsDropdown
+                            project={project}
+                            builders={builders}
+                            subdivisions={subdivisions}
                           />
                         </div>
                         <div onClick={(event) => event.stopPropagation()}>
@@ -455,11 +850,11 @@ export function ProjectsPageClient({
           )}
         </div>
 
-        <Card className="hidden xl:block h-fit p-5 xl:sticky xl:top-4">
+        <Card className="hidden h-fit border-primary/20 p-5 xl:sticky xl:top-4 xl:block">
           {selectedProject ? (
             <div className="space-y-5">
               <div>
-                <div className="text-sm font-medium text-muted-foreground">
+                <div className="text-sm font-medium text-primary/80">
                   Selected Project
                 </div>
                 <div className="mt-2 text-3xl font-semibold leading-tight">
@@ -467,22 +862,22 @@ export function ProjectsPageClient({
                 </div>
               </div>
 
-              <div className="rounded-md border p-4">
+              <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="text-4xl font-semibold leading-none">
-                      {selectedProject.job_count}
+                    <div className="text-2xl font-semibold leading-none">
+                      {selectedProject.job_count} {selectedProject.job_count === 1 ? "Job" : "Jobs"}
                     </div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      {selectedProject.open_job_count} open
+                      {selectedProject.open_job_count === 0 ? "All jobs completed" : `${selectedProject.open_job_count} open job${selectedProject.open_job_count === 1 ? "" : "s"}`}
                     </div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">
                       Last activity
                     </div>
-                    <div className="mt-1 text-2xl font-semibold leading-tight">
-                      {formatRelativeTime(selectedProject.last_activity_at)}
+                    <div className="mt-1 text-xl font-semibold leading-tight">
+                      {formatRelativeTime(selectedProject.last_activity_at)} {formatRelativeTime(selectedProject.created_at) === "No activity yet" && "(Created " + formatRelativeTime(selectedProject.created_at) + ")"}
                     </div>
                   </div>
                 </div>
@@ -490,11 +885,11 @@ export function ProjectsPageClient({
 
               <div className="space-y-3 border-t pt-4">
                 <div className="text-sm font-medium text-muted-foreground">
-                  Crew
+                  Superintendents / GC:
                 </div>
                 {selectedProject.crew_names.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
-                    No superintendent assigned.
+                    No Superintendents / GCs assigned.
                   </div>
                 ) : (
                   <div className="space-y-2">
