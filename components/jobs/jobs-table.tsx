@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toggleJobComplete } from "@/app/(app)/projects/[id]/actions";
 import { DeleteJobDialog } from "@/components/jobs/delete-job-dialog";
+import { EditJobDialog } from "@/components/jobs/edit-job-dialog";
 
 export type JobRow = {
   id: string;
@@ -38,6 +46,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
   const [filter, setFilter] = useState<"all" | "open" | "done">("all");
   const [isPending, startTransition] = useTransition();
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
+  const [editingJob, setEditingJob] = useState<JobRow | null>(null);
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -89,7 +98,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Search jobs..."
             className="w-full sm:w-64"
           />
@@ -107,7 +116,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                 <TableHead className="w-56">Superintendent / GC</TableHead>
               )}
               <TableHead className="w-35">Status</TableHead>
-              <TableHead className="w-55 text-right">Actions</TableHead>
+              <TableHead className="w-28 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -126,7 +135,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                 <TableRow key={job.id}>
                   <TableCell className="font-medium">{job.title}</TableCell>
                   <TableCell>{formatMoney(job.price_cents)}</TableCell>
-                  <TableCell>{job.scheduled_completion ?? "”"}</TableCell>
+                  <TableCell>{job.scheduled_completion ?? "--"}</TableCell>
                   {showSuperintendent && (
                     <TableCell>{job.superintendent ?? ""}</TableCell>
                   )}
@@ -138,40 +147,68 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="inline-flex gap-2">
-                      <Button
-                        className="cursor-pointer"
-                        variant="outline"
-                        disabled={isPending}
-                        onClick={() =>
-                          startTransition(async () => {
-                            await toggleJobComplete(job.id, !job.is_completed);
-                            router.refresh();
-                          })
-                        }
-                      >
-                        {job.is_completed
-                          ? "Unmark Completed"
-                          : "Mark Completed"}
-                      </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="cursor-pointer"
+                          disabled={isPending}
+                          aria-label={`Actions for ${job.title}`}
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            setEditingJob(job);
+                          }}
+                          disabled={isPending}
+                        >
+                          <Pencil className="size-4" />
+                          Edit Job
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            startTransition(async () => {
+                              await toggleJobComplete(job.id, !job.is_completed);
+                              router.refresh();
+                            });
+                          }}
+                          disabled={isPending}
+                        >
+                          <CheckCircle2 className="size-4" />
+                          {job.is_completed
+                            ? "Unmark Completed"
+                            : "Mark Completed"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer text-destructive focus:text-destructive"
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            setDeleteJobId(job.id);
+                          }}
+                          disabled={isPending}
+                        >
+                          <Trash2 className="size-4" />
+                          Delete Job
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
-                      <DeleteJobDialog
-                        jobId={job.id}
-                        open={deleteJobId === job.id}
-                        onOpenChange={(open) =>
-                          setDeleteJobId(open ? job.id : null)
-                        }
-                        trigger={
-                          <Button
-                            className="cursor-pointer hover:bg-destructive hover:text-white"
-                            variant="outline"
-                            disabled={isPending}
-                          >
-                            Delete
-                          </Button>
-                        }
-                      />
-                    </div>
+                    <DeleteJobDialog
+                      jobId={job.id}
+                      open={deleteJobId === job.id}
+                      onOpenChange={(open) =>
+                        setDeleteJobId(open ? job.id : null)
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -179,6 +216,16 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
           </TableBody>
         </Table>
       </div>
+
+      {editingJob && (
+        <EditJobDialog
+          job={editingJob}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingJob(null);
+          }}
+        />
+      )}
     </div>
   );
 }
