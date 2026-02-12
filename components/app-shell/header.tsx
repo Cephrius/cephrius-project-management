@@ -3,6 +3,8 @@
 import Link from "next/link";
 import {
   Briefcase,
+  ChevronsLeft,
+  ChevronsRight,
   FileText,
   FolderKanban,
   LogOutIcon,
@@ -23,6 +25,7 @@ import { useBreadcrumbs } from "./breadcrumb-context";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { cn } from "@/lib/utils";
+import { useSidebarState } from "./sidebar-state";
 
 type SuggestionType = "project" | "job" | "invoice";
 
@@ -46,6 +49,7 @@ export function Header() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { crumbs, rightSlot } = useBreadcrumbs();
+  const { collapsed, toggleCollapsed } = useSidebarState();
   const currentQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(currentQuery);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -223,6 +227,21 @@ export function Header() {
         </div>
 
         <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="hidden md:inline-flex"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronsRight className="size-4" />
+            ) : (
+              <ChevronsLeft className="size-4" />
+            )}
+          </Button>
+
           {crumbs.map((c, idx) => {
             const isLast = idx === crumbs.length - 1;
             return (
