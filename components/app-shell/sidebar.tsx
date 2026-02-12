@@ -44,24 +44,32 @@ export async function Sidebar() {
   const companyName = formatCompanyName(rawCompanyName);
 
   return (
-    <aside className="hidden border-r border-primary/20 bg-background md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col">
-      <div className="p-4">
-        <div className="text-sm font-semibold text-primary">{companyName}</div>
-        <div className="text-xs text-muted-foreground">JobSyte Portal</div>
+    <>
+      <div className="fixed inset-x-3 bottom-3 z-50 md:hidden">
+        <div className="rounded-2xl border border-primary/20 bg-background/95 p-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <SidebarNav mobile />
+        </div>
       </div>
 
-      <Separator />
+      <aside className="hidden overflow-hidden rounded-2xl border border-primary/20 bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 md:sticky md:top-3 md:flex md:h-[calc(100vh-1.5rem)] md:w-64 md:shrink-0 md:flex-col md:self-start">
+        <div className="p-4">
+          <div className="text-sm font-semibold text-primary">{companyName}</div>
+          <div className="text-xs text-muted-foreground">JobSyte Portal</div>
+        </div>
 
-      <SidebarNav />
+        <Separator />
 
-      <div className="mt-auto border-t border-primary/10 p-2 text-xs text-muted-foreground">
-        <p>v0.1.0 </p>
-        Powered by{" "}
-        <a href="https://cephrius.com" className="underline hover:text-primary">
-          Cephrius Technologies{" "}
-        </a>
-        <a>©{new Date().getFullYear()}</a>
-      </div>
-    </aside>
+        <SidebarNav />
+
+        <div className="mt-auto border-t border-primary/10 p-2 text-xs text-muted-foreground">
+          <p>v0.1.0 </p>
+          Powered by{" "}
+          <a href="https://cephrius.com" className="underline hover:text-primary">
+            Cephrius Technologies{" "}
+          </a>
+          <a>©{new Date().getFullYear()}</a>
+        </div>
+      </aside>
+    </>
   );
 }
