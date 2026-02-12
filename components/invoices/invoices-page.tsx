@@ -159,7 +159,7 @@ export function InvoicesPageClient({
     return (
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-semibold">Invoices (0)</h1>
+          <h1 className="text-xl font-semibold text-primary">Invoices (0)</h1>
           <Link href="/invoices/new">
             <Button>Create Invoice</Button>
           </Link>
@@ -176,7 +176,7 @@ export function InvoicesPageClient({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Invoices</h1>
+            <h1 className="text-2xl font-semibold text-primary">Invoices</h1>
             <p className="text-sm text-muted-foreground">
               {filteredInvoices.length} Invoice
               {filteredInvoices.length === 1 ? "" : "s"} shown
@@ -264,8 +264,10 @@ export function InvoicesPageClient({
                 <Card
                   key={invoice.id}
                   className={cn(
-                    "p-4 transition-colors sm:p-5",
-                    isSelected ? "ring-2 ring-primary/20" : "hover:bg-muted/30",
+                    "border-primary/10 p-4 transition-colors sm:p-5",
+                    isSelected
+                      ? "bg-primary/[0.03] ring-2 ring-primary/20"
+                      : "hover:bg-primary/5",
                   )}
                   onClick={() => setSelectedInvoiceId(invoice.id)}
                 >
@@ -331,11 +333,11 @@ export function InvoicesPageClient({
           )}
         </div>
 
-        <Card className="h-fit p-5 xl:sticky xl:top-4">
+        <Card className="h-fit border-primary/20 p-5 xl:sticky xl:top-4">
           {selectedInvoice ? (
             <div className="space-y-5">
               <div>
-                <div className="text-sm font-medium text-muted-foreground">
+                <div className="text-sm font-medium text-primary/80">
                   Selected Invoice
                 </div>
                 <div className="mt-2 text-3xl font-semibold leading-tight">
@@ -343,9 +345,9 @@ export function InvoicesPageClient({
                 </div>
               </div>
 
-              <div className="rounded-md border p-4">
+              <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-4">
                 <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground">Total</div>
+                  <div className="text-sm text-primary/80">Total</div>
                   <div className="text-4xl font-semibold leading-none">
                     {money(selectedInvoice.subtotal_cents)}
                   </div>

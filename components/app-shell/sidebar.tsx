@@ -44,9 +44,9 @@ export async function Sidebar() {
   const companyName = formatCompanyName(rawCompanyName);
 
   return (
-    <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col border-r bg-background">
+    <aside className="hidden border-r border-primary/20 bg-background md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col">
       <div className="p-4">
-        <div className="text-sm font-semibold">{companyName}</div>
+        <div className="text-sm font-semibold text-primary">{companyName}</div>
         <div className="text-xs text-muted-foreground">JobSyte Portal</div>
       </div>
 
@@ -54,10 +54,10 @@ export async function Sidebar() {
 
       <SidebarNav />
 
-      <div className="mt-auto p-2 text-xs text-muted-foreground">
+      <div className="mt-auto border-t border-primary/10 p-2 text-xs text-muted-foreground">
         <p>v0.1.0 </p>
         Powered by{" "}
-        <a href="https://cephrius.com" className="underline">
+        <a href="https://cephrius.com" className="underline hover:text-primary">
           Cephrius Technologies{" "}
         </a>
         <a>©{new Date().getFullYear()}</a>

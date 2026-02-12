@@ -27,7 +27,7 @@ export function Header() {
   };
 
   return (
-    <header className="border-b bg-background px-4 py-3">
+    <header className="border-b border-primary/20 bg-background px-4 py-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           {crumbs.map((c, idx) => {
@@ -38,11 +38,13 @@ export function Header() {
                 className="flex items-center gap-2"
               >
                 {c.href && !isLast ? (
-                  <Link className="hover:underline" href={c.href}>
+                  <Link className="hover:text-primary hover:underline" href={c.href}>
                     {c.label}
                   </Link>
                 ) : (
-                  <span className={isLast ? "text-foreground font-medium" : ""}>
+                  <span
+                    className={isLast ? "font-medium text-primary" : "text-muted-foreground"}
+                  >
                     {c.label}
                   </span>
                 )}
@@ -91,7 +93,7 @@ export function Header() {
                 "rounded-md border px-3 py-1.5 text-xs font-medium transition",
                 isActive
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "text-muted-foreground hover:bg-muted",
+                  : "text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-primary",
               )}
             >
               {item.label}

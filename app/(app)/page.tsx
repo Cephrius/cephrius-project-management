@@ -150,7 +150,7 @@ export default async function AppHome() {
     return (
       <div className="space-y-6">
         <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/" }]} />
-        <Card className="p-6">
+        <Card className="border-primary/20 p-6">
           <div className="text-sm text-muted-foreground">
             Failed to load dashboard: {firstError.message}
           </div>
@@ -202,7 +202,7 @@ export default async function AppHome() {
       <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/" }]} />
 
       <div>
-        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <h1 className="text-xl font-semibold text-primary">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
           Today&apos;s schedule, this week&apos;s pipeline, and billing at a
           glance.
@@ -210,8 +210,8 @@ export default async function AppHome() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Schedule Focus</div>
+        <Card className="border-primary/20 bg-primary/[0.03] p-4">
+          <div className="text-xs font-medium text-primary/80">Schedule Focus</div>
           <div className="mt-2 text-3xl font-semibold">{dueTodayCount}</div>
           <div className="text-xs text-muted-foreground">Jobs due today</div>
           <div className="mt-3 text-sm">
@@ -221,8 +221,8 @@ export default async function AppHome() {
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Work Pipeline</div>
+        <Card className="border-primary/20 bg-primary/[0.03] p-4">
+          <div className="text-xs font-medium text-primary/80">Work Pipeline</div>
           <div className="mt-2 text-3xl font-semibold">{openJobsCount}</div>
           <div className="text-xs text-muted-foreground">Open Jobs</div>
           <div className="mt-3 text-sm">
@@ -231,21 +231,21 @@ export default async function AppHome() {
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Projects</div>
+        <Card className="border-primary/20 bg-primary/[0.03] p-4">
+          <div className="text-xs font-medium text-primary/80">Projects</div>
           <div className="mt-2 text-3xl font-semibold">{projects.length}</div>
           <div className="text-xs text-muted-foreground">Active Projects</div>
           <div className="mt-3">
             <Link href="/projects">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10">
                 Open Projects
               </Button>
             </Link>
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">
+        <Card className="border-primary/20 bg-primary/[0.03] p-4">
+          <div className="text-xs font-medium text-primary/80">
             Invoices ({monthName})
           </div>
           <div className="mt-2 text-3xl font-semibold">{invoiceMonthCount}</div>
@@ -257,9 +257,9 @@ export default async function AppHome() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="xl:col-span-2 p-4 sm:p-6">
+        <Card className="border-primary/20 xl:col-span-2 p-4 sm:p-6">
           <div className="mb-4">
-            <div className="text-sm font-semibold">
+            <div className="text-sm font-semibold text-primary">
               Jobs Calendar (Next 12 Months)
             </div>
             <div className="text-xs text-muted-foreground">
@@ -274,15 +274,17 @@ export default async function AppHome() {
           />
         </Card>
         {/* WEEKS UPCOMING JOBS */}
-        <Card className="p-4 sm:p-6">
+        <Card className="border-primary/20 p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold">Jobs This Week</div>
+              <div className="text-sm font-semibold text-primary">Jobs This Week</div>
               <div className="text-xs text-muted-foreground">
                 All incomplete jobs scheduled for this week.
               </div>
             </div>
-            <Badge variant="secondary">{upcomingJobs.length}</Badge>
+            <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
+              {upcomingJobs.length}
+            </Badge>
           </div>
 
           {upcomingJobs.length === 0 ? (
@@ -298,7 +300,7 @@ export default async function AppHome() {
               }
             >
               {upcomingJobs.map((job) => (
-                <div key={job.id} className="rounded-md border p-3">
+                <div key={job.id} className="rounded-md border border-primary/20 p-3">
                   <div className="text-sm font-medium">{job.title}</div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {job.scheduled_completion} - {job.project_address}
@@ -315,16 +317,16 @@ export default async function AppHome() {
         </Card>
       </div>
 
-      <Card className="p-4 sm:p-6">
+      <Card className="border-primary/20 p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold">Recent Invoices</div>
+            <div className="text-sm font-semibold text-primary">Recent Invoices</div>
             <div className="text-xs text-muted-foreground">
               Most recently created invoices.
             </div>
           </div>
           <Link href="/invoices">
-            <Button size="sm" variant="outline">
+            <Button size="sm" variant="outline" className="border-primary/30 hover:bg-primary/10">
               View All
             </Button>
           </Link>
@@ -338,7 +340,7 @@ export default async function AppHome() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {recentInvoices.map((invoice) => (
               <Link key={invoice.id} href={`/invoices/${invoice.id}`}>
-                <div className="rounded-md border p-3 transition hover:bg-muted/40">
+                <div className="rounded-md border border-primary/20 p-3 transition hover:bg-primary/5">
                   <div className="text-sm font-medium">
                     {invoice.invoice_number}
                   </div>
