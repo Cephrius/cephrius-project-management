@@ -1,0 +1,75 @@
+import { deleteProject } from "@/app/(app)/projects/actions";
+import { useRouter } from "next/navigation";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+
+export function DeleteProjectButton({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function onDelete() {
+    setIsDeleting(true);
+    const res = await deleteProject(projectId);
+
+    if (!res.ok) {
+      toast.error(res.message ?? "Failed to delete project.");
+      setIsDeleting(false);
+      return;
+    }
+    toast.success("Project Deleted.");
+    router.refresh();
+    setIsDeleting(false);
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isDeleting}
+          className="gap-2 hover:bg-destructive hover:text-white cursor-pointer"
+        >
+          <Trash2 className="size-4" />
+          Delete
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete This Project?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will delete the project and all jobs under it. Invoice history
+            remains unchanged.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="cursor-pointer" disabled={isDeleting}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            className="cursor-pointer"
+            variant="destructive"
+            disabled={isDeleting}
+            onClick={onDelete}
+          >
+            {isDeleting ? "Deleting..." : "Delete Project"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}

@@ -30,6 +30,7 @@ export default async function InvoiceViewPage({
     .from("invoices")
     .select("*")
     .eq("id", id)
+    .is("deleted_at", null)
     .single();
 
   if (invErr || !invoice)

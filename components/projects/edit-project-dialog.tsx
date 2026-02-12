@@ -1,7 +1,17 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import {
+  createBuilder,
+  createSubdivision,
+  editProject,
+} from "@/app/(app)/projects/actions";
+import {
+  CreatableCombobox,
+  type ComboboxItem,
+} from "@/components/projects/createable-combobox";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,16 +19,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  createBuilder,
-  createSubdivision,
-  createProject,
-} from "@/app/(app)/projects/actions";
-import {
-  CreatableCombobox,
-  type ComboboxItem,
-} from "@/components/projects/createable-combobox";
+import type { ProjectListItem } from "./types";
+
+type Item = { id: string; name: string };
 
 function toTitleCase(value: string) {
   return value
@@ -29,32 +32,56 @@ function toTitleCase(value: string) {
     });
 }
 
-type Item = { id: string; name: string };
+function findItemByName(items: ComboboxItem[], name: string | null) {
+  const target = (name ?? "").trim().toLowerCase();
+  if (!target) return null;
+  return items.find((item) => item.name.trim().toLowerCase() === target) ?? null;
+}
 
-export function NewProjectDialog({
+export function EditProjectDialog({
   open,
   onOpenChange,
+  project,
   initialBuilders,
   initialSubdivisions,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  project: ProjectListItem;
   initialBuilders: Item[];
   initialSubdivisions: Item[];
 }) {
   const router = useRouter();
-
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [projectAddress, setProjectAddress] = useState("");
-
+  const [projectAddress, setProjectAddress] = useState(project.project_address);
   const [builders, setBuilders] = useState<ComboboxItem[]>(initialBuilders);
   const [subdivisions, setSubdivisions] =
     useState<ComboboxItem[]>(initialSubdivisions);
 
-  const [builder, setBuilder] = useState<ComboboxItem | null>(null);
-  const [subdivision, setSubdivision] = useState<ComboboxItem | null>(null);
+  const [builder, setBuilder] = useState<ComboboxItem | null>(
+    findItemByName(initialBuilders, project.builder_name),
+  );
+  const [subdivision, setSubdivision] = useState<ComboboxItem | null>(
+    findItemByName(initialSubdivisions, project.subdivision),
+  );
+
+  useEffect(() => {
+    setBuilders(initialBuilders);
+  }, [initialBuilders]);
+
+  useEffect(() => {
+    setSubdivisions(initialSubdivisions);
+  }, [initialSubdivisions]);
+
+  useEffect(() => {
+    if (!open) return;
+    setError(null);
+    setProjectAddress(project.project_address);
+    setBuilder(findItemByName(initialBuilders, project.builder_name));
+    setSubdivision(findItemByName(initialSubdivisions, project.subdivision));
+  }, [open, project, initialBuilders, initialSubdivisions]);
 
   const canSubmit = useMemo(() => {
     return projectAddress.trim().length > 0 && !!builder && !!subdivision;
@@ -62,8 +89,9 @@ export function NewProjectDialog({
 
   async function onCreateBuilder(name: string) {
     const res = await createBuilder(name);
-    if (!res.ok || !res.data)
+    if (!res.ok || !res.data) {
       throw new Error(res.message ?? "Failed to create builder.");
+    }
     setBuilders((prev) => {
       if (prev.some((p) => p.id === res.data!.id)) return prev;
       return [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name));
@@ -73,8 +101,9 @@ export function NewProjectDialog({
 
   async function onCreateSubdivision(name: string) {
     const res = await createSubdivision(name);
-    if (!res.ok || !res.data)
+    if (!res.ok || !res.data) {
       throw new Error(res.message ?? "Failed to create subdivision.");
+    }
     setSubdivisions((prev) => {
       if (prev.some((p) => p.id === res.data!.id)) return prev;
       return [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name));
@@ -86,24 +115,21 @@ export function NewProjectDialog({
     setError(null);
 
     const fd = new FormData();
+    fd.set("project_id", project.id);
     fd.set("project_address", toTitleCase(projectAddress));
 
-    // We submit IDs when selected.
     if (builder?.id) fd.set("builder_id", builder.id);
-    // (Fallback if you ever want: fd.set("builder_name", builder?.name ?? ""))
-
     if (subdivision?.id) fd.set("subdivision_id", subdivision.id);
 
     startTransition(async () => {
-      const res = await createProject(fd);
+      const res = await editProject(fd);
       if (!res.ok) {
-        setError(res.message ?? "Failed to create project.");
+        setError(res.message ?? "Failed to update project.");
         return;
       }
 
-      router.refresh();
       onOpenChange(false);
-      router.push(`/projects/${res.projectId}`);
+      router.refresh();
     });
   }
 
@@ -111,7 +137,7 @@ export function NewProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New Project</DialogTitle>
+          <DialogTitle>Edit Project</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -161,7 +187,7 @@ export function NewProjectDialog({
               disabled={isPending || !canSubmit}
               onClick={onSubmit}
             >
-              {isPending ? "Creating..." : "Create"}
+              {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>

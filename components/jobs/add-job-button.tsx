@@ -1,16 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
-import { AddJobDialog} from "@/components/jobs/add-job-dialog"
+import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 
-export function AddJobButton({ projectId }: { projectId: string }) {
-    const [open, setOpen] = useState(false);
+type ButtonProps = ComponentProps<typeof Button>;
 
-    return (
-        <>
-            <Button onClick={() => setOpen(true)}>Add Job</Button>
-            <AddJobDialog projectId={projectId} open={open} onOpenChange={setOpen} />
-        </>
-    )
+export function AddJobButton({
+  projectId,
+  label = "Add Job",
+  variant,
+  size,
+  className,
+}: {
+  projectId: string;
+  label?: string;
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        variant={variant}
+        size={size}
+        className={className}
+      >
+        {label}
+      </Button>
+      <AddJobDialog projectId={projectId} open={open} onOpenChange={setOpen} />
+    </>
+  );
 }

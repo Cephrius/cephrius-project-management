@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
 import { createInvoice } from "@/app/(app)/projects/[id]/invoice-actions";
-import { SelectSeparator } from "../ui/select";
 
 type Job = {
   id: string;
