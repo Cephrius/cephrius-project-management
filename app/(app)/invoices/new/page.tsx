@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { CreateInvoiceByBuilder } from "@/components/invoices/create-invoice-by-builder";
+import { readPreferenceSettings } from "@/lib/settings/preferences";
 
 export default async function NewInvoicePage() {
   const supabase = createClient();
@@ -13,6 +14,7 @@ export default async function NewInvoicePage() {
   } = await (await supabase).auth.getUser();
 
   if (error || !user) redirect("/login");
+  const settings = readPreferenceSettings(user.user_metadata);
 
   const { data: builders } = await (await supabase)
     .from("builders")
@@ -44,6 +46,7 @@ export default async function NewInvoicePage() {
       <Card className="p-4 sm:p-6">
         <CreateInvoiceByBuilder
           builders={builders ?? []}
+          defaultDueDays={settings.default_due_days}
           initialContractor={{
             company_name: profile?.company_name ?? "",
             address: profile?.address ?? "",

@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createInvoiceForBuilder } from "@/app/(app)/invoices/actions";
 import { cn } from "@/lib/utils";
+import { suggestDueDate } from "@/lib/settings/preferences";
 import {
   CreatableCombobox,
   type ComboboxItem,
@@ -79,9 +80,11 @@ function readStorageArray<T>(key: string): T[] {
 export function CreateInvoiceByBuilder({
   builders,
   initialContractor,
+  defaultDueDays,
 }: {
   builders: Builder[];
   initialContractor: Contractor;
+  defaultDueDays: number;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -114,7 +117,10 @@ export function CreateInvoiceByBuilder({
 
   const today = new Date().toISOString().slice(0, 10);
   const [invoiceDate, setInvoiceDate] = useState(today);
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(
+    suggestDueDate(today, defaultDueDays) ?? "",
+  );
+  const [dueDateManuallyEdited, setDueDateManuallyEdited] = useState(false);
 
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobs, setJobs] = useState<EligibleJob[]>([]);
@@ -590,7 +596,13 @@ export function CreateInvoiceByBuilder({
                 <Input
                   type="date"
                   value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
+                  onChange={(e) => {
+                    const nextInvoiceDate = e.target.value;
+                    setInvoiceDate(nextInvoiceDate);
+                    if (!dueDateManuallyEdited) {
+                      setDueDate(suggestDueDate(nextInvoiceDate, defaultDueDays) ?? "");
+                    }
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -598,8 +610,25 @@ export function CreateInvoiceByBuilder({
                 <Input
                   type="date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    setDueDateManuallyEdited(true);
+                    setDueDate(e.target.value);
+                  }}
                 />
+                {defaultDueDays > 0 && dueDateManuallyEdited && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setDueDateManuallyEdited(false);
+                      setDueDate(suggestDueDate(invoiceDate, defaultDueDays) ?? "");
+                    }}
+                  >
+                    Reset to default ({defaultDueDays} days)
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
