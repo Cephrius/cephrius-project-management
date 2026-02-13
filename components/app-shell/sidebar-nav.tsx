@@ -4,6 +4,11 @@ import Link from "next/link";
 import { Home, FolderKanban, FileText, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -12,7 +17,13 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function SidebarNav({ mobile = false }: { mobile?: boolean }) {
+export function SidebarNav({
+  mobile = false,
+  collapsed = false,
+}: {
+  mobile?: boolean;
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
 
   if (mobile) {
@@ -46,26 +57,48 @@ export function SidebarNav({ mobile = false }: { mobile?: boolean }) {
   }
 
   return (
-    <nav className="p-3 text-sm space-y-1">
+    <nav className={cn("p-3 text-sm space-y-1", collapsed && "px-2")}>
       {navItems.map((item) => {
         const isActive =
           item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const Icon = item.icon;
+        const linkClass = cn(
+          "flex items-center rounded-md border border-transparent transition",
+          isActive
+            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+            : "hover:border-primary/30 hover:bg-primary/5 hover:text-primary",
+          collapsed ? "justify-center px-2 py-2.5" : "gap-2 px-3 py-2",
+        );
+        const linkContent = (
+          <>
+            <Icon className="size-4 shrink-0" />
+            {!collapsed && item.label}
+          </>
+        );
+
+        if (!collapsed) {
+          return (
+            <Link key={item.href} href={item.href} className={linkClass}>
+              {linkContent}
+            </Link>
+          );
+        }
 
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-2 rounded-md border border-transparent px-3 py-2 transition",
-              isActive
-                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                : "hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
-            )}
-          >
-            <Icon className="size-4" />
-            {item.label}
-          </Link>
+          <Tooltip key={item.href}>
+            <TooltipTrigger asChild>
+              <Link
+                href={item.href}
+                className={linkClass}
+                aria-label={item.label}
+              >
+                {linkContent}
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              {item.label}
+            </TooltipContent>
+          </Tooltip>
         );
       })}
     </nav>

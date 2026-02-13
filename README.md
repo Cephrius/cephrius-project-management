@@ -34,3 +34,39 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Preferences Automation
+
+Settings under `Settings > Preferences` are processed by a daily cron route:
+
+- `Invoice Reminder Emails`
+- `Weekly Summary`
+- `Product Updates`
+
+Route:
+
+- `GET /api/cron/preferences?mode=auto`
+
+Required environment variables:
+
+```bash
+CRON_SECRET=your-random-secret
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+RESEND_API_KEY=re_xxx
+RESEND_FROM_EMAIL="JobSyte <notifications@yourdomain.com>"
+NEXT_PUBLIC_APP_URL=https://your-app-domain.com
+```
+
+Optional:
+
+```bash
+INVOICE_REMINDER_LEAD_DAYS=3
+PRODUCT_UPDATE_BULLETS="Update 1|Update 2|Update 3"
+```
+
+Manual run example:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  "http://localhost:3000/api/cron/preferences?mode=all&force=1"
+```
