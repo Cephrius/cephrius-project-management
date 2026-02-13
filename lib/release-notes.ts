@@ -7,6 +7,21 @@ export type ReleaseNote = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.1.3a",
+    releasedOn: "Feb 13, 2026",
+    changes: [
+      "Added smooth page transition animations when navigating between app routes.",
+      "Introduced a click-to-open Version Changelog dialog directly from the sidebar version label.",
+      "Refactored notification emails into centralized, reusable templates for reminders, weekly summaries, and product updates.",
+      "Updated email copy to use human-readable month and year formatting (for example, Feb 2026).",
+    ],
+    bugFixes: [
+      "Changelog popup now opens only once per new release version after deployment.",
+      "Improved changelog dialog sizing behavior so width can be expanded beyond default dialog caps.",
+      "Stabilized reminder template date labeling by passing explicit runtime context from cron processing.",
+    ],
+  },
+  {
     version: "v0.1.2",
     releasedOn: "Feb 13, 2026",
     changes: [
