@@ -41,7 +41,13 @@ function formatMoney(cents: number) {
   });
 }
 
-export function JobsTable({ jobs }: { jobs: JobRow[] }) {
+export function JobsTable({
+  jobs,
+  projectId,
+}: {
+  jobs: JobRow[];
+  projectId: string;
+}) {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | "open" | "done">("all");
   const [isPending, startTransition] = useTransition();
@@ -220,6 +226,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
       {editingJob && (
         <EditJobDialog
           job={editingJob}
+          projectId={projectId}
           open
           onOpenChange={(open) => {
             if (!open) setEditingJob(null);

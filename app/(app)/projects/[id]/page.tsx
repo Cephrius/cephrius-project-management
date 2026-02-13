@@ -138,7 +138,7 @@ export default async function ProjectDashboardPage({
           </div>
         </div>
 
-        <JobsTable jobs={allJobs} />
+        <JobsTable jobs={allJobs} projectId={project.id} />
       </Card>
     </div>
   );

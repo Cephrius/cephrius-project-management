@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import {
   createBuilder,
   createSubdivision,
@@ -29,25 +30,39 @@ function toTitleCase(value: string) {
     });
 }
 
+function normalizeWhitespace(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 type Item = { id: string; name: string };
 
 export function NewProjectDialog({
   open,
   onOpenChange,
-  initialBuilders,
-  initialSubdivisions,
+  initialBuilders = [],
+  initialSubdivisions = [],
+  initialHouseNumber = "",
+  initialStreetAddress = "",
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  initialBuilders: Item[];
-  initialSubdivisions: Item[];
+  initialBuilders?: Item[];
+  initialSubdivisions?: Item[];
+  initialHouseNumber?: string;
+  initialStreetAddress?: string;
 }) {
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [projectAddress, setProjectAddress] = useState("");
+  const [houseNumber, setHouseNumber] = useState(
+    normalizeWhitespace(initialHouseNumber),
+  );
+  const [streetAddress, setStreetAddress] = useState(
+    toTitleCase(initialStreetAddress),
+  );
 
   const [builders, setBuilders] = useState<ComboboxItem[]>(initialBuilders);
   const [subdivisions, setSubdivisions] =
@@ -56,9 +71,46 @@ export function NewProjectDialog({
   const [builder, setBuilder] = useState<ComboboxItem | null>(null);
   const [subdivision, setSubdivision] = useState<ComboboxItem | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    let isActive = true;
+
+    const needsBuilders = initialBuilders.length === 0;
+    const needsSubdivisions = initialSubdivisions.length === 0;
+    if (!needsBuilders && !needsSubdivisions) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    (async () => {
+      const [buildersRes, subdivisionsRes] = await Promise.all([
+        supabase.from("builders").select("id, name").order("name"),
+        supabase.from("subdivisions").select("id, name").order("name"),
+      ]);
+
+      if (!isActive) return;
+      if (needsBuilders && buildersRes.data) {
+        setBuilders(buildersRes.data as ComboboxItem[]);
+      }
+      if (needsSubdivisions && subdivisionsRes.data) {
+        setSubdivisions(subdivisionsRes.data as ComboboxItem[]);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [open, initialBuilders, initialSubdivisions, supabase]);
+
   const canSubmit = useMemo(() => {
-    return projectAddress.trim().length > 0 && !!builder && !!subdivision;
-  }, [projectAddress, builder, subdivision]);
+    return (
+      houseNumber.trim().length > 0 &&
+      streetAddress.trim().length > 0 &&
+      !!builder &&
+      !!subdivision
+    );
+  }, [houseNumber, streetAddress, builder, subdivision]);
 
   async function onCreateBuilder(name: string) {
     const res = await createBuilder(name);
@@ -86,7 +138,8 @@ export function NewProjectDialog({
     setError(null);
 
     const fd = new FormData();
-    fd.set("project_address", toTitleCase(projectAddress));
+    fd.set("house_number", normalizeWhitespace(houseNumber));
+    fd.set("street_address", toTitleCase(streetAddress));
 
     // We submit IDs when selected.
     if (builder?.id) fd.set("builder_id", builder.id);
@@ -115,16 +168,30 @@ export function NewProjectDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Project Address</div>
-            <Input
-              value={projectAddress}
-              onChange={(e) => setProjectAddress(e.target.value)}
-              onBlur={() =>
-                setProjectAddress((current) => toTitleCase(current))
-              }
-              placeholder="1234 Main St, Houston TX"
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Street Number</div>
+              <Input
+                value={houseNumber}
+                onChange={(e) => setHouseNumber(e.target.value)}
+                onBlur={() =>
+                  setHouseNumber((current) => normalizeWhitespace(current))
+                }
+                placeholder="1234"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <div className="text-sm font-medium">Street Address</div>
+              <Input
+                value={streetAddress}
+                onChange={(e) => setStreetAddress(e.target.value)}
+                onBlur={() =>
+                  setStreetAddress((current) => toTitleCase(current))
+                }
+                placeholder="Main St"
+              />
+            </div>
           </div>
 
           <CreatableCombobox

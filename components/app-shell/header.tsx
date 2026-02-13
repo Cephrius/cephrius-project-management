@@ -8,6 +8,7 @@ import {
   FileText,
   FolderKanban,
   LogOutIcon,
+  Plus,
   Search,
 } from "lucide-react";
 import {
@@ -26,6 +27,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { cn } from "@/lib/utils";
 import { useSidebarState } from "./sidebar-state";
+import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 
 type SuggestionType = "project" | "job" | "invoice";
 
@@ -43,6 +45,25 @@ function suggestionTypeLabel(type: SuggestionType) {
   return "Invoice";
 }
 
+function normalizeQuery(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function splitAddressFromQuery(value: string) {
+  const normalized = normalizeQuery(value);
+  if (!normalized) return { houseNumber: "", streetAddress: "" };
+
+  const [firstPart, ...restParts] = normalized.split(" ");
+  if (/^\d+[A-Za-z0-9-]*$/.test(firstPart)) {
+    return {
+      houseNumber: firstPart,
+      streetAddress: restParts.join(" "),
+    };
+  }
+
+  return { houseNumber: "", streetAddress: normalized };
+}
+
 export function Header() {
   const supabase = createClient();
   const router = useRouter();
@@ -56,6 +77,10 @@ export function Header() {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectSeed, setNewProjectSeed] = useState(0);
+  const [newProjectHouseNumber, setNewProjectHouseNumber] = useState("");
+  const [newProjectStreetAddress, setNewProjectStreetAddress] = useState("");
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -144,8 +169,22 @@ export function Header() {
     router.push(suggestion.href);
   }
 
+  function openNewProjectFromQuery(rawQuery: string) {
+    const { houseNumber, streetAddress } = splitAddressFromQuery(rawQuery);
+
+    setNewProjectHouseNumber(houseNumber);
+    setNewProjectStreetAddress(streetAddress);
+    setNewProjectSeed((current) => current + 1);
+    setNewProjectOpen(true);
+    setIsSearchFocused(false);
+    setSuggestions([]);
+    setActiveSuggestionIndex(-1);
+  }
+
   function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    const canNavigate = isSearchFocused && suggestions.length > 0;
+    const canCreateProject = query.trim().length >= 2;
+    const optionCount = suggestions.length + (canCreateProject ? 1 : 0);
+    const canNavigate = isSearchFocused && optionCount > 0;
     if (!canNavigate) {
       if (event.key === "Escape") {
         setIsSearchFocused(false);
@@ -157,7 +196,7 @@ export function Header() {
       event.preventDefault();
       setActiveSuggestionIndex((current) => {
         if (current < 0) return 0;
-        return (current + 1) % suggestions.length;
+        return (current + 1) % optionCount;
       });
       return;
     }
@@ -165,16 +204,22 @@ export function Header() {
     if (event.key === "ArrowUp") {
       event.preventDefault();
       setActiveSuggestionIndex((current) => {
-        if (current < 0) return suggestions.length - 1;
-        return current === 0 ? suggestions.length - 1 : current - 1;
+        if (current < 0) return optionCount - 1;
+        return current === 0 ? optionCount - 1 : current - 1;
       });
       return;
     }
 
     if (event.key === "Enter" && activeSuggestionIndex >= 0) {
       event.preventDefault();
-      const selected = suggestions[activeSuggestionIndex];
-      if (selected) selectSuggestion(selected);
+      if (activeSuggestionIndex < suggestions.length) {
+        const selected = suggestions[activeSuggestionIndex];
+        if (selected) selectSuggestion(selected);
+        return;
+      }
+      if (canCreateProject) {
+        openNewProjectFromQuery(query);
+      }
       return;
     }
 
@@ -199,6 +244,7 @@ export function Header() {
   };
 
   const showSuggestions = isSearchFocused && query.trim().length >= 2;
+  const canCreateProject = query.trim().length >= 2;
 
   return (
     <header className="border-b border-primary/20 bg-background px-4 py-3 rounded-xl">
@@ -335,6 +381,34 @@ export function Header() {
                     ))}
                   </div>
                 )}
+
+                {canCreateProject && (
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full items-start justify-between gap-3 border-t border-primary/10 px-3 py-2 text-left text-sm transition-colors",
+                      activeSuggestionIndex === suggestions.length
+                        ? "bg-primary/10"
+                        : "hover:bg-primary/5",
+                    )}
+                    onClick={() => openNewProjectFromQuery(query)}
+                  >
+                    <div className="flex min-w-0 items-start gap-2">
+                      <Plus className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">
+                          Create New Project
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          Prefill from: {normalizeQuery(query)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                      Action
+                    </div>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -363,6 +437,16 @@ export function Header() {
           </div>
         </div>
       </div>
+
+      <NewProjectDialog
+        key={`header-new-project-${newProjectSeed}`}
+        open={newProjectOpen}
+        onOpenChange={setNewProjectOpen}
+        initialBuilders={[]}
+        initialSubdivisions={[]}
+        initialHouseNumber={newProjectHouseNumber}
+        initialStreetAddress={newProjectStreetAddress}
+      />
     </header>
   );
 }

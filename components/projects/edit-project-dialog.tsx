@@ -32,6 +32,25 @@ function toTitleCase(value: string) {
     });
 }
 
+function normalizeWhitespace(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function splitProjectAddress(value: string) {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return { houseNumber: "", streetAddress: "" };
+
+  const firstSpace = normalized.indexOf(" ");
+  if (firstSpace === -1) {
+    return { houseNumber: normalized, streetAddress: "" };
+  }
+
+  return {
+    houseNumber: normalized.slice(0, firstSpace),
+    streetAddress: normalized.slice(firstSpace + 1),
+  };
+}
+
 function findItemByName(items: ComboboxItem[], name: string | null) {
   const target = (name ?? "").trim().toLowerCase();
   if (!target) return null;
@@ -55,7 +74,12 @@ export function EditProjectDialog({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [projectAddress, setProjectAddress] = useState(project.project_address);
+  const [houseNumber, setHouseNumber] = useState(
+    splitProjectAddress(project.project_address).houseNumber,
+  );
+  const [streetAddress, setStreetAddress] = useState(
+    splitProjectAddress(project.project_address).streetAddress,
+  );
   const [builders, setBuilders] = useState<ComboboxItem[]>(initialBuilders);
   const [subdivisions, setSubdivisions] =
     useState<ComboboxItem[]>(initialSubdivisions);
@@ -78,14 +102,21 @@ export function EditProjectDialog({
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setProjectAddress(project.project_address);
+    const splitAddress = splitProjectAddress(project.project_address);
+    setHouseNumber(splitAddress.houseNumber);
+    setStreetAddress(splitAddress.streetAddress);
     setBuilder(findItemByName(initialBuilders, project.builder_name));
     setSubdivision(findItemByName(initialSubdivisions, project.subdivision));
   }, [open, project, initialBuilders, initialSubdivisions]);
 
   const canSubmit = useMemo(() => {
-    return projectAddress.trim().length > 0 && !!builder && !!subdivision;
-  }, [projectAddress, builder, subdivision]);
+    return (
+      houseNumber.trim().length > 0 &&
+      streetAddress.trim().length > 0 &&
+      !!builder &&
+      !!subdivision
+    );
+  }, [houseNumber, streetAddress, builder, subdivision]);
 
   async function onCreateBuilder(name: string) {
     const res = await createBuilder(name);
@@ -116,7 +147,8 @@ export function EditProjectDialog({
 
     const fd = new FormData();
     fd.set("project_id", project.id);
-    fd.set("project_address", toTitleCase(projectAddress));
+    fd.set("house_number", normalizeWhitespace(houseNumber));
+    fd.set("street_address", toTitleCase(streetAddress));
 
     if (builder?.id) fd.set("builder_id", builder.id);
     if (subdivision?.id) fd.set("subdivision_id", subdivision.id);
@@ -141,16 +173,30 @@ export function EditProjectDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Project Address</div>
-            <Input
-              value={projectAddress}
-              onChange={(e) => setProjectAddress(e.target.value)}
-              onBlur={() =>
-                setProjectAddress((current) => toTitleCase(current))
-              }
-              placeholder="1234 Main St, Houston TX"
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Street Number</div>
+              <Input
+                value={houseNumber}
+                onChange={(e) => setHouseNumber(e.target.value)}
+                onBlur={() =>
+                  setHouseNumber((current) => normalizeWhitespace(current))
+                }
+                placeholder="1234"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <div className="text-sm font-medium">Street Address</div>
+              <Input
+                value={streetAddress}
+                onChange={(e) => setStreetAddress(e.target.value)}
+                onBlur={() =>
+                  setStreetAddress((current) => toTitleCase(current))
+                }
+                placeholder="Main St"
+              />
+            </div>
           </div>
 
           <CreatableCombobox

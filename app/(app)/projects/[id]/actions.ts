@@ -96,10 +96,9 @@ export async function createJob(projectId: string, formData: FormData) {
     String(formData.get("superintendent") || ""),
   );
   const superintendent = superintendentRaw || null;
+  const scheduledCompletion = scheduled_completion || null;
 
   if (!title) return { ok: false, message: "Job title is required." };
-  if (!scheduled_completion)
-    return { ok: false, message: "Scheduled completion date is required." };
 
   const price_cents = parsePriceToCents(priceRaw);
   if (price_cents === null)
@@ -109,7 +108,7 @@ export async function createJob(projectId: string, formData: FormData) {
     project_id: projectId,
     title,
     price_cents,
-    scheduled_completion,
+    scheduled_completion: scheduledCompletion,
     superintendent,
   });
 
@@ -170,11 +169,10 @@ export async function editJob(formData: FormData) {
     String(formData.get("superintendent") || ""),
   );
   const superintendent = superintendentRaw || null;
+  const scheduledCompletion = scheduled_completion || null;
 
   if (!jobId) return { ok: false, message: "Job id is required." };
   if (!title) return { ok: false, message: "Job title is required." };
-  if (!scheduled_completion)
-    return { ok: false, message: "Scheduled completion date is required." };
 
   const price_cents = parsePriceToCents(priceRaw);
   if (price_cents === null)
@@ -185,7 +183,7 @@ export async function editJob(formData: FormData) {
     .update({
       title,
       price_cents,
-      scheduled_completion,
+      scheduled_completion: scheduledCompletion,
       superintendent,
     })
     .eq("id", jobId)
