@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarNav } from "./sidebar-nav";
 import { cn } from "@/lib/utils";
 import { useSidebarState } from "./sidebar-state";
+import { VersionChangelogDialog } from "./version-changelog-dialog";
 
 function companyInitials(name: string) {
   return name
@@ -53,7 +54,7 @@ export function DesktopSidebar({ companyName }: { companyName: string }) {
           collapsed && "text-center",
         )}
       >
-        <p>v0.1.1</p>
+        <VersionChangelogDialog collapsed={collapsed}/>
         {!collapsed && (
           <>
             Powered by{" "}
