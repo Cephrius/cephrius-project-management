@@ -29,6 +29,10 @@ function normalizeHouseNumber(value: string) {
   return normalizeWhitespace(value);
 }
 
+function isValidHouseNumber(value: string) {
+  return /^\d+$/.test(value);
+}
+
 function normalizeStreetAddress(value: string) {
   return toTitleCase(value);
 }
@@ -170,6 +174,9 @@ export async function createProject(formData: FormData) {
       ok: false,
       message: "Street number and street address are required.",
     };
+  }
+  if (usingSplitAddress && !isValidHouseNumber(houseNumber)) {
+    return { ok: false, message: "Street number must be numeric." };
   }
   if (!project_address) {
     return { ok: false, message: "Project address is required." };
@@ -346,8 +353,11 @@ export async function editProject(formData: FormData) {
   if (usingSplitAddress && (!houseNumber || !streetAddress)) {
     return {
       ok: false,
-      message: "House number and street address are required.",
+      message: "Street number and street address are required.",
     };
+  }
+  if (usingSplitAddress && !isValidHouseNumber(houseNumber)) {
+    return { ok: false, message: "Street number must be numeric." };
   }
   if (!project_address)
     return { ok: false, message: "Project address is required." };

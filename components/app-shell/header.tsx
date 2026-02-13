@@ -53,8 +53,17 @@ function splitAddressFromQuery(value: string) {
   const normalized = normalizeQuery(value);
   if (!normalized) return { houseNumber: "", streetAddress: "" };
 
+  // Handles: "13104Steel Road" -> "13104" + "Steel Road"
+  const compactMatch = normalized.match(/^(\d+)\s*([A-Za-z].*)$/);
+  if (compactMatch) {
+    return {
+      houseNumber: compactMatch[1],
+      streetAddress: compactMatch[2].trim(),
+    };
+  }
+
   const [firstPart, ...restParts] = normalized.split(" ");
-  if (/^\d+[A-Za-z0-9-]*$/.test(firstPart)) {
+  if (/^\d+$/.test(firstPart)) {
     return {
       houseNumber: firstPart,
       streetAddress: restParts.join(" "),
@@ -63,6 +72,16 @@ function splitAddressFromQuery(value: string) {
 
   return { houseNumber: "", streetAddress: normalized };
 }
+
+function formatProjectQueryPreview(value: string) {
+  const { houseNumber, streetAddress } = splitAddressFromQuery(value);
+  if (houseNumber && streetAddress) {
+    return `${houseNumber} ${streetAddress}`;
+  }
+  if (houseNumber) return houseNumber;
+  return normalizeQuery(value);
+}
+
 
 export function Header() {
   const supabase = createClient();
@@ -400,7 +419,7 @@ export function Header() {
                           Create New Project
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          Prefill from: {normalizeQuery(query)}
+                          Prefill from: {formatProjectQueryPreview(query)}
                         </div>
                       </div>
                     </div>

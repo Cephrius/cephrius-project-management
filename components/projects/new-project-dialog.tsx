@@ -30,17 +30,23 @@ function toTitleCase(value: string) {
     });
 }
 
-function normalizeWhitespace(value: string) {
-  return value.trim().replace(/\s+/g, " ");
+function normalizeStreetNumber(value: string) {
+  return value.replace(/\D+/g, "");
 }
 
 type Item = { id: string; name: string };
+
+function findItemById(items: ComboboxItem[], id: string | null) {
+  if (!id) return null;
+  return items.find((item) => item.id === id) ?? null;
+}
 
 export function NewProjectDialog({
   open,
   onOpenChange,
   initialBuilders = [],
   initialSubdivisions = [],
+  initialSubdivisionId = "",
   initialHouseNumber = "",
   initialStreetAddress = "",
 }: {
@@ -48,6 +54,7 @@ export function NewProjectDialog({
   onOpenChange: (v: boolean) => void;
   initialBuilders?: Item[];
   initialSubdivisions?: Item[];
+  initialSubdivisionId?: string;
   initialHouseNumber?: string;
   initialStreetAddress?: string;
 }) {
@@ -58,7 +65,7 @@ export function NewProjectDialog({
   const [error, setError] = useState<string | null>(null);
 
   const [houseNumber, setHouseNumber] = useState(
-    normalizeWhitespace(initialHouseNumber),
+    normalizeStreetNumber(initialHouseNumber),
   );
   const [streetAddress, setStreetAddress] = useState(
     toTitleCase(initialStreetAddress),
@@ -69,7 +76,9 @@ export function NewProjectDialog({
     useState<ComboboxItem[]>(initialSubdivisions);
 
   const [builder, setBuilder] = useState<ComboboxItem | null>(null);
-  const [subdivision, setSubdivision] = useState<ComboboxItem | null>(null);
+  const [subdivision, setSubdivision] = useState<ComboboxItem | null>(
+    findItemById(initialSubdivisions, initialSubdivisionId),
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -94,14 +103,30 @@ export function NewProjectDialog({
         setBuilders(buildersRes.data as ComboboxItem[]);
       }
       if (needsSubdivisions && subdivisionsRes.data) {
-        setSubdivisions(subdivisionsRes.data as ComboboxItem[]);
+        const loadedSubdivisions = subdivisionsRes.data as ComboboxItem[];
+        setSubdivisions(loadedSubdivisions);
+        if (initialSubdivisionId) {
+          const initialSubdivision = findItemById(
+            loadedSubdivisions,
+            initialSubdivisionId,
+          );
+          if (initialSubdivision) {
+            setSubdivision((current) => current ?? initialSubdivision);
+          }
+        }
       }
     })();
 
     return () => {
       isActive = false;
     };
-  }, [open, initialBuilders, initialSubdivisions, supabase]);
+  }, [
+    open,
+    initialBuilders,
+    initialSubdivisions,
+    initialSubdivisionId,
+    supabase,
+  ]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -138,7 +163,7 @@ export function NewProjectDialog({
     setError(null);
 
     const fd = new FormData();
-    fd.set("house_number", normalizeWhitespace(houseNumber));
+    fd.set("house_number", normalizeStreetNumber(houseNumber));
     fd.set("street_address", toTitleCase(streetAddress));
 
     // We submit IDs when selected.
@@ -173,9 +198,9 @@ export function NewProjectDialog({
               <div className="text-sm font-medium">Street Number</div>
               <Input
                 value={houseNumber}
-                onChange={(e) => setHouseNumber(e.target.value)}
+                onChange={(e) => setHouseNumber(normalizeStreetNumber(e.target.value))}
                 onBlur={() =>
-                  setHouseNumber((current) => normalizeWhitespace(current))
+                  setHouseNumber((current) => normalizeStreetNumber(current))
                 }
                 placeholder="1234"
               />

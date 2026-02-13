@@ -36,6 +36,10 @@ function normalizeWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function normalizeStreetNumber(value: string) {
+  return value.replace(/\D+/g, "");
+}
+
 function splitProjectAddress(value: string) {
   const normalized = normalizeWhitespace(value);
   if (!normalized) return { houseNumber: "", streetAddress: "" };
@@ -75,7 +79,7 @@ export function EditProjectDialog({
   const [error, setError] = useState<string | null>(null);
 
   const [houseNumber, setHouseNumber] = useState(
-    splitProjectAddress(project.project_address).houseNumber,
+    normalizeStreetNumber(splitProjectAddress(project.project_address).houseNumber),
   );
   const [streetAddress, setStreetAddress] = useState(
     splitProjectAddress(project.project_address).streetAddress,
@@ -103,7 +107,7 @@ export function EditProjectDialog({
     if (!open) return;
     setError(null);
     const splitAddress = splitProjectAddress(project.project_address);
-    setHouseNumber(splitAddress.houseNumber);
+    setHouseNumber(normalizeStreetNumber(splitAddress.houseNumber));
     setStreetAddress(splitAddress.streetAddress);
     setBuilder(findItemByName(initialBuilders, project.builder_name));
     setSubdivision(findItemByName(initialSubdivisions, project.subdivision));
@@ -147,7 +151,7 @@ export function EditProjectDialog({
 
     const fd = new FormData();
     fd.set("project_id", project.id);
-    fd.set("house_number", normalizeWhitespace(houseNumber));
+    fd.set("house_number", normalizeStreetNumber(houseNumber));
     fd.set("street_address", toTitleCase(streetAddress));
 
     if (builder?.id) fd.set("builder_id", builder.id);
@@ -178,9 +182,9 @@ export function EditProjectDialog({
               <div className="text-sm font-medium">Street Number</div>
               <Input
                 value={houseNumber}
-                onChange={(e) => setHouseNumber(e.target.value)}
+                onChange={(e) => setHouseNumber(normalizeStreetNumber(e.target.value))}
                 onBlur={() =>
-                  setHouseNumber((current) => normalizeWhitespace(current))
+                  setHouseNumber((current) => normalizeStreetNumber(current))
                 }
                 placeholder="1234"
               />
