@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/notifications/send-email";
 import {
+  buildInvoiceReminderEmail,
+  buildProductUpdatesEmail,
+  buildWeeklySummaryEmail,
+} from "@/lib/notifications/templates";
+import {
   clampDueDays,
   readPreferenceSettings,
   type PreferenceSettings,
@@ -55,15 +60,6 @@ function money(cents: number): string {
     style: "currency",
     currency: "USD",
   });
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function isAuthorized(request: NextRequest): {
@@ -223,41 +219,33 @@ export async function GET(request: NextRequest) {
           );
 
           if (overdue.length + dueSoon.length > 0) {
-            const htmlRows = [...overdue, ...dueSoon]
-              .map((invoice) => {
-                const label = (invoice.invoice_number ?? "Invoice").trim();
-                const billTo = (invoice.bill_to_name ?? "Unknown Builder").trim();
-                const total = money(invoice.subtotal_cents ?? 0);
-                const dueDate = invoice.due_date ?? "N/A";
-                return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(
-                  billTo,
-                )}</td><td>${escapeHtml(dueDate)}</td><td>${escapeHtml(
-                  total,
-                )}</td></tr>`;
-              })
-              .join("");
-
-            const summaryLabel = `${overdue.length} overdue, ${dueSoon.length} due soon`;
+            const reminderItems = [
+              ...overdue.map((invoice) => ({
+                invoiceLabel: (invoice.invoice_number ?? "Invoice").trim(),
+                billTo: (invoice.bill_to_name ?? "Unknown Builder").trim(),
+                dueDate: invoice.due_date ?? "N/A",
+                total: money(invoice.subtotal_cents ?? 0),
+                status: "overdue" as const,
+              })),
+              ...dueSoon.map((invoice) => ({
+                invoiceLabel: (invoice.invoice_number ?? "Invoice").trim(),
+                billTo: (invoice.bill_to_name ?? "Unknown Builder").trim(),
+                dueDate: invoice.due_date ?? "N/A",
+                total: money(invoice.subtotal_cents ?? 0),
+                status: "due-soon" as const,
+              })),
+            ];
+            const template = buildInvoiceReminderEmail({
+              overdueCount: overdue.length,
+              dueSoonCount: dueSoon.length,
+              invoices: reminderItems,
+              appUrl,
+              asOfYmd: todayYmd,
+            });
             const sendRes = await sendEmail({
               to: email,
-              subject: `JobSyte invoice reminder: ${summaryLabel}`,
-              html: `<div>
-                <p>You have ${escapeHtml(summaryLabel)}.</p>
-                <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
-                  <thead>
-                    <tr>
-                      <th>Invoice</th>
-                      <th>Bill To</th>
-                      <th>Due Date</th>
-                      <th>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>${htmlRows}</tbody>
-                </table>
-                <p style="margin-top: 12px;">
-                  <a href="${escapeHtml(`${appUrl}/invoices`)}">Open invoices</a>
-                </p>
-              </div>`,
+              subject: template.subject,
+              html: template.html,
             });
 
             if (sendRes.ok) {
@@ -380,23 +368,23 @@ export async function GET(request: NextRequest) {
               0,
             );
 
+            const template = buildWeeklySummaryEmail({
+              weekStart: weeklyWindowStart,
+              weekEnd: weeklyWindowEnd,
+              metrics: {
+                jobsCreated: jobsCreatedCount,
+                jobsCompleted: jobsCompletedCount,
+                openJobs: openJobsCount,
+                invoicesIssued: invoicesIssuedCount,
+                totalInvoiced: money(issuedTotalCents),
+                overdueInvoices: overdueInvoicesCount ?? 0,
+              },
+              appUrl,
+            });
             const sendRes = await sendEmail({
               to: email,
-              subject: `JobSyte weekly summary (${weeklyWindowStart} to ${weeklyWindowEnd})`,
-              html: `<div>
-                <p>Your weekly summary is ready.</p>
-                <ul>
-                  <li>Jobs created: ${jobsCreatedCount}</li>
-                  <li>Jobs completed: ${jobsCompletedCount}</li>
-                  <li>Open jobs: ${openJobsCount}</li>
-                  <li>Invoices issued: ${invoicesIssuedCount}</li>
-                  <li>Total invoiced: ${escapeHtml(money(issuedTotalCents))}</li>
-                  <li>Overdue invoices: ${overdueInvoicesCount ?? 0}</li>
-                </ul>
-                <p>
-                  <a href="${escapeHtml(`${appUrl}/`)}">Open dashboard</a>
-                </p>
-              </div>`,
+              subject: template.subject,
+              html: template.html,
             });
 
             if (sendRes.ok) {
@@ -432,18 +420,15 @@ export async function GET(request: NextRequest) {
           .filter(Boolean)
           .slice(0, 8);
 
-        const bulletItems = bullets
-          .map((bullet) => `<li>${escapeHtml(bullet)}</li>`)
-          .join("");
-
+        const template = buildProductUpdatesEmail({
+          monthKey: currentMonthKey,
+          bullets,
+          appUrl,
+        });
         const sendRes = await sendEmail({
           to: email,
-          subject: `JobSyte product updates (${currentMonthKey})`,
-          html: `<div>
-            <p>Here are your latest JobSyte product updates:</p>
-            <ul>${bulletItems}</ul>
-            <p><a href="${escapeHtml(`${appUrl}/`)}">Open JobSyte</a></p>
-          </div>`,
+          subject: template.subject,
+          html: template.html,
         });
 
         if (sendRes.ok) {
