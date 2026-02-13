@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveInvoiceDueDate } from "@/lib/settings/preferences";
 import { redirect } from "next/navigation";
 
 function formatInvoiceNumber() {
@@ -32,7 +33,7 @@ export async function createInvoiceForBuilder(formData: FormData) {
   const bill_to_address = String(formData.get("bill_to_address") || "").trim();
 
   const invoice_date = String(formData.get("invoice_date") || "").trim(); // yyyy-mm-dd
-  const due_date = String(formData.get("due_date") || "").trim(); // optional
+  const due_date_raw = String(formData.get("due_date") || "").trim(); // optional
 
   const builder_id = String(formData.get("builder_id") || "").trim();
   const jobIds = formData.getAll("job_ids").map(String).filter(Boolean);
@@ -47,6 +48,12 @@ export async function createInvoiceForBuilder(formData: FormData) {
   if (!builder_id) return { ok: false, message: "Builder is required." };
   if (jobIds.length === 0)
     return { ok: false, message: "Select at least one completed job." };
+
+  const due_date = resolveInvoiceDueDate(
+    invoice_date,
+    due_date_raw,
+    user.user_metadata,
+  );
 
   // Builder snapshot
   const { data: builder, error: builderErr } = await (await supabase)
@@ -125,7 +132,7 @@ export async function createInvoiceForBuilder(formData: FormData) {
       user_id: user.id,
       invoice_number,
       invoice_date,
-      due_date: due_date || null,
+      due_date,
       contractor_name,
       contractor_address: contractor_address || null,
       contractor_phone: contractor_phone || null,

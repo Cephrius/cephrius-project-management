@@ -151,6 +151,50 @@ export async function toggleJobComplete(jobId: string, nextCompleted: boolean) {
   return { ok: true };
 }
 
+export async function editJob(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) redirect("/login");
+
+  const jobId = String(formData.get("job_id") || "").trim();
+  const title = toTitleCase(String(formData.get("title") || ""));
+  const priceRaw = String(formData.get("price") || "").trim();
+  const scheduled_completion = String(
+    formData.get("scheduled_completion") || "",
+  ).trim();
+  const superintendentRaw = toTitleCase(
+    String(formData.get("superintendent") || ""),
+  );
+  const superintendent = superintendentRaw || null;
+
+  if (!jobId) return { ok: false, message: "Job id is required." };
+  if (!title) return { ok: false, message: "Job title is required." };
+  if (!scheduled_completion)
+    return { ok: false, message: "Scheduled completion date is required." };
+
+  const price_cents = parsePriceToCents(priceRaw);
+  if (price_cents === null)
+    return { ok: false, message: "Enter a valid price." };
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({
+      title,
+      price_cents,
+      scheduled_completion,
+      superintendent,
+    })
+    .eq("id", jobId)
+    .is("deleted_at", null);
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
 export async function deleteJob(jobId: string) {
   const supabase = await createClient();
   const {

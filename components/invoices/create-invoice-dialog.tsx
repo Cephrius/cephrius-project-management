@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
 import { createInvoice } from "@/app/(app)/projects/[id]/invoice-actions";
+import { readPreferenceSettings, suggestDueDate } from "@/lib/settings/preferences";
 
 type Job = {
   id: string;
@@ -58,6 +59,8 @@ export function CreateInvoiceDialog({
   const today = new Date().toISOString().slice(0, 10);
   const [invoiceDate, setInvoiceDate] = useState(today);
   const [dueDate, setDueDate] = useState("");
+  const [defaultDueDays, setDefaultDueDays] = useState(30);
+  const [dueDateManuallyEdited, setDueDateManuallyEdited] = useState(false);
 
   const [query, setQuery] = useState("");
 
@@ -68,11 +71,17 @@ export function CreateInvoiceDialog({
     setError(null);
     setQuery("");
     setSelected({});
+    setInvoiceDate(today);
+    setDueDateManuallyEdited(false);
 
     (async () => {
       // Profile
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth.user?.id;
+
+      const settings = readPreferenceSettings(auth.user?.user_metadata ?? null);
+      setDefaultDueDays(settings.default_due_days);
+      setDueDate(suggestDueDate(today, settings.default_due_days) ?? "");
 
       if (userId) {
         const { data: profile } = await supabase
@@ -246,7 +255,13 @@ export function CreateInvoiceDialog({
               <Input
                 type="date"
                 value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
+                onChange={(e) => {
+                  const nextInvoiceDate = e.target.value;
+                  setInvoiceDate(nextInvoiceDate);
+                  if (!dueDateManuallyEdited) {
+                    setDueDate(suggestDueDate(nextInvoiceDate, defaultDueDays) ?? "");
+                  }
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -254,8 +269,25 @@ export function CreateInvoiceDialog({
               <Input
                 type="date"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={(e) => {
+                  setDueDateManuallyEdited(true);
+                  setDueDate(e.target.value);
+                }}
               />
+              {defaultDueDays > 0 && dueDateManuallyEdited && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setDueDateManuallyEdited(false);
+                    setDueDate(suggestDueDate(invoiceDate, defaultDueDays) ?? "");
+                  }}
+                >
+                  Reset to default ({defaultDueDays} days)
+                </Button>
+              )}
             </div>
           </div>
 
