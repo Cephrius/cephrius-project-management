@@ -39,6 +39,12 @@ type SearchSuggestion = {
   href: string;
 };
 
+const PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT = [
+  "projects:selected-project-id",
+  "projects:expanded-subdivisions",
+  "projects:expanded-builders",
+];
+
 function suggestionTypeLabel(type: SuggestionType) {
   if (type === "project") return "Project";
   if (type === "job") return "Job";
@@ -177,6 +183,10 @@ export function Header() {
   }, [query]);
 
   const handleSignOut = async () => {
+    for (const key of PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT) {
+      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
+    }
     await supabase.auth.signOut();
     window.location.href = "/login";
   };

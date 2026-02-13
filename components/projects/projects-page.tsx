@@ -45,6 +45,9 @@ import { EditProjectDialog } from "./edit-project-dialog";
 
 const PROJECTS_VIEW_STORAGE_KEY = "projects:view";
 const PROJECTS_SELECTED_STORAGE_KEY = "projects:selected-project-id";
+const PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY =
+  "projects:expanded-subdivisions";
+const PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY = "projects:expanded-builders";
 const UNASSIGNED_BUILDER = "__unassigned_builder__";
 const UNASSIGNED_SUBDIVISION = "__unassigned_subdivision__";
 
@@ -90,6 +93,18 @@ function toInitials(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+function parseStoredKeys(raw: string | null): string[] | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((value): value is string => typeof value === "string");
+  } catch {
+    return null;
+  }
 }
 
 function ProjectCardActionsDropdown({
@@ -208,9 +223,19 @@ export function ProjectsPageClient({
   });
   const [expandedSubdivisions, setExpandedSubdivisions] = useState<
     string[] | null
-  >(null);
+  >(() => {
+    if (typeof window === "undefined") return null;
+    return parseStoredKeys(
+      window.localStorage.getItem(PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY),
+    );
+  });
   const [expandedBuilders, setExpandedBuilders] = useState<string[] | null>(
-    null,
+    () => {
+      if (typeof window === "undefined") return null;
+      return parseStoredKeys(
+        window.localStorage.getItem(PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY),
+      );
+    },
   );
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     () => {
@@ -234,6 +259,30 @@ export function ProjectsPageClient({
   useEffect(() => {
     localStorage.setItem(PROJECTS_VIEW_STORAGE_KEY, view);
   }, [view]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (expandedSubdivisions === null) {
+      window.localStorage.removeItem(PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY,
+      JSON.stringify(expandedSubdivisions),
+    );
+  }, [expandedSubdivisions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (expandedBuilders === null) {
+      window.localStorage.removeItem(PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY,
+      JSON.stringify(expandedBuilders),
+    );
+  }, [expandedBuilders]);
 
   const crewOptions = useMemo(() => {
     const set = new Set<string>();
