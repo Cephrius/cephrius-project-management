@@ -61,7 +61,7 @@ export function DesktopSidebar({ companyName }: { companyName: string }) {
             <a href="https://cephrius.com" className="underline hover:text-primary">
               Cephrius Technologies{" "}
             </a>
-            <a>(c){new Date().getFullYear()}</a>
+            <a>© {new Date().getFullYear()}</a>
           </>
         )}
       </div>
