@@ -7,6 +7,24 @@ export type ReleaseNote = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.1.4a",
+    releasedOn: "Feb 13, 2026",
+    changes: [
+      "Made scheduled completion optional for jobs in both add and edit flows.",
+      "Added project-scoped job title and price prefill behavior with a price combobox tied to each project.",
+      "Split project address capture into Street Number and Street Address while keeping concatenated address display.",
+      "Added global search quick action to create a new project with auto-prefilled street number and street address.",
+      "Added grouped-view Add Project buttons per subdivision with automatic subdivision preselection.",
+    ],
+    bugFixes: [
+      "Improved search query parsing for compact address inputs like 3049Tong Lane.",
+      "Enforced numeric-only street number validation in project forms and server actions.",
+      "Persisted selected project and grouped expansion state when navigating back to Projects.",
+      "Stabilized grouped expansion persistence so folders stay open until explicitly closed or user sign-out.",
+      "Refined mobile header spacing and search control layout behavior for small screens.",
+    ],
+  },
+  {
     version: "v0.1.3a",
     releasedOn: "Feb 13, 2026",
     changes: [

@@ -63,6 +63,31 @@ function toOptions(values: Array<string | null>): ComboboxItem[] {
   return options.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function parsePriceToCents(input: string) {
+  const cleaned = input.replace(/[^0-9.]/g, "");
+  if (!cleaned) return null;
+  const numberValue = Number(cleaned);
+  if (!Number.isFinite(numberValue) || numberValue < 0) return null;
+  return Math.round(numberValue * 100);
+}
+
+function centsToPriceInput(cents: number) {
+  return (cents / 100).toFixed(2);
+}
+
+function toPriceOption(cents: number): ComboboxItem {
+  return {
+    id: String(cents),
+    name: centsToPriceInput(cents),
+  };
+}
+
+type JobSeedRow = {
+  title: string | null;
+  superintendent: string | null;
+  price_cents: number | null;
+};
+
 export function AddJobDialog({
   projectId,
   open,
@@ -78,11 +103,16 @@ export function AddJobDialog({
   const [error, setError] = useState<string | null>(null);
 
   const [titleOptions, setTitleOptions] = useState<ComboboxItem[]>([]);
+  const [priceOptions, setPriceOptions] = useState<ComboboxItem[]>([]);
+  const [defaultPriceByTitleId, setDefaultPriceByTitleId] = useState<
+    Record<string, ComboboxItem>
+  >({});
   const [superintendentOptions, setSuperintendentOptions] = useState<
     ComboboxItem[]
   >([]);
 
   const [title, setTitle] = useState<ComboboxItem | null>(null);
+  const [selectedPrice, setSelectedPrice] = useState<ComboboxItem | null>(null);
   const [price, setPrice] = useState("");
   const [scheduled, setScheduled] = useState("");
   const [superintendent, setSuperintendent] = useState<ComboboxItem | null>(
@@ -97,21 +127,51 @@ export function AddJobDialog({
     (async () => {
       const { data } = await supabase
         .from("jobs")
-        .select("title, superintendent")
+        .select("title, superintendent, price_cents")
+        .eq("project_id", projectId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(500);
 
       if (!isActive || !data) return;
 
-      setTitleOptions(toOptions(data.map((job) => job.title)));
-      setSuperintendentOptions(toOptions(data.map((job) => job.superintendent)));
+      const rows = data as JobSeedRow[];
+      const nextTitleOptions = toOptions(rows.map((job) => job.title));
+      const nextSuperintendentOptions = toOptions(
+        rows.map((job) => job.superintendent),
+      );
+
+      const priceOptionMap = new Map<string, ComboboxItem>();
+      const priceDefaultsByTitle: Record<string, ComboboxItem> = {};
+
+      for (const row of rows) {
+        if (typeof row.price_cents !== "number") continue;
+        const option = toPriceOption(row.price_cents);
+        if (!priceOptionMap.has(option.id)) {
+          priceOptionMap.set(option.id, option);
+        }
+
+        const titleOption = toComboboxItem(row.title ?? "");
+        if (!titleOption.name) continue;
+        if (!priceDefaultsByTitle[titleOption.id]) {
+          priceDefaultsByTitle[titleOption.id] = option;
+        }
+      }
+
+      const nextPriceOptions = Array.from(priceOptionMap.values()).sort(
+        (a, b) => Number(a.id) - Number(b.id),
+      );
+
+      setTitleOptions(nextTitleOptions);
+      setPriceOptions(nextPriceOptions);
+      setDefaultPriceByTitleId(priceDefaultsByTitle);
+      setSuperintendentOptions(nextSuperintendentOptions);
     })();
 
     return () => {
       isActive = false;
     };
-  }, [open, supabase]);
+  }, [open, supabase, projectId]);
 
   async function createTitle(name: string) {
     const option = toComboboxItem(name);
@@ -123,6 +183,33 @@ export function AddJobDialog({
     const option = toComboboxItem(name);
     setSuperintendentOptions((prev) => upsertOptions(prev, option));
     return option;
+  }
+
+  async function createPrice(value: string) {
+    const cents = parsePriceToCents(value);
+    if (cents === null) throw new Error("Enter a valid price.");
+
+    const option = toPriceOption(cents);
+    setPriceOptions((prev) => upsertOptions(prev, option));
+    setPrice(option.name);
+    setSelectedPrice(option);
+    return option;
+  }
+
+  function handleTitleChange(nextTitle: ComboboxItem | null) {
+    setTitle(nextTitle);
+    if (!nextTitle) return;
+
+    const defaultPrice = defaultPriceByTitleId[nextTitle.id];
+    if (!defaultPrice) return;
+
+    setSelectedPrice(defaultPrice);
+    setPrice(defaultPrice.name);
+  }
+
+  function handlePriceChange(nextPrice: ComboboxItem | null) {
+    setSelectedPrice(nextPrice);
+    setPrice(nextPrice?.name ?? "");
   }
 
   function submit() {
@@ -142,6 +229,7 @@ export function AddJobDialog({
       }
       onOpenChange(false);
       setTitle(null);
+      setSelectedPrice(null);
       setPrice("");
       setScheduled("");
       setSuperintendent(null);
@@ -162,24 +250,26 @@ export function AddJobDialog({
             placeholder="Select or create job title..."
             items={titleOptions}
             value={title}
-            onChange={setTitle}
+            onChange={handleTitleChange}
             onCreate={createTitle}
           />
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Job Price</div>
-            <Input
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="1200.00"
+            <CreatableCombobox
+              label="Job Price"
+              placeholder="Select or create project price..."
+              items={priceOptions}
+              value={selectedPrice}
+              onChange={handlePriceChange}
+              onCreate={createPrice}
             />
             <p className="text-xs text-muted-foreground">
-              Tip: you can type $1,200.00 too.
+              Prices are suggested from this project only.
             </p>
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Scheduled Completion</div>
+            <div className="text-sm font-medium">Scheduled Completion (Optional)</div>
             <Input
               type="date"
               value={scheduled}
@@ -221,9 +311,7 @@ export function AddJobDialog({
             </Button>
             <Button
               onClick={submit}
-              disabled={
-                isPending || !title?.name.trim() || !price.trim() || !scheduled
-              }
+              disabled={isPending || !title?.name.trim() || !price.trim()}
             >
               {isPending ? "Saving..." : "Save Job"}
             </Button>

@@ -25,6 +25,22 @@ function normalizeProjectAddress(value: string) {
   return toTitleCase(value);
 }
 
+function normalizeHouseNumber(value: string) {
+  return normalizeWhitespace(value);
+}
+
+function isValidHouseNumber(value: string) {
+  return /^\d+$/.test(value);
+}
+
+function normalizeStreetAddress(value: string) {
+  return toTitleCase(value);
+}
+
+function combineProjectAddress(houseNumber: string, streetAddress: string) {
+  return normalizeProjectAddress(`${houseNumber} ${streetAddress}`);
+}
+
 function isMissingDeletedAtColumnError(message: string | undefined) {
   const normalized = (message ?? "").toLowerCase();
   return normalized.includes("column") && normalized.includes("deleted_at");
@@ -131,9 +147,17 @@ export async function createProject(formData: FormData) {
     return { ok: false, message: "Session expired. Please log in again." };
   }
 
-  const project_address = normalizeProjectAddress(
-    String(formData.get("project_address") || ""),
-  );
+  const houseNumberRaw = String(formData.get("house_number") || "");
+  const streetAddressRaw = String(formData.get("street_address") || "");
+  const projectAddressRaw = String(formData.get("project_address") || "");
+
+  const houseNumber = normalizeHouseNumber(houseNumberRaw);
+  const streetAddress = normalizeStreetAddress(streetAddressRaw);
+  const usingSplitAddress =
+    houseNumberRaw.trim().length > 0 || streetAddressRaw.trim().length > 0;
+  const project_address = usingSplitAddress
+    ? combineProjectAddress(houseNumber, streetAddress)
+    : normalizeProjectAddress(projectAddressRaw);
 
   // We will accept either selected IDs or typed names.
   const builder_id = String(formData.get("builder_id") || "").trim() || null;
@@ -145,6 +169,15 @@ export async function createProject(formData: FormData) {
     formData.get("subdivision_name") || "",
   ).trim();
 
+  if (usingSplitAddress && (!houseNumber || !streetAddress)) {
+    return {
+      ok: false,
+      message: "Street number and street address are required.",
+    };
+  }
+  if (usingSplitAddress && !isValidHouseNumber(houseNumber)) {
+    return { ok: false, message: "Street number must be numeric." };
+  }
   if (!project_address) {
     return { ok: false, message: "Project address is required." };
   }
@@ -295,9 +328,17 @@ export async function editProject(formData: FormData) {
   }
 
   const projectId = String(formData.get("project_id") || "").trim();
-  const project_address = normalizeProjectAddress(
-    String(formData.get("project_address") || ""),
-  );
+  const houseNumberRaw = String(formData.get("house_number") || "");
+  const streetAddressRaw = String(formData.get("street_address") || "");
+  const projectAddressRaw = String(formData.get("project_address") || "");
+
+  const houseNumber = normalizeHouseNumber(houseNumberRaw);
+  const streetAddress = normalizeStreetAddress(streetAddressRaw);
+  const usingSplitAddress =
+    houseNumberRaw.trim().length > 0 || streetAddressRaw.trim().length > 0;
+  const project_address = usingSplitAddress
+    ? combineProjectAddress(houseNumber, streetAddress)
+    : normalizeProjectAddress(projectAddressRaw);
 
   const builder_id = String(formData.get("builder_id") || "").trim() || null;
   const builder_name_raw = String(formData.get("builder_name") || "").trim();
@@ -309,6 +350,15 @@ export async function editProject(formData: FormData) {
   ).trim();
 
   if (!projectId) return { ok: false, message: "Project id is required." };
+  if (usingSplitAddress && (!houseNumber || !streetAddress)) {
+    return {
+      ok: false,
+      message: "Street number and street address are required.",
+    };
+  }
+  if (usingSplitAddress && !isValidHouseNumber(houseNumber)) {
+    return { ok: false, message: "Street number must be numeric." };
+  }
   if (!project_address)
     return { ok: false, message: "Project address is required." };
 

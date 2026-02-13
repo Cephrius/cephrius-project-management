@@ -44,6 +44,10 @@ import { DeleteProjectButton } from "./delete-project-button";
 import { EditProjectDialog } from "./edit-project-dialog";
 
 const PROJECTS_VIEW_STORAGE_KEY = "projects:view";
+const PROJECTS_SELECTED_STORAGE_KEY = "projects:selected-project-id";
+const PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY =
+  "projects:expanded-subdivisions";
+const PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY = "projects:expanded-builders";
 const UNASSIGNED_BUILDER = "__unassigned_builder__";
 const UNASSIGNED_SUBDIVISION = "__unassigned_subdivision__";
 
@@ -91,14 +95,28 @@ function toInitials(name: string): string {
     .join("");
 }
 
+function parseStoredKeys(raw: string | null): string[] | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((value): value is string => typeof value === "string");
+  } catch {
+    return null;
+  }
+}
+
 function ProjectCardActionsDropdown({
   project,
   builders,
   subdivisions,
+  onViewProject,
 }: {
   project: ProjectListItem;
   builders: LookupItem[];
   subdivisions: LookupItem[];
+  onViewProject?: (projectId: string) => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [addJobOpen, setAddJobOpen] = useState(false);
@@ -142,6 +160,7 @@ function ProjectCardActionsDropdown({
             <Link
               href={`/projects/${project.id}`}
               className="flex w-full items-center gap-2"
+              onClick={() => onViewProject?.(project.id)}
             >
               <ArrowRight className="size-4" />
               View Jobs
@@ -204,17 +223,66 @@ export function ProjectsPageClient({
   });
   const [expandedSubdivisions, setExpandedSubdivisions] = useState<
     string[] | null
-  >(null);
+  >(() => {
+    if (typeof window === "undefined") return null;
+    return parseStoredKeys(
+      window.localStorage.getItem(PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY),
+    );
+  });
   const [expandedBuilders, setExpandedBuilders] = useState<string[] | null>(
-    null,
+    () => {
+      if (typeof window === "undefined") return null;
+      return parseStoredKeys(
+        window.localStorage.getItem(PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY),
+      );
+    },
   );
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    projects[0]?.id ?? null,
+    () => {
+      if (typeof window === "undefined") return projects[0]?.id ?? null;
+      const savedProjectId = window.sessionStorage.getItem(
+        PROJECTS_SELECTED_STORAGE_KEY,
+      );
+      return savedProjectId || projects[0]?.id || null;
+    },
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!selectedProjectId) {
+      window.sessionStorage.removeItem(PROJECTS_SELECTED_STORAGE_KEY);
+      return;
+    }
+    window.sessionStorage.setItem(PROJECTS_SELECTED_STORAGE_KEY, selectedProjectId);
+  }, [selectedProjectId]);
 
   useEffect(() => {
     localStorage.setItem(PROJECTS_VIEW_STORAGE_KEY, view);
   }, [view]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (expandedSubdivisions === null) {
+      window.localStorage.removeItem(PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY,
+      JSON.stringify(expandedSubdivisions),
+    );
+  }, [expandedSubdivisions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (expandedBuilders === null) {
+      window.localStorage.removeItem(PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY,
+      JSON.stringify(expandedBuilders),
+    );
+  }, [expandedBuilders]);
 
   const crewOptions = useMemo(() => {
     const set = new Set<string>();
@@ -607,37 +675,51 @@ export function ProjectsPageClient({
                 const isSubdivisionExpanded = effectiveExpandedSubdivisions.includes(
                   subdivisionGroup.key,
                 );
+                const subdivisionOption =
+                  subdivisions.find(
+                    (subdivision) =>
+                      subdivision.name.trim().toLowerCase() ===
+                      subdivisionGroup.label.trim().toLowerCase(),
+                  ) ?? null;
 
                 return (
                   <Card
                     key={subdivisionGroup.key}
                     className="overflow-hidden border-primary/20"
                   >
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/30 cursor-pointer"
-                      onClick={() => toggleSubdivision(subdivisionGroup.key)}
-                    >
-                      <div className="flex items-center gap-2 cursor-pointer">
-                        <ChevronDown
-                          className={cn(
-                            "size-4 shrink-0 transition-transform cursor-pointer",
-                            isSubdivisionExpanded && "rotate-180",
-                          )}
-                        />
-                        <div className="text-base font-semibold ">
-                          {subdivisionGroup.label}
+                    <div className="flex items-center gap-3 p-4">
+                      <button
+                        type="button"
+                        className="flex flex-1 items-center justify-between gap-3 text-left transition-colors hover:text-primary cursor-pointer"
+                        onClick={() => toggleSubdivision(subdivisionGroup.key)}
+                      >
+                        <div className="flex items-center gap-2 cursor-pointer">
+                          <ChevronDown
+                            className={cn(
+                              "size-4 shrink-0 transition-transform cursor-pointer",
+                              isSubdivisionExpanded && "rotate-180",
+                            )}
+                          />
+                          <div className="text-base font-semibold ">
+                            {subdivisionGroup.label}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {subdivisionGroup.projectCount}{" "}
-                        {subdivisionGroup.projectCount === 1
-                          ? "project"
-                          : "projects"}{" "}
-                        • {subdivisionGroup.totalJobCount} jobs •{" "}
-                        {subdivisionGroup.openJobCount} open
-                      </div>
-                    </button>
+                        <div className="text-xs text-muted-foreground">
+                          {subdivisionGroup.projectCount}{" "}
+                          {subdivisionGroup.projectCount === 1
+                            ? "project"
+                            : "projects"}{" "}
+                          • {subdivisionGroup.totalJobCount} jobs •{" "}
+                          {subdivisionGroup.openJobCount} open
+                        </div>
+                      </button>
+                      <NewProjectButton
+                        initialBuilders={builders}
+                        initialSubdivisions={subdivisions}
+                        initialSubdivisionId={subdivisionOption?.id}
+                        buttonLabel="Add Project"
+                      />
+                    </div>
 
                     {isSubdivisionExpanded && (
                       <div className="space-y-3 border-t p-3 sm:p-4">
@@ -733,6 +815,7 @@ export function ProjectsPageClient({
                                                 project={project}
                                                 builders={builders}
                                                 subdivisions={subdivisions}
+                                                onViewProject={setSelectedProjectId}
                                               />
                                             </div>
                                             <div
@@ -826,6 +909,7 @@ export function ProjectsPageClient({
                             project={project}
                             builders={builders}
                             subdivisions={subdivisions}
+                            onViewProject={setSelectedProjectId}
                           />
                         </div>
                         <div onClick={(event) => event.stopPropagation()}>
@@ -838,6 +922,7 @@ export function ProjectsPageClient({
                       <Link
                         href={`/projects/${project.id}`}
                         className="inline-flex items-center gap-1 text-lg font-medium text-primary dark:text-white dark:hover:text-muted-foreground/90 transition delay-100"
+                        onClick={() => setSelectedProjectId(project.id)}
                       >
                         Open Project
                         <ArrowRight className="size-5" />

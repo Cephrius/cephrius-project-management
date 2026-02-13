@@ -49,6 +49,12 @@ type SettingsPageClientProps = {
   };
 };
 
+const PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT = [
+  "projects:selected-project-id",
+  "projects:expanded-subdivisions",
+  "projects:expanded-builders",
+];
+
 function formatDate(value: string | null) {
   if (!value) return "N/A";
 
@@ -180,6 +186,11 @@ export function SettingsPageClient({
 
   async function onSignOutEverywhere() {
     setSigningOutAll(true);
+
+    for (const key of PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT) {
+      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
+    }
 
     const { error } = await supabase.auth.signOut({ scope: "global" });
     setSigningOutAll(false);

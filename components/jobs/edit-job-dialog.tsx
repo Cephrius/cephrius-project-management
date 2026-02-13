@@ -17,7 +17,6 @@ import {
   type ComboboxItem,
 } from "@/components/projects/createable-combobox";
 import type { JobRow } from "@/components/jobs/jobs-table";
-import { set } from "date-fns";
 import { toast } from "sonner";
 
 function normalizeWhitespace(value: string) {
@@ -70,12 +69,35 @@ function centsToPriceInput(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
+function parsePriceToCents(input: string) {
+  const cleaned = input.replace(/[^0-9.]/g, "");
+  if (!cleaned) return null;
+  const numberValue = Number(cleaned);
+  if (!Number.isFinite(numberValue) || numberValue < 0) return null;
+  return Math.round(numberValue * 100);
+}
+
+function toPriceOption(cents: number): ComboboxItem {
+  return {
+    id: String(cents),
+    name: centsToPriceInput(cents),
+  };
+}
+
+type JobSeedRow = {
+  title: string | null;
+  superintendent: string | null;
+  price_cents: number | null;
+};
+
 export function EditJobDialog({
   job,
+  projectId,
   open,
   onOpenChange,
 }: {
   job: JobRow;
+  projectId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
@@ -85,12 +107,19 @@ export function EditJobDialog({
   const [error, setError] = useState<string | null>(null);
 
   const [titleOptions, setTitleOptions] = useState<ComboboxItem[]>([]);
+  const [priceOptions, setPriceOptions] = useState<ComboboxItem[]>([]);
+  const [defaultPriceByTitleId, setDefaultPriceByTitleId] = useState<
+    Record<string, ComboboxItem>
+  >({});
   const [superintendentOptions, setSuperintendentOptions] = useState<
     ComboboxItem[]
   >([]);
 
   const [title, setTitle] = useState<ComboboxItem | null>(
     toComboboxItem(job.title),
+  );
+  const [selectedPrice, setSelectedPrice] = useState<ComboboxItem | null>(
+    toPriceOption(job.price_cents),
   );
   const [price, setPrice] = useState(centsToPriceInput(job.price_cents));
   const [scheduled, setScheduled] = useState(job.scheduled_completion ?? "");
@@ -106,23 +135,51 @@ export function EditJobDialog({
     (async () => {
       const { data } = await supabase
         .from("jobs")
-        .select("title, superintendent")
+        .select("title, superintendent, price_cents")
+        .eq("project_id", projectId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(500);
 
       if (!isActive || !data) return;
 
-      setTitleOptions(toOptions(data.map((row) => row.title)));
-      setSuperintendentOptions(
-        toOptions(data.map((row) => row.superintendent)),
+      const rows = data as JobSeedRow[];
+      const nextTitleOptions = toOptions(rows.map((row) => row.title));
+      const nextSuperintendentOptions = toOptions(
+        rows.map((row) => row.superintendent),
       );
+
+      const priceOptionMap = new Map<string, ComboboxItem>();
+      const priceDefaultsByTitle: Record<string, ComboboxItem> = {};
+
+      for (const row of rows) {
+        if (typeof row.price_cents !== "number") continue;
+        const option = toPriceOption(row.price_cents);
+        if (!priceOptionMap.has(option.id)) {
+          priceOptionMap.set(option.id, option);
+        }
+
+        const titleOption = toComboboxItem(row.title ?? "");
+        if (!titleOption.name) continue;
+        if (!priceDefaultsByTitle[titleOption.id]) {
+          priceDefaultsByTitle[titleOption.id] = option;
+        }
+      }
+
+      const nextPriceOptions = Array.from(priceOptionMap.values()).sort(
+        (a, b) => Number(a.id) - Number(b.id),
+      );
+
+      setTitleOptions(nextTitleOptions);
+      setPriceOptions(nextPriceOptions);
+      setDefaultPriceByTitleId(priceDefaultsByTitle);
+      setSuperintendentOptions(nextSuperintendentOptions);
     })();
 
     return () => {
       isActive = false;
     };
-  }, [open, supabase]);
+  }, [open, supabase, projectId]);
 
   async function createTitle(name: string) {
     const option = toComboboxItem(name);
@@ -134,6 +191,33 @@ export function EditJobDialog({
     const option = toComboboxItem(name);
     setSuperintendentOptions((prev) => upsertOptions(prev, option));
     return option;
+  }
+
+  async function createPrice(value: string) {
+    const cents = parsePriceToCents(value);
+    if (cents === null) throw new Error("Enter a valid price.");
+
+    const option = toPriceOption(cents);
+    setPriceOptions((prev) => upsertOptions(prev, option));
+    setPrice(option.name);
+    setSelectedPrice(option);
+    return option;
+  }
+
+  function handleTitleChange(nextTitle: ComboboxItem | null) {
+    setTitle(nextTitle);
+    if (!nextTitle) return;
+
+    const defaultPrice = defaultPriceByTitleId[nextTitle.id];
+    if (!defaultPrice) return;
+
+    setSelectedPrice(defaultPrice);
+    setPrice(defaultPrice.name);
+  }
+
+  function handlePriceChange(nextPrice: ComboboxItem | null) {
+    setSelectedPrice(nextPrice);
+    setPrice(nextPrice?.name ?? "");
   }
 
   function submit() {
@@ -173,21 +257,26 @@ export function EditJobDialog({
             placeholder="Select or create job title..."
             items={titleOptions}
             value={title}
-            onChange={setTitle}
+            onChange={handleTitleChange}
             onCreate={createTitle}
           />
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Job Price</div>
-            <Input
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="1200.00"
+            <CreatableCombobox
+              label="Job Price"
+              placeholder="Select or create project price..."
+              items={priceOptions}
+              value={selectedPrice}
+              onChange={handlePriceChange}
+              onCreate={createPrice}
             />
+            <p className="text-xs text-muted-foreground">
+              Prices are suggested from this project only.
+            </p>
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Scheduled Completion</div>
+            <div className="text-sm font-medium">Scheduled Completion (Optional)</div>
             <Input
               type="date"
               value={scheduled}
@@ -231,9 +320,7 @@ export function EditJobDialog({
             <Button
               type="button"
               onClick={submit}
-              disabled={
-                isPending || !title?.name.trim() || !price.trim() || !scheduled
-              }
+              disabled={isPending || !title?.name.trim() || !price.trim()}
             >
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
