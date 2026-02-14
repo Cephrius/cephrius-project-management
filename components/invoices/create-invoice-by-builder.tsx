@@ -249,6 +249,34 @@ export function CreateInvoiceByBuilder({
     toast.success("Bill-to info saved.");
   }
 
+  function deleteContractorPreset(presetId: string) {
+    const preset = contractorPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    const next = contractorPresets.filter((item) => item.id !== presetId);
+    persistContractorPresets(next);
+
+    if (selectedContractorPreset?.id === presetId) {
+      setSelectedContractorPreset(null);
+    }
+
+    toast.success(`Deleted "${preset.name}" preset.`);
+  }
+
+  function deleteBillToPreset(presetId: string) {
+    const preset = billToPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    const next = billToPresets.filter((item) => item.id !== presetId);
+    persistBillToPresets(next);
+
+    if (selectedBillToPreset?.id === presetId) {
+      setSelectedBillToPreset(null);
+    }
+
+    toast.success(`Deleted "${preset.name}" preset.`);
+  }
+
   async function loadEligibleJobs(builderId: string) {
     setLoadingJobs(true);
     setError(null);
@@ -492,6 +520,9 @@ export function CreateInvoiceByBuilder({
                 toast.success("Contractor info saved.");
                 return { id: saved.id, name: saved.name };
               }}
+              onDelete={async (item) => {
+                deleteContractorPreset(item.id);
+              }}
             />
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -565,6 +596,9 @@ export function CreateInvoiceByBuilder({
                 setBillToName(saved.name);
                 toast.success("Bill-to info saved.");
                 return { id: saved.id, name: saved.name };
+              }}
+              onDelete={async (item) => {
+                deleteBillToPreset(item.id);
               }}
             />
 

@@ -1,13 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export type ComboboxItem = { id: string; name: string };
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
 
 export function CreatableCombobox({
   label,
@@ -16,6 +21,7 @@ export function CreatableCombobox({
   value,
   onChange,
   onCreate,
+  onDelete,
 }: {
   label: string;
   placeholder?: string;
@@ -23,10 +29,12 @@ export function CreatableCombobox({
   value: ComboboxItem | null;
   onChange: (item: ComboboxItem | null) => void;
   onCreate: (name: string) => Promise<ComboboxItem>;
+  onDelete?: (item: ComboboxItem) => Promise<void> | void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [creating, setCreating] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const normalizedQuery = query.trim().replace(/\s+/g, " ");
@@ -43,7 +51,7 @@ export function CreatableCombobox({
   }, [items, lowerQuery]);
 
   async function handleCreate() {
-    if (!normalizedQuery || creating) return;
+    if (!normalizedQuery || creating || deletingId) return;
     setCreating(true);
     setError(null);
 
@@ -52,10 +60,27 @@ export function CreatableCombobox({
       onChange(created);
       setQuery("");
       setOpen(false);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to create.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Failed to create."));
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDelete(item: ComboboxItem) {
+    if (!onDelete || deletingId) return;
+    setDeletingId(item.id);
+    setError(null);
+
+    try {
+      await onDelete(item);
+      if (value?.id === item.id) {
+        onChange(null);
+      }
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Failed to delete."));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -95,7 +120,7 @@ export function CreatableCombobox({
                     type="button"
                     variant="outline"
                     className="w-full justify-start"
-                    disabled={creating}
+                    disabled={creating || !!deletingId}
                     onClick={handleCreate}
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -110,6 +135,7 @@ export function CreatableCombobox({
                 <CommandItem
                   key={item.id}
                   value={item.name}
+                  className="pr-1"
                   onSelect={() => {
                     onChange(item);
                     setOpen(false);
@@ -117,7 +143,31 @@ export function CreatableCombobox({
                   }}
                 >
                   <Check className={cn("mr-2 h-4 w-4", value?.id === item.id ? "opacity-100" : "opacity-0")} />
-                  {item.name}
+                  <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                  {onDelete && (
+                    <button
+                      type="button"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                      aria-label={`Delete ${item.name}`}
+                      disabled={!!deletingId && deletingId !== item.id}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void handleDelete(item);
+                      }}
+                    >
+                      <Trash2
+                        className={cn(
+                          "h-4 w-4",
+                          deletingId === item.id && "animate-pulse",
+                        )}
+                      />
+                    </button>
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -128,7 +178,7 @@ export function CreatableCombobox({
                   type="button"
                   variant="outline"
                   className="w-full justify-start"
-                  disabled={creating}
+                  disabled={creating || !!deletingId}
                   onClick={handleCreate}
                 >
                   <Plus className="mr-2 h-4 w-4" />

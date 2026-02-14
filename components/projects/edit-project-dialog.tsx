@@ -210,6 +210,9 @@ export function EditProjectDialog({
             value={builder}
             onChange={setBuilder}
             onCreate={onCreateBuilder}
+            onDelete={(item) => {
+              setBuilders((prev) => prev.filter((entry) => entry.id !== item.id));
+            }}
           />
 
           <CreatableCombobox
@@ -219,6 +222,11 @@ export function EditProjectDialog({
             value={subdivision}
             onChange={setSubdivision}
             onCreate={onCreateSubdivision}
+            onDelete={(item) => {
+              setSubdivisions((prev) =>
+                prev.filter((entry) => entry.id !== item.id),
+              );
+            }}
           />
 
           {error && <p className="text-sm text-destructive">{error}</p>}

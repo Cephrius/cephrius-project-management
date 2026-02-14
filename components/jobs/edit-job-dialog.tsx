@@ -259,6 +259,16 @@ export function EditJobDialog({
             value={title}
             onChange={handleTitleChange}
             onCreate={createTitle}
+            onDelete={(item) => {
+              setTitleOptions((prev) =>
+                prev.filter((entry) => entry.id !== item.id),
+              );
+              setDefaultPriceByTitleId((prev) => {
+                const next = { ...prev };
+                delete next[item.id];
+                return next;
+              });
+            }}
           />
 
           <div className="space-y-2">
@@ -269,6 +279,11 @@ export function EditJobDialog({
               value={selectedPrice}
               onChange={handlePriceChange}
               onCreate={createPrice}
+              onDelete={(item) => {
+                setPriceOptions((prev) =>
+                  prev.filter((entry) => entry.id !== item.id),
+                );
+              }}
             />
             <p className="text-xs text-muted-foreground">
               Prices are suggested from this project only.
@@ -292,6 +307,11 @@ export function EditJobDialog({
               value={superintendent}
               onChange={setSuperintendent}
               onCreate={createSuperintendent}
+              onDelete={(item) => {
+                setSuperintendentOptions((prev) =>
+                  prev.filter((entry) => entry.id !== item.id),
+                );
+              }}
             />
             {superintendent && (
               <Button
