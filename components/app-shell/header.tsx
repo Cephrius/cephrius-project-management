@@ -281,9 +281,9 @@ export function Header() {
       : `results-${suggestions.map((suggestion) => `${suggestion.type}:${suggestion.id}`).join("|")}`;
 
   return (
-    <header className="border-b border-primary/20 bg-background px-4 py-3 rounded-xl">
-      <div className="relative grid gap-3 pr-24 sm:pr-36 md:grid-cols-[1fr_minmax(18rem,30rem)_1fr] md:items-center md:gap-4 md:pr-0">
-        <div className="absolute right-0 top-0 flex items-center gap-2 md:hidden">
+    <header className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3">
+      <div className="grid gap-3 min-[787px]:grid-cols-[1fr_minmax(18rem,30rem)_1fr] min-[787px]:items-center min-[787px]:gap-4">
+        <div className="flex items-center justify-end gap-2 min-[787px]:hidden">
           <ThemeSwitcher />
 
           <Button
@@ -306,12 +306,12 @@ export function Header() {
           </Button>
         </div>
 
-        <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+        <div className="hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground min-[787px]:flex">
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="hidden md:inline-flex cursor-pointer"
+            className="hidden cursor-pointer min-[787px]:inline-flex"
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -325,7 +325,7 @@ export function Header() {
           {crumbs.length > 0 && (
             <span
               aria-hidden="true"
-              className="hidden h-5 w-px bg-border md:block"
+              className="hidden h-5 w-px bg-border min-[787px]:block"
             />
           )}
 
@@ -355,7 +355,7 @@ export function Header() {
 
         <form
           onSubmit={handleGlobalSearch}
-          className="flex w-full items-center gap-2 md:col-start-2 md:justify-self-center"
+          className="flex min-w-0 w-full items-center gap-2 min-[787px]:col-start-2 min-[787px]:justify-self-center"
         >
           <div className="relative w-full" ref={searchContainerRef}>
             <Input
@@ -465,17 +465,17 @@ export function Header() {
           <Button
             type="submit"
             variant="outline"
-            size="sm"
-            className="cursor-pointer border-primary/30 hover:bg-primary/10"
+            size="icon"
+            className="h-9 w-9 shrink-0 cursor-pointer border-primary/30 hover:bg-primary/10"
             aria-label="Search"
           >
             <Search className="h-4 w-4" />
           </Button>
         </form>
 
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end md:col-start-3 md:justify-self-end">
+        <div className="hidden flex-wrap items-center gap-2 sm:justify-end min-[787px]:col-start-3 min-[787px]:flex min-[787px]:justify-self-end">
           {rightSlot}
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2 min-[787px]:flex">
             <ThemeSwitcher />
             <Button
               variant="destructive"
