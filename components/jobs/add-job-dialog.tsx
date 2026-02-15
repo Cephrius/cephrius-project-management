@@ -92,10 +92,12 @@ export function AddJobDialog({
   projectId,
   open,
   onOpenChange,
+  initialTitle = "",
 }: {
   projectId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  initialTitle?: string;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -111,7 +113,12 @@ export function AddJobDialog({
     ComboboxItem[]
   >([]);
 
-  const [title, setTitle] = useState<ComboboxItem | null>(null);
+  const [title, setTitle] = useState<ComboboxItem | null>(() => {
+    const normalizedInitialTitle = normalizeName(initialTitle);
+    return normalizedInitialTitle
+      ? toComboboxItem(normalizedInitialTitle)
+      : null;
+  });
   const [selectedPrice, setSelectedPrice] = useState<ComboboxItem | null>(null);
   const [price, setPrice] = useState("");
   const [scheduled, setScheduled] = useState("");
