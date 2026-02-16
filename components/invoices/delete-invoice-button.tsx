@@ -1,5 +1,5 @@
+"use client";
 import { useRouter } from "next/navigation";
-
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -17,7 +17,13 @@ import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import { deleteInvoice } from "@/app/(app)/invoices/actions";
 
-export function DeleteInvoiceButton({ invoiceId }: { invoiceId: string }) {
+export function DeleteInvoiceButton({
+  invoiceId,
+  redirectTo,
+}: {
+  invoiceId: string;
+  redirectTo?: string;
+}) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -31,6 +37,10 @@ export function DeleteInvoiceButton({ invoiceId }: { invoiceId: string }) {
       return;
     }
     toast.success("Invoice Deleted.");
+    if (redirectTo) {
+      router.push(redirectTo);
+      return;
+    }
     router.refresh();
     setIsDeleting(false);
   }

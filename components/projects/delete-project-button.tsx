@@ -42,10 +42,11 @@ export function DeleteProjectButton({ projectId }: { projectId: string }) {
           variant="outline"
           size="sm"
           disabled={isDeleting}
+          aria-label="Delete project"
           className="gap-2 hover:bg-destructive hover:text-white cursor-pointer"
         >
           <Trash2 className="size-4" />
-          Delete
+          <span className="hidden sm:inline">Delete</span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

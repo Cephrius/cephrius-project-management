@@ -11,6 +11,14 @@ function formatInvoiceNumber() {
   return `INV-${ymd}-${rand}`;
 }
 
+function parsePriceToCents(input: string) {
+  const cleaned = input.replace(/[^0-9.]/g, "");
+  if (!cleaned) return null;
+  const num = Number(cleaned);
+  if (!Number.isFinite(num) || num < 0) return null;
+  return Math.round(num * 100);
+}
+
 export async function createInvoiceForBuilder(formData: FormData) {
   const supabase = createClient();
 
@@ -152,12 +160,13 @@ export async function createInvoiceForBuilder(formData: FormData) {
   // Insert invoice items with per-project snapshots
   const items = selected.map((j) => {
     const p = projectMap.get(j.project_id)!;
+    const subdivisionNameRawSnapshot = (p.subdivision ?? "").trim() || "Unassigned";
     return {
       invoice_id: invoice.id,
       job_id: j.id,
       project_id_snapshot: p.id,
       project_address_snapshot: p.project_address,
-      subdivision_snapshot: p.subdivision ?? null,
+      subdivision_name_raw_snapshot: subdivisionNameRawSnapshot,
       builder_name_snapshot: builder.name,
       job_title_snapshot: j.title,
       job_price_cents_snapshot: j.price_cents,
@@ -225,12 +234,40 @@ export async function editInvoice(formData: FormData) {
   const bill_to_address = String(formData.get("bill_to_address") || "").trim();
   const invoice_date = String(formData.get("invoice_date") || "").trim();
   const due_date = String(formData.get("due_date") || "").trim();
+  const itemIds = formData.getAll("item_id").map((value) => String(value).trim());
+  const itemTitles = formData
+    .getAll("item_title")
+    .map((value) => String(value).trim());
+  const itemPrices = formData
+    .getAll("item_price")
+    .map((value) => String(value).trim());
+  const itemProjectAddresses = formData
+    .getAll("item_project_address")
+    .map((value) => String(value).trim());
+  const itemSubdivisions = formData
+    .getAll("item_subdivision")
+    .map((value) => String(value).trim());
+  const itemBuilders = formData
+    .getAll("item_builder_name")
+    .map((value) => String(value).trim());
 
   if (!invoiceId) return { ok: false, message: "Invoice id is required." };
   if (!contractor_name) return { ok: false, message: "Contractor name is required." };
   if (!bill_to_name) return { ok: false, message: "Bill to name is required." };
   if (!bill_to_address) return { ok: false, message: "Bill to address is required." };
   if (!invoice_date) return { ok: false, message: "Invoice date is required." };
+  if (itemIds.length === 0) {
+    return { ok: false, message: "At least one invoice item is required." };
+  }
+  if (
+    itemTitles.length !== itemIds.length ||
+    itemPrices.length !== itemIds.length ||
+    itemProjectAddresses.length !== itemIds.length ||
+    itemSubdivisions.length !== itemIds.length ||
+    itemBuilders.length !== itemIds.length
+  ) {
+    return { ok: false, message: "Invoice items payload is invalid." };
+  }
 
   const { data: existing, error: existingErr } = await supabase
     .from("invoices")
@@ -243,6 +280,58 @@ export async function editInvoice(formData: FormData) {
   if (existingErr) return { ok: false, message: existingErr.message };
   if (!existing) return { ok: false, message: "Invoice not found." };
 
+  const normalizedItems = itemIds.map((id, index) => {
+    const title = itemTitles[index] ?? "";
+    const priceRaw = itemPrices[index] ?? "";
+    const projectAddress = itemProjectAddresses[index] ?? "";
+    const subdivisionRaw = itemSubdivisions[index] ?? "";
+    const builderNameRaw = itemBuilders[index] ?? "";
+    const priceCents = parsePriceToCents(priceRaw);
+    return {
+      id,
+      title,
+      priceRaw,
+      priceCents,
+      projectAddress,
+      subdivisionRaw,
+      builderNameRaw,
+    };
+  });
+
+  for (const item of normalizedItems) {
+    if (!item.id) return { ok: false, message: "Invoice item id is required." };
+    if (!item.title) return { ok: false, message: "Invoice item title is required." };
+    if (item.priceCents === null) {
+      return { ok: false, message: `Enter a valid price for "${item.title}".` };
+    }
+  }
+
+  const { data: existingItems, error: itemsErr } = await supabase
+    .from("invoice_items")
+    .select("id")
+    .eq("invoice_id", invoiceId);
+
+  if (itemsErr) return { ok: false, message: itemsErr.message };
+
+  const existingItemIds = new Set(
+    (existingItems ?? []).map((item) => String(item.id)),
+  );
+  const submittedItemIds = new Set(normalizedItems.map((item) => item.id));
+  for (const item of normalizedItems) {
+    if (!existingItemIds.has(item.id)) {
+      return { ok: false, message: "One or more invoice items were not found." };
+    }
+  }
+
+  const idsToDelete = Array.from(existingItemIds).filter(
+    (id) => !submittedItemIds.has(id),
+  );
+
+  const subtotal_cents = normalizedItems.reduce(
+    (sum, item) => sum + (item.priceCents ?? 0),
+    0,
+  );
+
   const { error: updateErr } = await supabase
     .from("invoices")
     .update({
@@ -253,12 +342,45 @@ export async function editInvoice(formData: FormData) {
       bill_to_address,
       invoice_date,
       due_date: due_date || null,
+      subtotal_cents,
     })
     .eq("id", invoiceId)
     .eq("user_id", user.id)
     .is("deleted_at", null);
 
   if (updateErr) return { ok: false, message: updateErr.message };
+
+  if (idsToDelete.length > 0) {
+    const { error: deleteItemsErr } = await supabase
+      .from("invoice_items")
+      .delete()
+      .eq("invoice_id", invoiceId)
+      .in("id", idsToDelete);
+
+    if (deleteItemsErr) return { ok: false, message: deleteItemsErr.message };
+  }
+
+  for (const item of normalizedItems) {
+    const subdivisionNameRawSnapshot =
+      item.subdivisionRaw.trim() || "Unassigned";
+    const builderNameSnapshot = item.builderNameRaw.trim() || "Unknown";
+    const projectAddressSnapshot = item.projectAddress.trim() || "—";
+
+    const { error: updateItemErr } = await supabase
+      .from("invoice_items")
+      .update({
+        job_title_snapshot: item.title,
+        job_price_cents_snapshot: item.priceCents,
+        project_address_snapshot: projectAddressSnapshot,
+        subdivision_name_raw_snapshot: subdivisionNameRawSnapshot,
+        builder_name_snapshot: builderNameSnapshot,
+      })
+      .eq("invoice_id", invoiceId)
+      .eq("id", item.id);
+
+    if (updateItemErr) return { ok: false, message: updateItemErr.message };
+  }
+
   return { ok: true };
 }
 

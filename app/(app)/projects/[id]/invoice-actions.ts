@@ -122,7 +122,8 @@ export async function createInvoice(projectId: string, formData: FormData) {
     job_id: j.id,
     project_id_snapshot: project.id,
     project_address_snapshot: project.project_address,
-    subdivision_name_raw_snapshot: project.subdivision ?? null,
+    subdivision_name_raw_snapshot:
+      (project.subdivision ?? "").trim() || "Unassigned",
     builder_name_snapshot: project.builder_name,
     job_title_snapshot: j.title,
     job_price_cents_snapshot: j.price_cents,

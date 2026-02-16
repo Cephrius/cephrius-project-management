@@ -126,6 +126,7 @@ export function EditJobDialog({
   const [superintendent, setSuperintendent] = useState<ComboboxItem | null>(
     job.superintendent ? toComboboxItem(job.superintendent) : null,
   );
+  const canSubmit = Boolean(title?.name.trim() && price.trim());
 
   useEffect(() => {
     if (!open) return;
@@ -251,7 +252,14 @@ export function EditJobDialog({
           <DialogTitle>Edit Job</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isPending || !canSubmit) return;
+            submit();
+          }}
+        >
           <CreatableCombobox
             label="Job Title"
             placeholder="Select or create job title..."
@@ -338,14 +346,13 @@ export function EditJobDialog({
               Cancel
             </Button>
             <Button
-              type="button"
-              onClick={submit}
-              disabled={isPending || !title?.name.trim() || !price.trim()}
+              type="submit"
+              disabled={isPending || !canSubmit}
             >
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

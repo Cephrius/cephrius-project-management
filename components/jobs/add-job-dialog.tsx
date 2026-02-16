@@ -125,6 +125,7 @@ export function AddJobDialog({
   const [superintendent, setSuperintendent] = useState<ComboboxItem | null>(
     null,
   );
+  const canSubmit = Boolean(title?.name.trim() && price.trim());
 
   useEffect(() => {
     if (!open) return;
@@ -251,7 +252,14 @@ export function AddJobDialog({
           <DialogTitle>Add Job</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isPending || !canSubmit) return;
+            submit();
+          }}
+        >
           <CreatableCombobox
             label="Job Title"
             placeholder="Select or create job title..."
@@ -330,6 +338,7 @@ export function AddJobDialog({
 
           <div className="flex justify-end gap-2">
             <Button
+              type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
@@ -337,13 +346,13 @@ export function AddJobDialog({
               Cancel
             </Button>
             <Button
-              onClick={submit}
-              disabled={isPending || !title?.name.trim() || !price.trim()}
+              type="submit"
+              disabled={isPending || !canSubmit}
             >
               {isPending ? "Saving..." : "Save Job"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

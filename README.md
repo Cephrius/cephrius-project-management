@@ -70,3 +70,57 @@ Manual run example:
 curl -H "Authorization: Bearer $CRON_SECRET" \
   "http://localhost:3000/api/cron/preferences?mode=all&force=1"
 ```
+
+## Project and Job CSV Import
+
+Use the importer to bulk create projects and jobs from CSV.
+
+Command:
+
+```bash
+npm run import:projects-jobs -- --file ./path/to/projects.csv --user-id <user-uuid>
+```
+
+Start with a dry run:
+
+```bash
+npm run import:projects-jobs -- --file ./path/to/projects.csv --user-id <user-uuid> --dry-run
+```
+
+Optional flags:
+
+- `--default-builder "Builder Name"`
+- `--default-subdivision "Subdivision Name"`
+
+Supported headers (case-insensitive aliases):
+
+- `project_address` (or `address`, `project`)
+- `house_number` (or `street_number`, `street no`) + `street_address` (or `street`, `street_name`) as an alternative to `project_address`
+- `job_title` (or `job`, `title`)
+- `price` (or `amount`, `job_price`, `job_cost`)
+- `builder_name` (or `builder`)
+- `subdivision` (or `subdivision_name`)
+- `superintendent` (or `gc`, `crew`)
+- `scheduled_completion` (or `scheduled`, `date`) in `YYYY-MM-DD` or `MM/DD/YYYY`
+
+Example CSV:
+
+```csv
+project_address,job_title,price,builder_name,subdivision,superintendent,scheduled_completion
+1204 Main St,Rough Grade,120,Acme Homes,North Ridge,John Smith,2026-02-20
+1204 Main St,Final Grade,90,Acme Homes,North Ridge,John Smith,2026-02-21
+1208 Main St,Rough Grade,125,Acme Homes,North Ridge,,2026-02-22
+```
+
+Also supported: a single composite column value like:
+
+```text
+1204 Main St ----> Job: Rough Grade -----> Price: 120
+```
+
+Behavior:
+
+- Creates builder/subdivision records if they do not exist.
+- Creates a project when one does not already exist for the same user + builder + subdivision + address.
+- Adds jobs to existing projects when matched.
+- Skips duplicate jobs inside a project (same title + price + schedule + superintendent).

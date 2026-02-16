@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { NewProjectDialog } from "./new-project-dialog";
 
 type Item = { id: string; name: string };
@@ -13,6 +14,7 @@ export function NewProjectButton({
   initialHouseNumber,
   initialStreetAddress,
   buttonLabel = "New Project",
+  buttonClassName,
 }: {
   initialBuilders: Item[];
   initialSubdivisions: Item[];
@@ -20,6 +22,7 @@ export function NewProjectButton({
   initialHouseNumber?: string;
   initialStreetAddress?: string;
   buttonLabel?: string;
+  buttonClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [dialogSeed, setDialogSeed] = useState(0);
@@ -27,6 +30,7 @@ export function NewProjectButton({
   return (
     <>
       <Button
+        className={cn(buttonClassName)}
         onClick={() => {
           setDialogSeed((current) => current + 1);
           setOpen(true);

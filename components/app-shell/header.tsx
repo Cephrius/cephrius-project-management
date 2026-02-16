@@ -281,7 +281,10 @@ export function Header() {
       : `results-${suggestions.map((suggestion) => `${suggestion.type}:${suggestion.id}`).join("|")}`;
 
   return (
-    <header className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3">
+    <header
+      data-app-shell-header
+      className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3"
+    >
       <div className="grid gap-3 min-[787px]:grid-cols-[1fr_minmax(18rem,30rem)_1fr] min-[787px]:items-center min-[787px]:gap-4">
         <div className="flex items-center justify-end gap-2 min-[787px]:hidden">
           <ThemeSwitcher />

@@ -36,6 +36,7 @@ export function CreatableCombobox({
   const [creating, setCreating] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = React.useState<number>(-1);
 
   const normalizedQuery = query.trim().replace(/\s+/g, " ");
   const lowerQuery = normalizedQuery.toLowerCase();
@@ -49,6 +50,29 @@ export function CreatableCombobox({
     if (!lowerQuery) return false;
     return items.some((i) => i.name.toLowerCase() === lowerQuery);
   }, [items, lowerQuery]);
+  const canCreate = !exactMatch && normalizedQuery.length > 0;
+  const keyboardOptions = React.useMemo(
+    () => [
+      ...filtered.map((item) => ({ kind: "item" as const, item })),
+      ...(canCreate ? [{ kind: "create" as const }] : []),
+    ],
+    [filtered, canCreate],
+  );
+
+  React.useEffect(() => {
+    if (!open) {
+      setActiveIndex(-1);
+      return;
+    }
+    if (keyboardOptions.length === 0) {
+      setActiveIndex(-1);
+      return;
+    }
+    setActiveIndex((current) => {
+      if (current >= 0 && current < keyboardOptions.length) return current;
+      return 0;
+    });
+  }, [open, keyboardOptions.length]);
 
   async function handleCreate() {
     if (!normalizedQuery || creating || deletingId) return;
@@ -84,6 +108,21 @@ export function CreatableCombobox({
     }
   }
 
+  function selectActiveOption() {
+    if (activeIndex < 0 || activeIndex >= keyboardOptions.length) return;
+    const target = keyboardOptions[activeIndex];
+    if (!target) return;
+
+    if (target.kind === "create") {
+      void handleCreate();
+      return;
+    }
+
+    onChange(target.item);
+    setOpen(false);
+    setQuery("");
+  }
+
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium">{label}</div>
@@ -107,39 +146,53 @@ export function CreatableCombobox({
               placeholder={`Search ${label.toLowerCase()}...`}
               value={query}
               onValueChange={setQuery}
+              onKeyDown={(event) => {
+                if (!open || keyboardOptions.length === 0) return;
+
+                const moveNext =
+                  event.key === "ArrowDown" ||
+                  (event.key === "Tab" && !event.shiftKey);
+                const movePrev =
+                  event.key === "ArrowUp" ||
+                  (event.key === "Tab" && event.shiftKey);
+
+                if (moveNext || movePrev) {
+                  event.preventDefault();
+                  const delta = movePrev ? -1 : 1;
+                  setActiveIndex((current) => {
+                    const base = current < 0 ? (delta > 0 ? -1 : 0) : current;
+                    return (
+                      (base + delta + keyboardOptions.length) %
+                      keyboardOptions.length
+                    );
+                  });
+                  return;
+                }
+
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  selectActiveOption();
+                }
+              }}
             />
 
             <CommandEmpty>
-              <div className="p-2 text-sm text-muted-foreground">
-                No results.
-              </div>
-
-              {!exactMatch && normalizedQuery && (
-                <div className="p-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start"
-                    disabled={creating || !!deletingId}
-                    onClick={handleCreate}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {creating ? "Creating..." : `Create "${normalizedQuery}"`}
-                  </Button>
-                </div>
-              )}
+              <div className="p-2 text-sm text-muted-foreground">No results.</div>
             </CommandEmpty>
 
             <CommandGroup>
-              {filtered.map((item) => (
+              {filtered.map((item, index) => (
                 <CommandItem
                   key={item.id}
                   value={item.name}
-                  className="pr-1"
+                  className={cn("pr-1", activeIndex === index && "bg-muted")}
                   onSelect={() => {
                     onChange(item);
                     setOpen(false);
                     setQuery("");
+                  }}
+                  onMouseEnter={() => {
+                    setActiveIndex(index);
                   }}
                 >
                   <Check className={cn("mr-2 h-4 w-4", value?.id === item.id ? "opacity-100" : "opacity-0")} />
@@ -170,22 +223,26 @@ export function CreatableCombobox({
                   )}
                 </CommandItem>
               ))}
-            </CommandGroup>
 
-            {!exactMatch && normalizedQuery && filtered.length > 0 && (
-              <div className="border-t p-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start"
+              {canCreate && (
+                <CommandItem
+                  value={`__create__${lowerQuery}`}
+                  className={cn(
+                    activeIndex === filtered.length && "bg-muted",
+                  )}
                   disabled={creating || !!deletingId}
-                  onClick={handleCreate}
+                  onSelect={() => {
+                    void handleCreate();
+                  }}
+                  onMouseEnter={() => {
+                    setActiveIndex(filtered.length);
+                  }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {creating ? "Creating..." : `Create "${normalizedQuery}"`}
-                </Button>
-              </div>
-            )}
+                </CommandItem>
+              )}
+            </CommandGroup>
           </Command>
         </PopoverContent>
       </Popover>

@@ -192,7 +192,14 @@ export function NewProjectDialog({
           <DialogTitle>New Project</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isPending || !canSubmit) return;
+            onSubmit();
+          }}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-2">
               <div className="text-sm font-medium">Street Number</div>
@@ -257,14 +264,13 @@ export function NewProjectDialog({
               Cancel
             </Button>
             <Button
-              type="button"
+              type="submit"
               disabled={isPending || !canSubmit}
-              onClick={onSubmit}
             >
               {isPending ? "Creating..." : "Create"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
