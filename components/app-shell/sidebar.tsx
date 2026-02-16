@@ -44,7 +44,7 @@ export async function Sidebar() {
   const companyName = formatCompanyName(rawCompanyName);
 
   return (
-    <>
+    <div data-app-shell-sidebar>
       <div className="fixed inset-x-3 bottom-3 z-50 md:hidden">
         <div className="rounded-2xl border border-primary/20 bg-background/95 p-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <SidebarNav mobile />
@@ -52,6 +52,6 @@ export async function Sidebar() {
       </div>
 
       <DesktopSidebar companyName={companyName} />
-    </>
+    </div>
   );
 }

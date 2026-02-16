@@ -31,6 +31,7 @@ type BillToPreset = {
   id: string;
   name: string;
   address: string;
+  email?: string;
 };
 
 type EligibleJob = {
@@ -106,6 +107,7 @@ export function CreateInvoiceByBuilder({
 
   const [billToName, setBillToName] = useState("");
   const [billToAddress, setBillToAddress] = useState("");
+  const [billToEmail, setBillToEmail] = useState("");
   const [contractorPresets, setContractorPresets] = useState<
     ContractorPreset[]
   >([]);
@@ -199,11 +201,16 @@ export function CreateInvoiceByBuilder({
     return saved;
   }
 
-  function upsertBillToPreset(input: { name: string; address: string }) {
+  function upsertBillToPreset(input: {
+    name: string;
+    address: string;
+    email: string;
+  }) {
     const name = normalizeText(input.name);
     if (!name) return null;
 
     const address = normalizeText(input.address);
+    const email = normalizeText(input.email);
     const existing = billToPresets.find(
       (preset) => preset.name.toLowerCase() === name.toLowerCase(),
     );
@@ -211,6 +218,7 @@ export function CreateInvoiceByBuilder({
       id: existing?.id ?? makePresetId(),
       name,
       address,
+      email,
     };
     const next = existing
       ? billToPresets.map((preset) =>
@@ -240,6 +248,7 @@ export function CreateInvoiceByBuilder({
     const saved = upsertBillToPreset({
       name: billToName,
       address: billToAddress,
+      email: billToEmail,
     });
     if (!saved) {
       toast.error("Enter a bill-to name first.");
@@ -247,6 +256,34 @@ export function CreateInvoiceByBuilder({
     }
     setSelectedBillToPreset({ id: saved.id, name: saved.name });
     toast.success("Bill-to info saved.");
+  }
+
+  function deleteContractorPreset(presetId: string) {
+    const preset = contractorPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    const next = contractorPresets.filter((item) => item.id !== presetId);
+    persistContractorPresets(next);
+
+    if (selectedContractorPreset?.id === presetId) {
+      setSelectedContractorPreset(null);
+    }
+
+    toast.success(`Deleted "${preset.name}" preset.`);
+  }
+
+  function deleteBillToPreset(presetId: string) {
+    const preset = billToPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    const next = billToPresets.filter((item) => item.id !== presetId);
+    persistBillToPresets(next);
+
+    if (selectedBillToPreset?.id === presetId) {
+      setSelectedBillToPreset(null);
+    }
+
+    toast.success(`Deleted "${preset.name}" preset.`);
   }
 
   async function loadEligibleJobs(builderId: string) {
@@ -387,6 +424,7 @@ export function CreateInvoiceByBuilder({
 
       fd.set("bill_to_name", billToName);
       fd.set("bill_to_address", billToAddress);
+      fd.set("bill_to_email", billToEmail);
 
       fd.set("invoice_date", invoiceDate);
       fd.set("due_date", dueDate);
@@ -405,7 +443,14 @@ export function CreateInvoiceByBuilder({
   }
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (isPending || !canSubmit) return;
+        submit();
+      }}
+    >
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">
           Create Invoice By Builder
@@ -449,7 +494,7 @@ export function CreateInvoiceByBuilder({
           <Card className="space-y-4 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="space-y-1">
-                <div className="text-sm font-semibold">2. Contractor Info</div>
+                <div className="text-sm font-semibold">2. From</div>
                 <p className="text-xs text-muted-foreground">
                   This appears in the From section of the invoice.
                 </p>
@@ -491,6 +536,9 @@ export function CreateInvoiceByBuilder({
                 setContractorName(saved.name);
                 toast.success("Contractor info saved.");
                 return { id: saved.id, name: saved.name };
+              }}
+              onDelete={async (item) => {
+                deleteContractorPreset(item.id);
               }}
             />
 
@@ -553,11 +601,13 @@ export function CreateInvoiceByBuilder({
 
                 setBillToName(preset.name);
                 setBillToAddress(preset.address);
+                setBillToEmail(preset.email ?? "");
               }}
               onCreate={async (name) => {
                 const saved = upsertBillToPreset({
                   name,
                   address: billToAddress,
+                  email: billToEmail,
                 });
                 if (!saved) throw new Error("Bill-to name is required.");
 
@@ -565,6 +615,9 @@ export function CreateInvoiceByBuilder({
                 setBillToName(saved.name);
                 toast.success("Bill-to info saved.");
                 return { id: saved.id, name: saved.name };
+              }}
+              onDelete={async (item) => {
+                deleteBillToPreset(item.id);
               }}
             />
 
@@ -583,6 +636,15 @@ export function CreateInvoiceByBuilder({
                   value={billToAddress}
                   onChange={(e) => setBillToAddress(e.target.value)}
                   placeholder="Street, city, state, zip"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <div className="text-sm font-medium">Billing Email (Optional)</div>
+                <Input
+                  type="email"
+                  value={billToEmail}
+                  onChange={(e) => setBillToEmail(e.target.value)}
+                  placeholder="billing@example.com"
                 />
               </div>
             </div>
@@ -794,13 +856,14 @@ export function CreateInvoiceByBuilder({
 
           <div className="hidden flex-col gap-2 xl:flex">
             <Button
+              type="button"
               variant="outline"
               disabled={isPending}
               onClick={() => router.push("/invoices")}
             >
               Cancel
             </Button>
-            <Button disabled={isPending || !canSubmit} onClick={submit}>
+            <Button type="submit" disabled={isPending || !canSubmit}>
               {isPending ? "Creating..." : "Create Invoice"}
             </Button>
           </div>
@@ -811,16 +874,17 @@ export function CreateInvoiceByBuilder({
 
       <div className="flex justify-end gap-2 xl:hidden">
         <Button
+          type="button"
           variant="outline"
           disabled={isPending}
           onClick={() => router.push("/invoices")}
         >
           Cancel
         </Button>
-        <Button disabled={isPending || !canSubmit} onClick={submit}>
+        <Button type="submit" disabled={isPending || !canSubmit}>
           {isPending ? "Creating..." : "Create Invoice"}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

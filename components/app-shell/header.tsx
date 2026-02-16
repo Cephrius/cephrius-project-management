@@ -274,11 +274,19 @@ export function Header() {
 
   const showSuggestions = isSearchFocused && query.trim().length >= 2;
   const canCreateProject = query.trim().length >= 2;
+  const suggestionsTransitionKey = isLoadingSuggestions
+    ? "loading"
+    : suggestions.length === 0
+      ? `empty-${query.trim().toLowerCase()}`
+      : `results-${suggestions.map((suggestion) => `${suggestion.type}:${suggestion.id}`).join("|")}`;
 
   return (
-    <header className="border-b border-primary/20 bg-background px-4 py-3 rounded-xl">
-      <div className="relative grid gap-3 pr-24 sm:pr-36 md:grid-cols-[1fr_minmax(18rem,30rem)_1fr] md:items-center md:gap-4 md:pr-0">
-        <div className="absolute right-0 top-0 flex items-center gap-2 md:hidden">
+    <header
+      data-app-shell-header
+      className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3"
+    >
+      <div className="grid gap-3 min-[787px]:grid-cols-[1fr_minmax(18rem,30rem)_1fr] min-[787px]:items-center min-[787px]:gap-4">
+        <div className="flex items-center justify-end gap-2 min-[787px]:hidden">
           <ThemeSwitcher />
 
           <Button
@@ -301,12 +309,12 @@ export function Header() {
           </Button>
         </div>
 
-        <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+        <div className="hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground min-[787px]:flex">
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="hidden md:inline-flex cursor-pointer"
+            className="hidden cursor-pointer min-[787px]:inline-flex"
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -316,6 +324,13 @@ export function Header() {
               <ChevronsLeft className="size-4" />
             )}
           </Button>
+
+          {crumbs.length > 0 && (
+            <span
+              aria-hidden="true"
+              className="hidden h-5 w-px bg-border min-[787px]:block"
+            />
+          )}
 
           {crumbs.map((c, idx) => {
             const isLast = idx === crumbs.length - 1;
@@ -343,13 +358,17 @@ export function Header() {
 
         <form
           onSubmit={handleGlobalSearch}
-          className="flex w-full items-center gap-2 md:col-start-2 md:justify-self-center"
+          className="flex min-w-0 w-full items-center gap-2 min-[787px]:col-start-2 min-[787px]:justify-self-center"
         >
           <div className="relative w-full" ref={searchContainerRef}>
             <Input
               name="q"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setIsSearchFocused(true);
+                setActiveSuggestionIndex(-1);
+              }}
               onFocus={() => setIsSearchFocused(true)}
               onKeyDown={handleInputKeyDown}
               placeholder="Search projects, jobs, invoices..."
@@ -359,57 +378,62 @@ export function Header() {
             />
 
             {showSuggestions && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-primary/20 bg-background shadow-lg">
-                {isLoadingSuggestions ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                    Searching...
-                  </div>
-                ) : suggestions.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                    No matches found.
-                  </div>
-                ) : (
-                  <div className="max-h-80 overflow-y-auto py-1">
-                    {suggestions.map((suggestion, index) => (
-                      <button
-                        key={suggestion.id}
-                        type="button"
-                        className={cn(
-                          "flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm transition-colors",
-                          activeSuggestionIndex === index
-                            ? "bg-primary/10"
-                            : "hover:bg-primary/5",
-                        )}
-                        onClick={() => selectSuggestion(suggestion)}
-                      >
-                        <div className="flex min-w-0 items-start gap-2">
-                          {suggestion.type === "project" && (
-                            <FolderKanban className="mt-0.5 size-4 shrink-0 text-primary" />
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-primary/20 bg-background shadow-lg animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 duration-150">
+                <div
+                  key={suggestionsTransitionKey}
+                  className="animate-in fade-in-0 slide-in-from-top-1 duration-200"
+                >
+                  {isLoadingSuggestions ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground animate-pulse">
+                      Searching...
+                    </div>
+                  ) : suggestions.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No matches found.
+                    </div>
+                  ) : (
+                    <div className="max-h-80 overflow-y-auto py-1">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={suggestion.id}
+                          type="button"
+                          className={cn(
+                            "flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm transition-colors",
+                            activeSuggestionIndex === index
+                              ? "bg-primary/10"
+                              : "hover:bg-primary/5",
                           )}
-                          {suggestion.type === "job" && (
-                            <Briefcase className="mt-0.5 size-4 shrink-0 text-primary" />
-                          )}
-                          {suggestion.type === "invoice" && (
-                            <FileText className="mt-0.5 size-4 shrink-0 text-primary" />
-                          )}
-                          <div className="min-w-0">
-                            <div className="truncate font-medium">
-                              {suggestion.title}
-                            </div>
-                            {suggestion.subtitle && (
-                              <div className="truncate text-xs text-muted-foreground">
-                                {suggestion.subtitle}
-                              </div>
+                          onClick={() => selectSuggestion(suggestion)}
+                        >
+                          <div className="flex min-w-0 items-start gap-2">
+                            {suggestion.type === "project" && (
+                              <FolderKanban className="mt-0.5 size-4 shrink-0 text-primary" />
                             )}
+                            {suggestion.type === "job" && (
+                              <Briefcase className="mt-0.5 size-4 shrink-0 text-primary" />
+                            )}
+                            {suggestion.type === "invoice" && (
+                              <FileText className="mt-0.5 size-4 shrink-0 text-primary" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="truncate font-medium">
+                                {suggestion.title}
+                              </div>
+                              {suggestion.subtitle && (
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {suggestion.subtitle}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                          {suggestionTypeLabel(suggestion.type)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                          <div className="rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                            {suggestionTypeLabel(suggestion.type)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {canCreateProject && (
                   <button
@@ -444,17 +468,17 @@ export function Header() {
           <Button
             type="submit"
             variant="outline"
-            size="sm"
-            className="cursor-pointer border-primary/30 hover:bg-primary/10"
+            size="icon"
+            className="h-9 w-9 shrink-0 cursor-pointer border-primary/30 hover:bg-primary/10"
             aria-label="Search"
           >
             <Search className="h-4 w-4" />
           </Button>
         </form>
 
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end md:col-start-3 md:justify-self-end">
+        <div className="hidden flex-wrap items-center gap-2 sm:justify-end min-[787px]:col-start-3 min-[787px]:flex min-[787px]:justify-self-end">
           {rightSlot}
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2 min-[787px]:flex">
             <ThemeSwitcher />
             <Button
               variant="destructive"

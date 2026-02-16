@@ -24,14 +24,14 @@ function ReleaseSection({
 }: {
   title: string;
   items: string[];
-  icon: "changes" | "fixes";
+  icon: "changes" | "fixes" | "major";
 }) {
   if (items.length === 0) return null;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-        {icon === "changes" ? (
+        {icon === "changes" || icon === "major" ? (
           <Sparkles className="size-4" />
         ) : (
           <Bug className="size-4" />
@@ -70,6 +70,11 @@ function ReleaseCard({
       </div>
 
       <div className="space-y-4">
+        <ReleaseSection
+          title="Major Additions"
+          items={release.majorAdditions ?? []}
+          icon="major"
+        />
         <ReleaseSection title="Changes" items={release.changes} icon="changes" />
         <ReleaseSection title="Bug Fixes" items={release.bugFixes} icon="fixes" />
       </div>

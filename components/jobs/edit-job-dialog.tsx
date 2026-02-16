@@ -126,6 +126,7 @@ export function EditJobDialog({
   const [superintendent, setSuperintendent] = useState<ComboboxItem | null>(
     job.superintendent ? toComboboxItem(job.superintendent) : null,
   );
+  const canSubmit = Boolean(title?.name.trim() && price.trim());
 
   useEffect(() => {
     if (!open) return;
@@ -251,7 +252,14 @@ export function EditJobDialog({
           <DialogTitle>Edit Job</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isPending || !canSubmit) return;
+            submit();
+          }}
+        >
           <CreatableCombobox
             label="Job Title"
             placeholder="Select or create job title..."
@@ -259,6 +267,16 @@ export function EditJobDialog({
             value={title}
             onChange={handleTitleChange}
             onCreate={createTitle}
+            onDelete={(item) => {
+              setTitleOptions((prev) =>
+                prev.filter((entry) => entry.id !== item.id),
+              );
+              setDefaultPriceByTitleId((prev) => {
+                const next = { ...prev };
+                delete next[item.id];
+                return next;
+              });
+            }}
           />
 
           <div className="space-y-2">
@@ -269,6 +287,11 @@ export function EditJobDialog({
               value={selectedPrice}
               onChange={handlePriceChange}
               onCreate={createPrice}
+              onDelete={(item) => {
+                setPriceOptions((prev) =>
+                  prev.filter((entry) => entry.id !== item.id),
+                );
+              }}
             />
             <p className="text-xs text-muted-foreground">
               Prices are suggested from this project only.
@@ -292,6 +315,11 @@ export function EditJobDialog({
               value={superintendent}
               onChange={setSuperintendent}
               onCreate={createSuperintendent}
+              onDelete={(item) => {
+                setSuperintendentOptions((prev) =>
+                  prev.filter((entry) => entry.id !== item.id),
+                );
+              }}
             />
             {superintendent && (
               <Button
@@ -318,14 +346,13 @@ export function EditJobDialog({
               Cancel
             </Button>
             <Button
-              type="button"
-              onClick={submit}
-              disabled={isPending || !title?.name.trim() || !price.trim()}
+              type="submit"
+              disabled={isPending || !canSubmit}
             >
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
 import { createInvoice } from "@/app/(app)/projects/[id]/invoice-actions";
 import { readPreferenceSettings, suggestDueDate } from "@/lib/settings/preferences";
+import {
+  CreatableCombobox,
+  type ComboboxItem,
+} from "@/components/projects/createable-combobox";
 
 type Job = {
   id: string;
@@ -22,12 +27,53 @@ type Job = {
   scheduled_completion: string | null;
   is_completed: boolean;
 };
+type InvoicedItemRow = { job_id: string | null };
+
+type ContractorPreset = {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+};
+
+type BillToPreset = {
+  id: string;
+  name: string;
+  address: string;
+  email?: string;
+};
+
+const CONTRACTOR_PRESETS_STORAGE_KEY = "invoice:contractor-presets";
+const BILL_TO_PRESETS_STORAGE_KEY = "invoice:bill-to-presets";
 
 function money(cents: number) {
   return (cents / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
   });
+}
+
+function normalizeText(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function makePresetId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function readStorageArray<T>(key: string): T[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 export function CreateInvoiceDialog({
@@ -55,6 +101,17 @@ export function CreateInvoiceDialog({
 
   const [billToName, setBillToName] = useState("");
   const [billToAddress, setBillToAddress] = useState("");
+  const [billToEmail, setBillToEmail] = useState("");
+  const [contractorPresets, setContractorPresets] = useState<
+    ContractorPreset[]
+  >(() => readStorageArray<ContractorPreset>(CONTRACTOR_PRESETS_STORAGE_KEY));
+  const [billToPresets, setBillToPresets] = useState<BillToPreset[]>(() =>
+    readStorageArray<BillToPreset>(BILL_TO_PRESETS_STORAGE_KEY),
+  );
+  const [selectedContractorPreset, setSelectedContractorPreset] =
+    useState<ComboboxItem | null>(null);
+  const [selectedBillToPreset, setSelectedBillToPreset] =
+    useState<ComboboxItem | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
   const [invoiceDate, setInvoiceDate] = useState(today);
@@ -64,17 +121,163 @@ export function CreateInvoiceDialog({
 
   const [query, setQuery] = useState("");
 
+  const contractorPresetItems: ComboboxItem[] = useMemo(
+    () =>
+      [...contractorPresets]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((preset) => ({ id: preset.id, name: preset.name })),
+    [contractorPresets],
+  );
+  const billToPresetItems: ComboboxItem[] = useMemo(
+    () =>
+      [...billToPresets]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((preset) => ({ id: preset.id, name: preset.name })),
+    [billToPresets],
+  );
+
+  function persistContractorPresets(next: ContractorPreset[]) {
+    setContractorPresets(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        CONTRACTOR_PRESETS_STORAGE_KEY,
+        JSON.stringify(next),
+      );
+    }
+  }
+
+  function persistBillToPresets(next: BillToPreset[]) {
+    setBillToPresets(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(BILL_TO_PRESETS_STORAGE_KEY, JSON.stringify(next));
+    }
+  }
+
+  function upsertContractorPreset(input: {
+    name: string;
+    address: string;
+    phone: string;
+  }) {
+    const name = normalizeText(input.name);
+    if (!name) return null;
+
+    const address = normalizeText(input.address);
+    const phone = normalizeText(input.phone);
+    const existing = contractorPresets.find(
+      (preset) => preset.name.toLowerCase() === name.toLowerCase(),
+    );
+    const saved: ContractorPreset = {
+      id: existing?.id ?? makePresetId(),
+      name,
+      address,
+      phone,
+    };
+    const next = existing
+      ? contractorPresets.map((preset) =>
+          preset.id === existing.id ? saved : preset,
+        )
+      : [...contractorPresets, saved];
+
+    persistContractorPresets(next);
+    return saved;
+  }
+
+  function upsertBillToPreset(input: {
+    name: string;
+    address: string;
+    email: string;
+  }) {
+    const name = normalizeText(input.name);
+    if (!name) return null;
+
+    const address = normalizeText(input.address);
+    const email = normalizeText(input.email);
+    const existing = billToPresets.find(
+      (preset) => preset.name.toLowerCase() === name.toLowerCase(),
+    );
+    const saved: BillToPreset = {
+      id: existing?.id ?? makePresetId(),
+      name,
+      address,
+      email,
+    };
+    const next = existing
+      ? billToPresets.map((preset) =>
+          preset.id === existing.id ? saved : preset,
+        )
+      : [...billToPresets, saved];
+
+    persistBillToPresets(next);
+    return saved;
+  }
+
+  function saveCurrentContractorPreset() {
+    const saved = upsertContractorPreset({
+      name: contractorName,
+      address: contractorAddress,
+      phone: contractorPhone,
+    });
+    if (!saved) {
+      toast.error("Enter a company name first.");
+      return;
+    }
+    setSelectedContractorPreset({ id: saved.id, name: saved.name });
+    toast.success("From preset saved.");
+  }
+
+  function saveCurrentBillToPreset() {
+    const saved = upsertBillToPreset({
+      name: billToName,
+      address: billToAddress,
+      email: billToEmail,
+    });
+    if (!saved) {
+      toast.error("Enter a bill-to name first.");
+      return;
+    }
+    setSelectedBillToPreset({ id: saved.id, name: saved.name });
+    toast.success("Bill-to preset saved.");
+  }
+
+  function deleteContractorPreset(presetId: string) {
+    const preset = contractorPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    const next = contractorPresets.filter((item) => item.id !== presetId);
+    persistContractorPresets(next);
+
+    if (selectedContractorPreset?.id === presetId) {
+      setSelectedContractorPreset(null);
+    }
+
+    toast.success(`Deleted "${preset.name}" preset.`);
+  }
+
+  function deleteBillToPreset(presetId: string) {
+    const preset = billToPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    const next = billToPresets.filter((item) => item.id !== presetId);
+    persistBillToPresets(next);
+
+    if (selectedBillToPreset?.id === presetId) {
+      setSelectedBillToPreset(null);
+    }
+
+    toast.success(`Deleted "${preset.name}" preset.`);
+  }
+
   // Load contractor profile + eligible jobs when opened
   useEffect(() => {
     if (!open) return;
 
-    setError(null);
-    setQuery("");
-    setSelected({});
-    setInvoiceDate(today);
-    setDueDateManuallyEdited(false);
-
     (async () => {
+      setError(null);
+      setQuery("");
+      setSelected({});
+      setInvoiceDate(today);
+      setDueDateManuallyEdited(false);
+
       // Profile
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth.user?.id;
@@ -120,7 +323,9 @@ export function CreateInvoiceDialog({
         .in("job_id", ids);
 
       const invoicedSet = new Set(
-        (invoicedItems ?? []).map((x: any) => x.job_id as string),
+        ((invoicedItems ?? []) as InvoicedItemRow[])
+          .map((item) => item.job_id)
+          .filter((jobId): jobId is string => Boolean(jobId)),
       );
 
       const eligible = comp.filter((j) => !invoicedSet.has(j.id));
@@ -129,7 +334,7 @@ export function CreateInvoiceDialog({
       // Default: select none (user must choose)
       setSelected({});
     })();
-  }, [open, projectId, supabase]);
+  }, [open, projectId, supabase, today]);
 
   // Search
   const filteredJobs = useMemo(() => {
@@ -154,12 +359,13 @@ export function CreateInvoiceDialog({
     [selectedJobs],
   );
 
-  const canSubmit =
+  const canSubmit = Boolean(
     contractorName.trim() &&
-    billToName.trim() &&
-    billToAddress.trim() &&
-    invoiceDate.trim() &&
-    selectedJobs.length > 0;
+      billToName.trim() &&
+      billToAddress.trim() &&
+      invoiceDate.trim() &&
+      selectedJobs.length > 0,
+  );
 
   function submit() {
     setError(null);
@@ -171,6 +377,7 @@ export function CreateInvoiceDialog({
       fd.set("contractor_phone", contractorPhone);
       fd.set("bill_to_name", billToName);
       fd.set("bill_to_address", billToAddress);
+      fd.set("bill_to_email", billToEmail);
       fd.set("invoice_date", invoiceDate);
       fd.set("due_date", dueDate);
 
@@ -196,10 +403,59 @@ export function CreateInvoiceDialog({
             {/* <SelectSeparator className=" max-w-4xl"/> */}
         </DialogHeader>
 
-        <div className="space-y-5 sm:space-y-6">
+        <form
+          className="space-y-5 sm:space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isPending || !canSubmit) return;
+            submit();
+          }}
+        >
           {/* Contractor */}
           <div className="space-y-3">
-            <div className="text-sm font-semibold">Contractor Info</div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-semibold">From</div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={saveCurrentContractorPreset}
+              >
+                Save From Preset
+              </Button>
+            </div>
+            <CreatableCombobox
+              label="Saved From Profiles"
+              placeholder="Select or create from profile..."
+              items={contractorPresetItems}
+              value={selectedContractorPreset}
+              onChange={(item) => {
+                setSelectedContractorPreset(item);
+                if (!item) return;
+
+                const preset = contractorPresets.find((p) => p.id === item.id);
+                if (!preset) return;
+
+                setContractorName(preset.name);
+                setContractorAddress(preset.address);
+                setContractorPhone(preset.phone);
+              }}
+              onCreate={async (name) => {
+                const saved = upsertContractorPreset({
+                  name,
+                  address: contractorAddress,
+                  phone: contractorPhone,
+                });
+                if (!saved) throw new Error("From company name is required.");
+
+                setSelectedContractorPreset({ id: saved.id, name: saved.name });
+                setContractorName(saved.name);
+                toast.success("From preset saved.");
+                return { id: saved.id, name: saved.name };
+              }}
+              onDelete={async (item) => {
+                deleteContractorPreset(item.id);
+              }}
+            />
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
                 <div className="text-sm font-light">Company Name</div>
@@ -227,7 +483,49 @@ export function CreateInvoiceDialog({
 
           {/* Bill to */}
           <div className="space-y-3">
-            <div className="text-sm font-semibold">Bill To</div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-semibold">Bill To</div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={saveCurrentBillToPreset}
+              >
+                Save Bill-To Preset
+              </Button>
+            </div>
+            <CreatableCombobox
+              label="Saved Bill-To Profiles"
+              placeholder="Select or create bill-to profile..."
+              items={billToPresetItems}
+              value={selectedBillToPreset}
+              onChange={(item) => {
+                setSelectedBillToPreset(item);
+                if (!item) return;
+
+                const preset = billToPresets.find((p) => p.id === item.id);
+                if (!preset) return;
+
+                setBillToName(preset.name);
+                setBillToAddress(preset.address);
+                setBillToEmail(preset.email ?? "");
+              }}
+              onCreate={async (name) => {
+                const saved = upsertBillToPreset({
+                  name,
+                  address: billToAddress,
+                  email: billToEmail,
+                });
+                if (!saved) throw new Error("Bill-to name is required.");
+
+                setSelectedBillToPreset({ id: saved.id, name: saved.name });
+                setBillToName(saved.name);
+                toast.success("Bill-to preset saved.");
+                return { id: saved.id, name: saved.name };
+              }}
+              onDelete={async (item) => {
+                deleteBillToPreset(item.id);
+              }}
+            />
             <div className="grid gap-2 md:grid-cols-2">
               <div className="space-y-1 md:col-span-2">
                 <div className="text-sm font-light">Builder Name</div>
@@ -243,6 +541,15 @@ export function CreateInvoiceDialog({
                   value={billToAddress}
                   onChange={(e) => setBillToAddress(e.target.value)}
                   placeholder="Bill to address"
+                />
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <div className="text-sm font-light">Billing Email (Optional)</div>
+                <Input
+                  type="email"
+                  value={billToEmail}
+                  onChange={(e) => setBillToEmail(e.target.value)}
+                  placeholder="billing@example.com"
                 />
               </div>
             </div>
@@ -356,6 +663,7 @@ export function CreateInvoiceDialog({
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
+              type="button"
               className="w-full sm:w-auto"
               variant="outline"
               disabled={isPending}
@@ -364,14 +672,14 @@ export function CreateInvoiceDialog({
               Cancel
             </Button>
             <Button
+              type="submit"
               className="w-full sm:w-auto"
               disabled={isPending || !canSubmit}
-              onClick={submit}
             >
               {isPending ? "Creating..." : "Create Invoice"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -92,10 +92,12 @@ export function AddJobDialog({
   projectId,
   open,
   onOpenChange,
+  initialTitle = "",
 }: {
   projectId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  initialTitle?: string;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -111,13 +113,19 @@ export function AddJobDialog({
     ComboboxItem[]
   >([]);
 
-  const [title, setTitle] = useState<ComboboxItem | null>(null);
+  const [title, setTitle] = useState<ComboboxItem | null>(() => {
+    const normalizedInitialTitle = normalizeName(initialTitle);
+    return normalizedInitialTitle
+      ? toComboboxItem(normalizedInitialTitle)
+      : null;
+  });
   const [selectedPrice, setSelectedPrice] = useState<ComboboxItem | null>(null);
   const [price, setPrice] = useState("");
   const [scheduled, setScheduled] = useState("");
   const [superintendent, setSuperintendent] = useState<ComboboxItem | null>(
     null,
   );
+  const canSubmit = Boolean(title?.name.trim() && price.trim());
 
   useEffect(() => {
     if (!open) return;
@@ -244,7 +252,14 @@ export function AddJobDialog({
           <DialogTitle>Add Job</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isPending || !canSubmit) return;
+            submit();
+          }}
+        >
           <CreatableCombobox
             label="Job Title"
             placeholder="Select or create job title..."
@@ -252,6 +267,16 @@ export function AddJobDialog({
             value={title}
             onChange={handleTitleChange}
             onCreate={createTitle}
+            onDelete={(item) => {
+              setTitleOptions((prev) =>
+                prev.filter((entry) => entry.id !== item.id),
+              );
+              setDefaultPriceByTitleId((prev) => {
+                const next = { ...prev };
+                delete next[item.id];
+                return next;
+              });
+            }}
           />
 
           <div className="space-y-2">
@@ -262,6 +287,11 @@ export function AddJobDialog({
               value={selectedPrice}
               onChange={handlePriceChange}
               onCreate={createPrice}
+              onDelete={(item) => {
+                setPriceOptions((prev) =>
+                  prev.filter((entry) => entry.id !== item.id),
+                );
+              }}
             />
             <p className="text-xs text-muted-foreground">
               Prices are suggested from this project only.
@@ -285,6 +315,11 @@ export function AddJobDialog({
               value={superintendent}
               onChange={setSuperintendent}
               onCreate={createSuperintendent}
+              onDelete={(item) => {
+                setSuperintendentOptions((prev) =>
+                  prev.filter((entry) => entry.id !== item.id),
+                );
+              }}
             />
             {superintendent && (
               <Button
@@ -303,6 +338,7 @@ export function AddJobDialog({
 
           <div className="flex justify-end gap-2">
             <Button
+              type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
@@ -310,13 +346,13 @@ export function AddJobDialog({
               Cancel
             </Button>
             <Button
-              onClick={submit}
-              disabled={isPending || !title?.name.trim() || !price.trim()}
+              type="submit"
+              disabled={isPending || !canSubmit}
             >
               {isPending ? "Saving..." : "Save Job"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

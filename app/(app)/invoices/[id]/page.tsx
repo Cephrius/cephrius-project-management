@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { PrintButton } from "@/components/invoices/print-button";
+import { EditInvoiceDialog } from "@/components/invoices/edit-invoice-dialog";
+import { DeleteInvoiceButton } from "@/components/invoices/delete-invoice-button";
 
 function money(cents: number) {
   return (cents / 100).toLocaleString(undefined, {
@@ -47,15 +49,17 @@ export default async function InvoiceViewPage({
     .order("created_at", { ascending: true });
 
   return (
-    <div className="space-y-6">
-      <BreadcrumbSetter
-        crumbs={[
-          { label: "Invoices", href: "/invoices" },
-          { label: invoice.invoice_number },
-        ]}
-      />
+    <div id="invoice-print-root" className="space-y-6 print:space-y-0">
+      <div className="print:hidden">
+        <BreadcrumbSetter
+          crumbs={[
+            { label: "Invoices", href: "/invoices" },
+            { label: invoice.invoice_number },
+          ]}
+        />
+      </div>
 
-      <Card className="p-6">
+      <Card className="p-6 print:border-0 print:p-0 print:shadow-none">
         <div className="flex items-start justify-between gap-6">
           <div>
             <div className="text-xl font-semibold">
@@ -71,7 +75,11 @@ export default async function InvoiceViewPage({
             )}
           </div>
 
-          <PrintButton />
+          <div className="flex items-center gap-2 print:hidden">
+            <EditInvoiceDialog invoice={invoice} items={items ?? []} />
+            <DeleteInvoiceButton invoiceId={invoice.id} redirectTo="/invoices" />
+            <PrintButton />
+          </div>
         </div>
 
         <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -99,8 +107,8 @@ export default async function InvoiceViewPage({
           </div>
         </div>
 
-        <div className="mt-6 overflow-x-auto rounded-md border">
-          <div className="min-w-[720px]">
+        <div className="mt-6 overflow-x-auto rounded-md border print:border-0">
+          <div className="min-w-[720px] print:min-w-0">
             <div className="grid grid-cols-14 gap-2 border-b p-3 text-xs font-semibold text-muted-foreground">
               <div className="col-span-7">Description</div>
               <div className="col-span-2">Project</div>

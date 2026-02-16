@@ -176,7 +176,14 @@ export function EditProjectDialog({
           <DialogTitle>Edit Project</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isPending || !canSubmit) return;
+            onSubmit();
+          }}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-2">
               <div className="text-sm font-medium">Street Number</div>
@@ -210,6 +217,9 @@ export function EditProjectDialog({
             value={builder}
             onChange={setBuilder}
             onCreate={onCreateBuilder}
+            onDelete={(item) => {
+              setBuilders((prev) => prev.filter((entry) => entry.id !== item.id));
+            }}
           />
 
           <CreatableCombobox
@@ -219,6 +229,11 @@ export function EditProjectDialog({
             value={subdivision}
             onChange={setSubdivision}
             onCreate={onCreateSubdivision}
+            onDelete={(item) => {
+              setSubdivisions((prev) =>
+                prev.filter((entry) => entry.id !== item.id),
+              );
+            }}
           />
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -233,14 +248,13 @@ export function EditProjectDialog({
               Cancel
             </Button>
             <Button
-              type="button"
+              type="submit"
               disabled={isPending || !canSubmit}
-              onClick={onSubmit}
             >
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

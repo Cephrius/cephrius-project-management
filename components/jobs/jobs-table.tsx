@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toggleJobComplete } from "@/app/(app)/projects/[id]/actions";
+import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 import { DeleteJobDialog } from "@/components/jobs/delete-job-dialog";
 import { EditJobDialog } from "@/components/jobs/edit-job-dialog";
 
@@ -54,6 +55,9 @@ export function JobsTable({
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<JobRow | null>(null);
   const [query, setQuery] = useState("");
+  const [addJobOpen, setAddJobOpen] = useState(false);
+  const [addJobInitialTitle, setAddJobInitialTitle] = useState("");
+  const [addJobSeed, setAddJobSeed] = useState(0);
 
   const filtered = useMemo(() => {
     let list = jobs;
@@ -76,6 +80,17 @@ export function JobsTable({
     () => jobs.some((j) => (j.superintendent ?? "").trim().length > 0),
     [jobs],
   );
+  const normalizedQuery = useMemo(
+    () => query.trim().replace(/\s+/g, " "),
+    [query],
+  );
+
+  function openCreateJobFromSearch() {
+    if (!normalizedQuery) return;
+    setAddJobInitialTitle(normalizedQuery);
+    setAddJobSeed((current) => current + 1);
+    setAddJobOpen(true);
+  }
 
   return (
     <div className="space-y-3">
@@ -108,6 +123,16 @@ export function JobsTable({
             placeholder="Search jobs..."
             className="w-full sm:w-64"
           />
+          <Button
+            type="button"
+            variant="outline"
+            className="cursor-pointer gap-2 sm:whitespace-nowrap bg-primary text-white dark:bg-primary" 
+            disabled={!normalizedQuery}
+            onClick={openCreateJobFromSearch}
+          >
+            <Plus className="size-4" />
+            {normalizedQuery ? `Create "${normalizedQuery}"` : "Create Job"}
+          </Button>
         </div>
       </div>
 
@@ -233,6 +258,13 @@ export function JobsTable({
           }}
         />
       )}
+      <AddJobDialog
+        key={`jobs-table-add-job-${addJobSeed}`}
+        projectId={projectId}
+        open={addJobOpen}
+        onOpenChange={setAddJobOpen}
+        initialTitle={addJobInitialTitle}
+      />
     </div>
   );
 }
