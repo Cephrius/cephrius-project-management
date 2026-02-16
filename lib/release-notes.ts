@@ -1,11 +1,31 @@
 export type ReleaseNote = {
   version: string;
   releasedOn: string;
+  majorAdditions?: string[];
   changes: string[];
   bugFixes: string[];
 };
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    version: "v0.1.5a",
+    releasedOn: "Feb 16, 2026",
+    majorAdditions: [
+      "Added in-app CSV import for projects and jobs with dry-run validation, summary reporting, and direct create/append behavior.",
+      "Added street-level folders to grouped project view so projects are organized by subdivision -> builder -> street -> Jobs.",
+      "Expanded invoice management with edit and delete actions, including full line-item editing (description, amount, address, subdivision, and builder).",
+    ],
+    changes: [
+      "Extended invoice editing to recalculate subtotal values from updated line items.",
+      "Improved project actions and import controls so they adapt cleanly on smaller screens.",
+      "Refined grouped project rows and project cards for better wrapping and readability on mobile widths.",
+    ],
+    bugFixes: [
+      "Resolved invoice item insert failures caused by null subdivision snapshots violating database constraints.",
+      "Fixed search behavior where suggestions did not reopen after pressing Escape and continuing to type.",
+      "Fixed multiple header and projects layout overflow issues on narrow/mobile viewports.",
+    ],
+  },
   {
     version: "v0.1.4a",
     releasedOn: "Feb 13, 2026",
