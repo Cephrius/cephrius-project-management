@@ -86,22 +86,27 @@ export default async function ProjectDashboardPage({
           { label: "Projects", href: "/projects" },
           { label: project.project_address },
         ]}
-        rightSlot={
-          <div className="flex gap-2">
-            <CreateInvoiceButton
-              projectId={project.id}
-              disabled={completedNotInvoiceCount === 0}
-            />
-            <AddJobButton projectId={project.id} />
-          </div>
-        }
       />
 
-      <div>
-        <h1 className="text-xl font-semibold">{project.project_address}</h1>
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">{project.project_address}</h1>
+          <p className="text-sm text-muted-foreground">
           Builder: {project.builder_name} • Subdivision: {project.subdivision}
-        </p>
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+          <CreateInvoiceButton
+            projectId={project.id}
+            disabled={completedNotInvoiceCount === 0}
+            className="w-full sm:w-auto"
+          />
+          <AddJobButton
+            projectId={project.id}
+            label="New Job"
+            className="w-full sm:w-auto"
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

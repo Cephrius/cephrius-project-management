@@ -88,7 +88,6 @@ function formatProjectQueryPreview(value: string) {
   return normalizeQuery(value);
 }
 
-
 export function Header() {
   const supabase = createClient();
   const router = useRouter();
@@ -124,7 +123,8 @@ export function Header() {
     }
 
     document.addEventListener("mousedown", handleOutsideMouseDown);
-    return () => document.removeEventListener("mousedown", handleOutsideMouseDown);
+    return () =>
+      document.removeEventListener("mousedown", handleOutsideMouseDown);
   }, []);
 
   useEffect(() => {
@@ -285,13 +285,48 @@ export function Header() {
       data-app-shell-header
       className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3"
     >
-      <div className="grid gap-3 min-[787px]:grid-cols-[1fr_minmax(18rem,30rem)_1fr] min-[787px]:items-center min-[787px]:gap-4">
-        <div className="hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground min-[787px]:flex">
+      <div className="grid gap-3 min-[787px]:grid-cols-[minmax(0,1fr)_auto] min-[787px]:items-center">
+        <div className="min-w-0 min-[787px]:col-start-1 min-[789px]:flex min-[789px]:items-center min-[789px]:gap-3">
+          <div className="hidden min-w-0 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground min-[789px]:flex">
+          {crumbs.map((c, idx) => {
+            const isLast = idx === crumbs.length - 1;
+            return (
+              <div
+                key={`${c.label}-${idx}`}
+                className="flex items-center gap-2"
+              >
+                {c.href && !isLast ? (
+                  <Link
+                    className="hover:text-primary hover:underline"
+                    href={c.href}
+                  >
+                    {c.label}
+                  </Link>
+                ) : (
+                  <span
+                    className={
+                      isLast
+                        ? "font-medium text-primary"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {c.label}
+                  </span>
+                )}
+                {!isLast && <span>&gt;</span>}
+              </div>
+            );
+          })}
+          </div>
+          <form
+            onSubmit={handleGlobalSearch}
+            className="flex min-w-0 w-full items-center gap-2 min-[789px]:w-auto min-[789px]:flex-1"
+          >
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="hidden cursor-pointer min-[787px]:inline-flex"
+            className="hidden h-9 w-9 shrink-0 cursor-pointer min-[766px]:inline-flex"
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -301,42 +336,6 @@ export function Header() {
               <ChevronsLeft className="size-4" />
             )}
           </Button>
-
-          {crumbs.length > 0 && (
-            <span
-              aria-hidden="true"
-              className="hidden h-5 w-px bg-border min-[787px]:block"
-            />
-          )}
-
-          {crumbs.map((c, idx) => {
-            const isLast = idx === crumbs.length - 1;
-            return (
-              <div
-                key={`${c.label}-${idx}`}
-                className="flex items-center gap-2"
-              >
-                {c.href && !isLast ? (
-                  <Link className="hover:text-primary hover:underline" href={c.href}>
-                    {c.label}
-                  </Link>
-                ) : (
-                  <span
-                    className={isLast ? "font-medium text-primary" : "text-muted-foreground"}
-                  >
-                    {c.label}
-                  </span>
-                )}
-                {!isLast && <span>&gt;</span>}
-              </div>
-            );
-          })}
-        </div>
-
-        <form
-          onSubmit={handleGlobalSearch}
-          className="flex min-w-0 w-full items-center gap-2 min-[787px]:col-start-2 min-[787px]:justify-self-center"
-        >
           <div className="relative min-w-0 flex-1" ref={searchContainerRef}>
             <Input
               name="q"
@@ -464,9 +463,10 @@ export function Header() {
               <LogOutIcon className="h-4 w-4" />
             </Button>
           </div>
-        </form>
+          </form>
+        </div>
 
-        <div className="hidden flex-wrap items-center gap-2 sm:justify-end min-[787px]:col-start-3 min-[787px]:flex min-[787px]:justify-self-end">
+        <div className="hidden flex-wrap items-center gap-2 sm:justify-end min-[787px]:col-start-2 min-[787px]:row-start-1 min-[787px]:flex min-[787px]:justify-self-end">
           {rightSlot}
           <div className="hidden items-center gap-2 min-[787px]:flex">
             <ThemeSwitcher />
