@@ -286,29 +286,6 @@ export function Header() {
       className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3"
     >
       <div className="grid gap-3 min-[787px]:grid-cols-[1fr_minmax(18rem,30rem)_1fr] min-[787px]:items-center min-[787px]:gap-4">
-        <div className="flex items-center justify-end gap-2 min-[787px]:hidden">
-          <ThemeSwitcher />
-
-          <Button
-            variant="destructive"
-            size="icon"
-            className="cursor-pointer sm:hidden"
-            aria-label="Sign out"
-            onClick={handleSignOut}
-          >
-            <LogOutIcon className="h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="destructive"
-            size="sm"
-            className="hidden cursor-pointer sm:inline-flex"
-            onClick={handleSignOut}
-          >
-            Sign out
-          </Button>
-        </div>
-
         <div className="hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground min-[787px]:flex">
           <Button
             type="button"
@@ -360,7 +337,7 @@ export function Header() {
           onSubmit={handleGlobalSearch}
           className="flex min-w-0 w-full items-center gap-2 min-[787px]:col-start-2 min-[787px]:justify-self-center"
         >
-          <div className="relative w-full" ref={searchContainerRef}>
+          <div className="relative min-w-0 flex-1" ref={searchContainerRef}>
             <Input
               name="q"
               value={query}
@@ -474,6 +451,19 @@ export function Header() {
           >
             <Search className="h-4 w-4" />
           </Button>
+
+          <div className="flex items-center gap-2 min-[787px]:hidden">
+            <ThemeSwitcher hideLabel />
+            <Button
+              variant="destructive"
+              size="icon"
+              className="cursor-pointer"
+              aria-label="Sign out"
+              onClick={handleSignOut}
+            >
+              <LogOutIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </form>
 
         <div className="hidden flex-wrap items-center gap-2 sm:justify-end min-[787px]:col-start-3 min-[787px]:flex min-[787px]:justify-self-end">

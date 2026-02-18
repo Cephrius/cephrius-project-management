@@ -75,10 +75,10 @@ export function MonthJobsCalendar({
   const selectedJobs = jobsByDate.get(selectedKey) ?? [];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="flex justify-center lg:justify-start">
+    <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="flex w-full justify-center overflow-x-auto pb-1 lg:justify-start">
         <Calendar
-          className="rounded-xl"
+          className="min-w-[17.5rem] rounded-xl"
           mode="single"
           required
           defaultMonth={monthDate}
@@ -98,7 +98,7 @@ export function MonthJobsCalendar({
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-sm font-semibold">
             {format(selectedDate, "EEE, MMM d")}
           </div>
@@ -114,13 +114,13 @@ export function MonthJobsCalendar({
         ) : (
           <div className="max-h-[20rem] space-y-2 overflow-y-auto pr-1">
             {selectedJobs.map((job) => (
-              <div key={job.id} className="rounded-md border p-3">
-                <div className="text-sm font-medium">{job.title}</div>
+              <div key={job.id} className="rounded-md border p-2.5 sm:p-3">
+                <div className="break-words text-sm font-medium">{job.title}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Project: {job.project_address}
                 </div>
                 {job.superintendent && (
-                  <div className="text-xs text-muted-foreground">
+                  <div className="break-words text-xs text-muted-foreground">
                     Superintendent / GC: {job.superintendent}
                   </div>
                 )}

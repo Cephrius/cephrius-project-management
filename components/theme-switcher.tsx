@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -49,7 +50,11 @@ function applyPrimaryColor(key: PrimaryColorKey) {
   root.style.setProperty("--sidebar-primary-foreground", color.foreground);
 }
 
-export function ThemeSwitcher() {
+export function ThemeSwitcher({
+  hideLabel = false,
+}: {
+  hideLabel?: boolean;
+} = {}) {
   const { theme = "system", setTheme } = useTheme();
 
   const selectedTheme: ThemeMode =
@@ -120,10 +125,13 @@ export function ThemeSwitcher() {
           type="button"
           variant="outline"
           size="sm"
+          aria-label="Theme"
           className="cursor-pointer border-primary/30 hover:bg-primary/10"
         >
           <ActiveIcon className="size-4" />
-          <span className="hidden sm:inline">Theme</span>
+          <span className={cn(hideLabel ? "hidden" : "hidden sm:inline")}>
+            Theme
+          </span>
           <span
             className="size-3 rounded-full border"
             style={{ backgroundColor: activePrimary.primary }}

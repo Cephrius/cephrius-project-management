@@ -159,13 +159,13 @@ export function InvoicesPageClient({
     return (
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-semibold text-primary">Invoices (0)</h1>
-          <Link href="/invoices/new">
-            <Button>Create Invoice</Button>
+          <h1 className="text-xl font-semibold text-primary">Invoices</h1>
+          <Link href="/invoices/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">Create Invoice</Button>
           </Link>
         </div>
         <Card className="p-8">
-          <div className="text-sm text-muted-foreground">No invoices yet.</div>
+          <div className="text-sm text-muted-foreground">You don't have any invoices yet.</div>
         </Card>
       </div>
     );
@@ -209,8 +209,8 @@ export function InvoicesPageClient({
               className="w-full sm:w-72"
             />
 
-            <Link href="/invoices/new">
-              <Button>Create Invoice</Button>
+            <Link href="/invoices/new" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto">Create Invoice</Button>
             </Link>
           </div>
         </div>
