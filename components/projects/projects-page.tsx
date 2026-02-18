@@ -626,7 +626,7 @@ export function ProjectsPageClient({
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-xl font-semibold">Projects (0)</h1>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <ImportProjectJobsButton className="w-full sm:w-auto" />
             <NewProjectButton
               initialBuilders={builders}
@@ -656,48 +656,50 @@ export function ProjectsPageClient({
             </p>
           </div>
 
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            {hasActiveFilters && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary dark:text-white">
-                <span className="inline-flex items-center gap-1">
-                  <Filter className="size-3" />
-                  Filters Active
-                </span>
+          <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+              {hasActiveFilters && (
+                <div className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary dark:text-white">
+                  <span className="inline-flex items-center gap-1">
+                    <Filter className="size-3" />
+                    Filters Active
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs sm:h-8 sm:gap-2 sm:text-sm"
+                    onClick={resetFilters}
+                    disabled={!hasActiveFilters}
+                  >
+                    <Filter className="size-3.5 sm:size-4" />
+                    <span className="hidden sm:inline">Clear Filters</span>
+                    <span className="sm:hidden">Clear</span>
+                  </Button>
+                </div>
+              )}
+              <div className="ml-auto sm:ml-0 inline-flex overflow-hidden rounded-md border bg-background">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant={view === "list" ? "secondary" : "ghost"}
                   size="sm"
-                  className="gap-2"
-                  onClick={resetFilters}
-                  disabled={!hasActiveFilters}
+                  className="rounded-none border-0 cursor-pointer"
+                  onClick={() => setView("list")}
+                  aria-label="List view"
                 >
-                  <Filter className="size-4" />
-                  Clear Filters
+                  <List className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={view === "grouped" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="rounded-none border-0 border- cursor-pointer"
+                  onClick={() => setView("grouped")}
+                  aria-label="Grouped view"
+                >
+                  <Building2 className="size-4" />
                 </Button>
               </div>
-            )}
-
-            <div className="inline-flex overflow-hidden rounded-md border bg-background">
-              <Button
-                type="button"
-                variant={view === "list" ? "secondary" : "ghost"}
-                size="sm"
-                className="rounded-none border-0 cursor-pointer"
-                onClick={() => setView("list")}
-                aria-label="List view"
-              >
-                <List className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                variant={view === "grouped" ? "secondary" : "ghost"}
-                size="sm"
-                className="rounded-none border-0 border- cursor-pointer"
-                onClick={() => setView("grouped")}
-                aria-label="Grouped view"
-              >
-                <Building2 className="size-4" />
-              </Button>
             </div>
 
             <Input
