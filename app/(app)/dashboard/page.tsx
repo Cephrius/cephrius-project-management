@@ -149,7 +149,7 @@ export default async function AppHome() {
   if (firstError) {
     return (
       <div className="space-y-6">
-        <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/" }]} />
+        <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/dashboard" }]} />
         <Card className="border-primary/20 p-6">
           <div className="text-sm text-muted-foreground">
             Failed to load dashboard: {firstError.message}
@@ -199,7 +199,7 @@ export default async function AppHome() {
 
   return (
     <div className="space-y-6">
-      <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/" }]} />
+      <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/dashboard" }]} />
 
       <div>
         <h1 className="text-xl font-semibold text-primary">Dashboard</h1>

@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 function getPageTitle(pathname: string): string {
-  if (pathname === "/") return "Dashboard";
+  if (pathname === "/" ) return "JobSyte";
+  if (pathname === "/dashboard") return "Dashboard";
   if (pathname.startsWith("/projects")) return "Projects";
   if (pathname.startsWith("/invoices")) return "Invoices";
   if (pathname.startsWith("/settings")) return "Settings";

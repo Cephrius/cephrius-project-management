@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
