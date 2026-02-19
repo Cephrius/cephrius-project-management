@@ -299,7 +299,9 @@ export function EditJobDialog({
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Scheduled Completion (Optional)</div>
+            <div className="text-sm font-medium">
+              Scheduled Completion (Optional)
+            </div>
             <Input
               type="date"
               value={scheduled}
@@ -345,10 +347,7 @@ export function EditJobDialog({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending || !canSubmit}
-            >
+            <Button type="submit" disabled={isPending || !canSubmit}>
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>

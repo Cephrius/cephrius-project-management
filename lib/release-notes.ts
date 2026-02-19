@@ -8,6 +8,14 @@ export type ReleaseNote = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.1.6a",
+    releasedOn: "Feb 18, 2026",
+    changes: [],
+    bugFixes: [
+      "Enhanced UI responsiveness in Header component; improved layout and styling for better mobile and desktop views."
+    ],
+  },
+  {
     version: "v0.1.5a",
     releasedOn: "Feb 16, 2026",
     majorAdditions: [

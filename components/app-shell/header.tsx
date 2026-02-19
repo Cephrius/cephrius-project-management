@@ -88,7 +88,6 @@ function formatProjectQueryPreview(value: string) {
   return normalizeQuery(value);
 }
 
-
 export function Header() {
   const supabase = createClient();
   const router = useRouter();
@@ -124,7 +123,8 @@ export function Header() {
     }
 
     document.addEventListener("mousedown", handleOutsideMouseDown);
-    return () => document.removeEventListener("mousedown", handleOutsideMouseDown);
+    return () =>
+      document.removeEventListener("mousedown", handleOutsideMouseDown);
   }, []);
 
   useEffect(() => {
@@ -285,13 +285,14 @@ export function Header() {
       data-app-shell-header
       className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3"
     >
-      <div className="grid gap-3 min-[787px]:grid-cols-[1fr_minmax(18rem,30rem)_1fr] min-[787px]:items-center min-[787px]:gap-4">
-        <div className="hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground min-[787px]:flex">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="hidden min-w-0 items-center gap-2 md:flex">
+          {/* Dashboard Collapse Component */}
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="hidden cursor-pointer min-[787px]:inline-flex"
+            className="h-9 w-9 shrink-0 cursor-pointer"
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -302,42 +303,50 @@ export function Header() {
             )}
           </Button>
 
-          {crumbs.length > 0 && (
-            <span
-              aria-hidden="true"
-              className="hidden h-5 w-px bg-border min-[787px]:block"
-            />
-          )}
-
-          {crumbs.map((c, idx) => {
-            const isLast = idx === crumbs.length - 1;
-            return (
-              <div
-                key={`${c.label}-${idx}`}
-                className="flex items-center gap-2"
-              >
-                {c.href && !isLast ? (
-                  <Link className="hover:text-primary hover:underline" href={c.href}>
-                    {c.label}
-                  </Link>
-                ) : (
-                  <span
-                    className={isLast ? "font-medium text-primary" : "text-muted-foreground"}
-                  >
-                    {c.label}
-                  </span>
-                )}
-                {!isLast && <span>&gt;</span>}
-              </div>
-            );
-          })}
+          <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden text-sm text-muted-foreground lg:flex">
+            {crumbs.map((c, idx) => {
+              const isLast = idx === crumbs.length - 1;
+              return (
+                <div
+                  key={`${c.label}-${idx}`}
+                  className="flex min-w-0 items-center gap-2"
+                >
+                  {c.href && !isLast ? (
+                    <Link
+                      className="max-w-[12rem] truncate hover:text-primary hover:underline"
+                      href={c.href}
+                    >
+                      {c.label}
+                    </Link>
+                  ) : (
+                    <span
+                      className={cn(
+                        "max-w-[12rem] truncate",
+                        isLast
+                          ? "font-medium text-primary"
+                          : "text-muted-foreground",
+                      )}
+                      title={c.label}
+                    >
+                      {c.label}
+                    </span>
+                  )}
+                  {!isLast && <span>&gt;</span>}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <form
           onSubmit={handleGlobalSearch}
-          className="flex min-w-0 w-full items-center gap-2 min-[787px]:col-start-2 min-[787px]:justify-self-center"
+          className="col-start-1 row-start-1 flex w-full min-w-0 items-center gap-2 md:col-start-2 md:justify-self-center md:max-w-[30rem] lg:max-w-[34rem] xl:max-w-[40rem]"
         >
-          <div className="relative min-w-0 flex-1" ref={searchContainerRef}>
+          <div
+            className="relative min-w-0 flex-1"
+            ref={searchContainerRef}
+          >
+            {/* Search Bar Component */}
             <Input
               name="q"
               value={query}
@@ -434,7 +443,7 @@ export function Header() {
                         </div>
                       </div>
                     </div>
-                    <div className="rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                    <div className="rounded border border-primary/20  bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
                       Action
                     </div>
                   </button>
@@ -451,33 +460,34 @@ export function Header() {
           >
             <Search className="h-4 w-4" />
           </Button>
-
-          <div className="flex items-center gap-2 min-[787px]:hidden">
-            <ThemeSwitcher hideLabel />
-            <Button
-              variant="destructive"
-              size="icon"
-              className="cursor-pointer"
-              aria-label="Sign out"
-              onClick={handleSignOut}
-            >
-              <LogOutIcon className="h-4 w-4" />
-            </Button>
-          </div>
         </form>
 
-        <div className="hidden flex-wrap items-center gap-2 sm:justify-end min-[787px]:col-start-3 min-[787px]:flex min-[787px]:justify-self-end">
-          {rightSlot}
-          <div className="hidden items-center gap-2 min-[787px]:flex">
-            <ThemeSwitcher />
-            <Button
-              variant="destructive"
-              className="cursor-pointer"
-              onClick={handleSignOut}
-            >
-              Sign out
-            </Button>
+        <div className="col-start-2 row-start-1 ml-auto flex min-w-0 items-center justify-end gap-2 md:col-start-3">
+          <div className="hidden min-w-0 max-w-[16rem] overflow-hidden lg:block">
+            {rightSlot}
           </div>
+          <div className="lg:hidden">
+            <ThemeSwitcher hideLabel />
+          </div>
+          <div className="hidden lg:block">
+            <ThemeSwitcher />
+          </div>
+          <Button
+            variant="destructive"
+            size="icon"
+            className="cursor-pointer lg:hidden"
+            aria-label="Sign out"
+            onClick={handleSignOut}
+          >
+            <LogOutIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="destructive"
+            className="hidden cursor-pointer lg:inline-flex"
+            onClick={handleSignOut}
+          >
+            Sign out
+          </Button>
         </div>
       </div>
 
