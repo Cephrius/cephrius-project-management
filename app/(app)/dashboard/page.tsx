@@ -44,7 +44,7 @@ function money(cents: number) {
   });
 }
 
-export default async function AppHome() {
+export default async function DashboardPage() {
   const supabase = await createClient();
   const {
     data: { user },
