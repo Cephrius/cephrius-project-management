@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/JobSyte_OFFICAL_LIGHT.png",
+        url: "/image.png",
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/JobSyte_OFFICAL_DARK.png",
+        url: "/image.png",
         media: "(prefers-color-scheme: dark)",
       },
       {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: "/jobsyte-_safari.png",
   },
 };
 

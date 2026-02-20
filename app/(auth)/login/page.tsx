@@ -16,14 +16,6 @@ export default function LoginPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [showVerified, setShowVerified] = useState(false);
 
-  function getCookie(name: string) {
-    if (typeof document === "undefined") return null;
-    const match = document.cookie.match(
-      new RegExp("(^| )" + name + "=([^;]+)"),
-    );
-    return match ? decodeURIComponent(match[2]) : null;
-  }
-
   useEffect(() => {
     const match = document.cookie.match(/(^| )bf_verified=([^;]+)/);
     if (match?.[2] === "1") {
@@ -94,9 +86,9 @@ export default function LoginPage() {
           {msg && <p className="text-sm  text-destructive">{msg}</p>}
         </div>
         <div className="text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <a className="underline" href="/signup">
-            Sign up
+          Don&apos;t have an account?{" "}
+          <a className="underline" href="/request-demo">
+            Request a demo
           </a>
         </div>
       </Card>
