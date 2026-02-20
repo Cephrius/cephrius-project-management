@@ -15,14 +15,15 @@ export function DashboardPreview() {
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-foreground/5">
           <div className="border-b border-border px-4 py-3 flex items-center gap-2">
             <div className="flex gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-border" />
-              <div className="h-3 w-3 rounded-full bg-border" />
-              <div className="h-3 w-3 rounded-full bg-border" />
+              <div className="h-3 w-3 rounded-full bg-red-500" />
+              <div className="h-3 w-3 rounded-full bg-yellow-500" />
+              <div className="h-3 w-3 rounded-full bg-green-500" />
             </div>
-            <div className="flex-1 flex justify-center">
+            <div className="flex-1 flex justify-center ">
               <div className="rounded-md bg-secondary px-4 py-1 text-xs text-muted-foreground">
-                app.jobsyte.io
+                jobsyte.co/dashboard
               </div>
+              
             </div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}

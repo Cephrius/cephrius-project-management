@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
+import { ThemeSwitcher } from "../theme-switcher"
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -17,13 +19,23 @@ export function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border"
     >
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-            <span className="text-sm font-bold text-accent-foreground font-mono">JS</span>
-          </div>
-          <span className="text-lg font-semibold tracking-tight text-foreground font-mono">
-            JobSyte
-          </span>
+        <Link href="/" className="flex items-center" aria-label="JobSyte home">
+          <Image
+            src="/JobSyte_OFFICAL_LIGHT.png"
+            alt="JobSyte"
+            width={520}
+            height={100}
+            priority
+            className="h-12 w-auto dark:hidden md:h-14"
+          />
+          <Image
+            src="/JobSyte_OFFICAL_DARK.png"
+            alt="JobSyte"
+            width={520}
+            height={100}
+            priority
+            className="hidden h-12 w-auto dark:block md:h-14"
+          />
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">

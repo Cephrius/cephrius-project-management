@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/jobsyte.png",
+        url: "/JobSyte_OFFICAL_LIGHT.png",
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/jobsyte_dark.png",
+        url: "/JobSyte_OFFICAL_DARK.png",
         media: "(prefers-color-scheme: dark)",
       },
       {
