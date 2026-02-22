@@ -99,6 +99,10 @@ export async function POST(request: Request) {
   const to =
     parseEmailAddress(process.env.DEMO_REQUEST_TO_EMAIL) ??
     parseEmailAddress(process.env.RESEND_FROM_EMAIL);
+  const from =
+    parseEmailAddress(process.env.DEMO_REQUEST_FROM_EMAIL) ??
+    parseEmailAddress(process.env.RESEND_FROM_EMAIL) ??
+    to;
 
   if (!to) {
     return NextResponse.json(
@@ -124,6 +128,7 @@ export async function POST(request: Request) {
   `;
 
   const sendResult = await sendEmail({
+    from,
     to,
     subject: `New demo request - ${parsed.payload.companyName}`,
     html,

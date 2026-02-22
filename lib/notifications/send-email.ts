@@ -4,6 +4,7 @@ type SendEmailInput = {
   to: string;
   subject: string;
   html: string;
+  from?: string;
 };
 
 type SendEmailResult = {
@@ -16,9 +17,10 @@ export async function sendEmail({
   to,
   subject,
   html,
+  from: fromOverride,
 }: SendEmailInput): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.RESEND_FROM_EMAIL?.trim();
+  const from = fromOverride?.trim() || process.env.RESEND_FROM_EMAIL?.trim();
 
   if (!apiKey || !from) {
     return {
