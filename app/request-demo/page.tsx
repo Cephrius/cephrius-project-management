@@ -46,7 +46,7 @@ const HOVER_SPRING = {
   damping: 18,
   mass: 0.75,
 } as const;
-const REQUEST_DEMO_LIGHT_THEME_STYLE: CSSProperties = {
+const REQUEST_DEMO_LIGHT_THEME_STYLE: CSSProperties & Record<string, string> = {
   colorScheme: "light",
   "--background": "#ffffff",
   "--foreground": "#000000",
@@ -111,7 +111,9 @@ export default function RequestDemoPage() {
           fullName,
           companyName,
           workEmail,
-          phone: phoneNumber ? `${form.phoneCountry} ${phoneNumber}` : undefined,
+          phone: phoneNumber
+            ? `${form.phoneCountry} ${phoneNumber}`
+            : undefined,
           teamSize: form.companySize || undefined,
           notes: jobTitle ? `Job title: ${jobTitle}` : undefined,
         }),
@@ -144,7 +146,10 @@ export default function RequestDemoPage() {
       className="relative min-h-screen overflow-hidden bg-background"
       style={REQUEST_DEMO_LIGHT_THEME_STYLE}
     >
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
         <motion.div
           className="absolute -top-40 left-1/2 h-[42rem] w-[42rem] -translate-x-1/2 rounded-full blur-3xl"
           style={{
@@ -208,7 +213,6 @@ export default function RequestDemoPage() {
             >
               <Link href="/login">Sign in</Link>
             </Button>
-            
           </div>
         </div>
       </motion.header>
@@ -229,7 +233,11 @@ export default function RequestDemoPage() {
                     ? undefined
                     : { scaleX: [0.92, 1.08, 0.92], opacity: [0.65, 1, 0.65] }
                 }
-                transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 2.8,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               />
               <h1 className="max-w-xl text-4xl font-semibold tracking-tight md:text-5xl text-black">
                 Got a question for our sales team?
@@ -240,7 +248,8 @@ export default function RequestDemoPage() {
                 fewer handoffs.
               </p>
               <p className="max-w-xl text-base italic text-muted-foreground md:text-lg">
-                For any question about JobSyte and about how we can fit your needs reach us at{" "}
+                For any question about JobSyte and about how we can fit your
+                needs reach us at{" "}
                 <a
                   href={`mailto:${SALES_EMAIL}`}
                   className="underline decoration-foreground/50 underline-offset-4 hover:decoration-foreground"
@@ -254,7 +263,9 @@ export default function RequestDemoPage() {
             <motion.div
               variants={FADE_UP}
               className="max-w-xl space-y-4 rounded-2xl border border-border/70 bg-card/80 p-5"
-              whileHover={shouldReduceMotion ? undefined : { y: -4, scale: 1.01 }}
+              whileHover={
+                shouldReduceMotion ? undefined : { y: -4, scale: 1.01 }
+              }
               transition={HOVER_SPRING}
             >
               <p className="text-2xl font-semibold leading-tight tracking-tight text-black">
@@ -284,7 +295,10 @@ export default function RequestDemoPage() {
               <Card className="relative overflow-hidden rounded-3xl border border-border/70 bg-card/95 p-6 shadow-xl md:p-8">
                 <div className="pointer-events-none absolute -bottom-24 -right-16 size-52 rounded-full bg-primary/10 blur-3xl" />
 
-                <form className="relative z-10 space-y-4" onSubmit={handleSubmit}>
+                <form
+                  className="relative z-10 space-y-4"
+                  onSubmit={handleSubmit}
+                >
                   <motion.div className="space-y-2" variants={FADE_UP}>
                     <Label htmlFor="workEmail">Work Email</Label>
                     <Input
@@ -302,7 +316,10 @@ export default function RequestDemoPage() {
                     />
                   </motion.div>
 
-                  <motion.div className="grid gap-4 sm:grid-cols-2" variants={FADE_UP}>
+                  <motion.div
+                    className="grid gap-4 sm:grid-cols-2"
+                    variants={FADE_UP}
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <Input
@@ -335,7 +352,10 @@ export default function RequestDemoPage() {
                     </div>
                   </motion.div>
 
-                  <motion.div className="grid gap-4 sm:grid-cols-2" variants={FADE_UP}>
+                  <motion.div
+                    className="grid gap-4 sm:grid-cols-2"
+                    variants={FADE_UP}
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="companyName">Company</Label>
                       <Input
@@ -380,10 +400,16 @@ export default function RequestDemoPage() {
                         }))
                       }
                     >
-                      <NativeSelectOption value="">Select one</NativeSelectOption>
+                      <NativeSelectOption value="">
+                        Select one
+                      </NativeSelectOption>
                       <NativeSelectOption value="1-10">1-10</NativeSelectOption>
-                      <NativeSelectOption value="11-50">11-50</NativeSelectOption>
-                      <NativeSelectOption value="51-200">51-200</NativeSelectOption>
+                      <NativeSelectOption value="11-50">
+                        11-50
+                      </NativeSelectOption>
+                      <NativeSelectOption value="51-200">
+                        51-200
+                      </NativeSelectOption>
                       <NativeSelectOption value="201+">201+</NativeSelectOption>
                     </NativeSelect>
                   </motion.div>
@@ -402,10 +428,18 @@ export default function RequestDemoPage() {
                           }))
                         }
                       >
-                        <NativeSelectOption value="+1">US +1</NativeSelectOption>
-                        <NativeSelectOption value="+44">UK +44</NativeSelectOption>
-                        <NativeSelectOption value="+61">AU +61</NativeSelectOption>
-                        <NativeSelectOption value="+353">IE +353</NativeSelectOption>
+                        <NativeSelectOption value="+1">
+                          US +1
+                        </NativeSelectOption>
+                        <NativeSelectOption value="+44">
+                          UK +44
+                        </NativeSelectOption>
+                        <NativeSelectOption value="+61">
+                          AU +61
+                        </NativeSelectOption>
+                        <NativeSelectOption value="+353">
+                          IE +353
+                        </NativeSelectOption>
                       </NativeSelect>
                       <Input
                         id="phone"
@@ -426,8 +460,12 @@ export default function RequestDemoPage() {
                     variants={FADE_UP}
                   >
                     <motion.div
-                      whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }}
-                      whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                      whileHover={
+                        shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }
+                      }
+                      whileTap={
+                        shouldReduceMotion ? undefined : { scale: 0.98 }
+                      }
                       transition={HOVER_SPRING}
                     >
                       <Button
@@ -463,8 +501,8 @@ export default function RequestDemoPage() {
                       transition={{ duration: 0.35, ease: EASE_OUT }}
                       className="relative z-10 mt-5 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-foreground"
                     >
-                      Request received. We will reach out with scheduling options and
-                      next signup steps.
+                      Request received. We will reach out with scheduling
+                      options and next signup steps.
                     </motion.p>
                   )}
                 </AnimatePresence>
