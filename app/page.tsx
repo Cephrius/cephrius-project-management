@@ -30,7 +30,7 @@ const HOVER_SPRING = {
   damping: 20,
   mass: 0.7,
 } as const;
-const LANDING_LIGHT_THEME_STYLE: CSSProperties = {
+const LANDING_LIGHT_THEME_STYLE: CSSProperties & Record<string, string> = {
   colorScheme: "light",
   "--background": "#ffffff",
   "--foreground": "#000000",
