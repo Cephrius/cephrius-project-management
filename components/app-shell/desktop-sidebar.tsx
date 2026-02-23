@@ -50,16 +50,19 @@ export function DesktopSidebar({ companyName }: { companyName: string }) {
 
       <div
         className={cn(
-          "mt-auto border-t border-primary/10 p-2 text-xs text-muted-foreground",
+          "mt-auto border-t border-primary/10 p-2 text-xs text-muted-foreground flex-col",
           collapsed && "text-center",
         )}
       >
-        <VersionChangelogDialog collapsed={collapsed}/>
+        <VersionChangelogDialog collapsed={collapsed} />
         {!collapsed && (
           <>
-            Powered by{" "}
-            <a href="https://cephrius.com" className="underline hover:text-primary">
-              Cephrius Technologies{" "}
+            {" "}
+            <a
+              href="https://cephrius.com"
+              className="underline hover:text-primary"
+            >
+              Cephrius Technologies
             </a>
             <a>© {new Date().getFullYear()}</a>
           </>

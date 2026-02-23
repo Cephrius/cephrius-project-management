@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  MonitorIcon,
-  MoonIcon,
-  PaletteIcon,
-  SunIcon,
-} from "lucide-react";
+import { MonitorIcon, MoonIcon, PaletteIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
@@ -28,12 +23,17 @@ const PRIMARY_COLOR_STORAGE_KEY = "theme:primary-color";
 const PRIMARY_COLORS = [
   { id: "yellow", label: "Yellow", primary: "#eab308", foreground: "#000000" },
   { id: "blue", label: "Blue", primary: "#2563eb", foreground: "#ffffff" },
-  { id: "emerald", label: "Emerald", primary: "#059669", foreground: "#ffffff" },
+  {
+    id: "emerald",
+    label: "Emerald",
+    primary: "#059669",
+    foreground: "#ffffff",
+  },
   { id: "teal", label: "Teal", primary: "#0f766e", foreground: "#ffffff" },
   { id: "amber", label: "Amber", primary: "#d97706", foreground: "#ffffff" },
   { id: "rose", label: "Rose", primary: "#e11d48", foreground: "#ffffff" },
   { id: "violet", label: "Violet", primary: "#7c3aed", foreground: "#ffffff" },
-  { id: "slate", label: "Slate", primary: "#334155", foreground: "#ffffff" },
+  { id: "white", label: "White", primary: "#ffffff", foreground: "#000000" },
 ] as const;
 
 type PrimaryColorKey = (typeof PRIMARY_COLORS)[number]["id"];
@@ -62,8 +62,9 @@ export function ThemeSwitcher({
       ? theme
       : "system";
 
-  const [primaryColor, setPrimaryColor] =
-    useState<PrimaryColorKey>(DEFAULT_PRIMARY_COLOR);
+  const [primaryColor, setPrimaryColor] = useState<PrimaryColorKey>(
+    DEFAULT_PRIMARY_COLOR,
+  );
 
   const THEME_DELAY_MS = 100;
   const THEME_TRANSITION_MS = 350;
@@ -89,9 +90,12 @@ export function ThemeSwitcher({
       setTheme(next);
     }, THEME_DELAY_MS);
 
-    window.setTimeout(() => {
-      root.classList.remove("theme-transitioning");
-    }, THEME_DELAY_MS + THEME_TRANSITION_MS + 30);
+    window.setTimeout(
+      () => {
+        root.classList.remove("theme-transitioning");
+      },
+      THEME_DELAY_MS + THEME_TRANSITION_MS + 30,
+    );
   }
 
   function setPrimaryColorSmooth(next: PrimaryColorKey) {
@@ -114,7 +118,8 @@ export function ThemeSwitcher({
   }, [selectedTheme]);
 
   const activePrimary = useMemo(
-    () => PRIMARY_COLORS.find((c) => c.id === primaryColor) ?? PRIMARY_COLORS[0],
+    () =>
+      PRIMARY_COLORS.find((c) => c.id === primaryColor) ?? PRIMARY_COLORS[0],
     [primaryColor],
   );
 

@@ -980,7 +980,7 @@ export async function importProjectsJobsCsv(
 
   if (!dryRun) {
     revalidatePath("/projects");
-    revalidatePath("/");
+    revalidatePath("/dashboard");
   }
 
   return { ok: true, summary: { ...summary, rowErrors: summary.rowErrors.slice(0, 200) } };
