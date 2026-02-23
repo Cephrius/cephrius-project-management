@@ -14,14 +14,14 @@ type DemoRequestPayload = {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function parseEmailAddress(value: string | undefined): string | null {
-  if (!value) return null;
+function parseEmailAddress(value: string | undefined): string | undefined {
+  if (!value) return undefined;
   const trimmed = value.trim();
-  if (!trimmed) return null;
+  if (!trimmed) return undefined;
 
   const match = trimmed.match(/<([^>]+)>/);
   const candidate = (match?.[1] ?? trimmed).trim().toLowerCase();
-  if (!EMAIL_PATTERN.test(candidate)) return null;
+  if (!EMAIL_PATTERN.test(candidate)) return undefined;
   return candidate;
 }
 

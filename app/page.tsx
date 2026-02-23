@@ -8,11 +8,10 @@ import {
   ArrowRight,
   ChevronDown,
   FileText,
-  FolderOpen,
-  LayoutDashboard,
+
   Plus,
   Search,
-  Settings,
+
   Users,
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
