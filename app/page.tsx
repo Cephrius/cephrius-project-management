@@ -26,9 +26,41 @@ const CARD_REVEAL_DURATION = 0.85;
 const LOGO_MARQUEE_DURATION = 40;
 const HOVER_SPRING = {
   type: "spring",
-  stiffness: 170,
-  damping: 20,
-  mass: 0.7,
+  stiffness: 135,
+  damping: 18,
+  mass: 0.9,
+} as const;
+const HOVER_CARD_SHADOW = "0 20px 44px -28px rgba(15, 23, 42, 0.33)";
+const HOVER_SOFT_SHADOW = "0 16px 34px -26px rgba(15, 23, 42, 0.24)";
+const CTA_HOVER = {
+  y: -4,
+  scale: 1.025,
+  boxShadow: "0 18px 36px -20px rgba(37, 99, 235, 0.48)",
+} as const;
+const METRIC_CARD_HOVER = {
+  y: -6,
+  scale: 1.014,
+  boxShadow: HOVER_CARD_SHADOW,
+} as const;
+const LIST_CARD_HOVER = {
+  y: -3,
+  scale: 1.008,
+  boxShadow: HOVER_SOFT_SHADOW,
+} as const;
+const LOGO_CARD_HOVER = {
+  y: -6,
+  scale: 1.035,
+  rotate: -0.45,
+  boxShadow: HOVER_SOFT_SHADOW,
+} as const;
+const COLLABORATION_CARD_HOVER = {
+  y: -10,
+  scale: 1.012,
+  rotateX: 1.8,
+  boxShadow: HOVER_CARD_SHADOW,
+} as const;
+const INVOICE_ROW_HOVER = {
+  backgroundColor: "rgba(37, 99, 235, 0.06)",
 } as const;
 const LANDING_LIGHT_THEME_STYLE: CSSProperties & Record<string, string> = {
   colorScheme: "light",
@@ -349,34 +381,36 @@ export default function LandingPage() {
           style={{
             background:
               "radial-gradient(circle at center, hsl(var(--primary) / 0.22) 0%, transparent 70%)",
+            willChange: "transform, opacity",
           }}
           animate={
             shouldReduceMotion
               ? undefined
               : {
-                  x: [0, 120, 0],
-                  y: [0, 70, 0],
-                  scale: [1, 1.08, 1],
+                  x: [0, 96, 0],
+                  scale: [1, 1.06, 1],
+                  opacity: [0.86, 1, 0.86],
                 }
           }
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute -bottom-56 right-[-12rem] h-[38rem] w-[38rem] rounded-full blur-3xl"
           style={{
             background:
               "radial-gradient(circle at center, hsl(var(--accent) / 0.26) 0%, transparent 72%)",
+            willChange: "transform, opacity",
           }}
           animate={
             shouldReduceMotion
               ? undefined
               : {
-                  x: [0, -90, 0],
-                  y: [0, -60, 0],
-                  scale: [1, 1.06, 1],
+                  x: [0, -78, 0],
+                  scale: [1, 1.05, 1],
+                  opacity: [0.86, 1, 0.86],
                 }
           }
-          transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur">
@@ -468,7 +502,7 @@ export default function LandingPage() {
             className="mt-8 flex flex-wrap items-center justify-center gap-3"
           >
             <motion.div
-              whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }}
+              whileHover={shouldReduceMotion ? undefined : CTA_HOVER}
               whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
               transition={HOVER_SPRING}
             >
@@ -484,9 +518,9 @@ export default function LandingPage() {
             variants={HERO_ITEM}
             className="mt-7 hidden items-center justify-center text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground md:flex"
             animate={
-              shouldReduceMotion ? undefined : { y: [0, 6, 0], opacity: [0.55, 1, 0.55] }
+              shouldReduceMotion ? undefined : { opacity: [0.55, 1, 0.55] }
             }
-            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
           >
             Scroll to explore
             <ChevronDown className="ml-2 size-4" />
@@ -503,11 +537,7 @@ export default function LandingPage() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: SECTION_ENTER_DURATION, ease: EASE_OUT }}
         >
-          <motion.div
-            className="grid gap-4 lg:grid-cols-[220px_1fr]"
-            animate={shouldReduceMotion ? undefined : { y: [0, -4, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          >
+          <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
             <aside className="hidden rounded-2xl border border-border/70 bg-background/70 p-3 lg:block">
               <div className="rounded-xl border border-border bg-card px-3 py-2">
                 <p className="text-sm font-semibold">Acme Construction LLC</p>
@@ -574,14 +604,8 @@ export default function LandingPage() {
                     key={metric.label}
                     className="rounded-xl border border-border bg-card p-3"
                     variants={REVEAL_ITEM}
-                    whileHover={
-                      shouldReduceMotion
-                        ? undefined
-                        : {
-                          y: -4,
-                          transition: HOVER_SPRING,
-                        }
-                    }
+                    whileHover={shouldReduceMotion ? undefined : METRIC_CARD_HOVER}
+                    transition={HOVER_SPRING}
                   >
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                       {metric.label}
@@ -598,7 +622,11 @@ export default function LandingPage() {
               </motion.div>
 
               <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                <article className="rounded-xl border border-border bg-card p-3">
+                <motion.article
+                  className="rounded-xl border border-border bg-card p-3"
+                  whileHover={shouldReduceMotion ? undefined : LIST_CARD_HOVER}
+                  transition={HOVER_SPRING}
+                >
                   <div>
                     <p className="text-sm font-semibold text-primary">
                       Jobs Calendar (Next 12 Months)
@@ -649,6 +677,8 @@ export default function LandingPage() {
                           key={`${entry.date}-${entry.title}`}
                           className="rounded-lg border border-border p-2.5"
                           variants={REVEAL_ITEM}
+                          whileHover={shouldReduceMotion ? undefined : LIST_CARD_HOVER}
+                          transition={HOVER_SPRING}
                         >
                           <p className="text-sm font-semibold">{entry.date}</p>
                           <p className="text-xs text-muted-foreground">
@@ -669,9 +699,13 @@ export default function LandingPage() {
                       ))}
                     </motion.div>
                   </div>
-                </article>
+                </motion.article>
 
-                <article className="rounded-xl border border-border bg-card p-3">
+                <motion.article
+                  className="rounded-xl border border-border bg-card p-3"
+                  whileHover={shouldReduceMotion ? undefined : LIST_CARD_HOVER}
+                  transition={HOVER_SPRING}
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-primary">
@@ -698,6 +732,8 @@ export default function LandingPage() {
                         key={job.id}
                         className="rounded-lg border border-border px-2.5 py-2"
                         variants={REVEAL_ITEM}
+                        whileHover={shouldReduceMotion ? undefined : LIST_CARD_HOVER}
+                        transition={HOVER_SPRING}
                       >
                         <p className="text-sm font-semibold">{job.id}</p>
                         <p className="text-xs text-muted-foreground">
@@ -715,7 +751,7 @@ export default function LandingPage() {
                       </div>
                     )}
                   </motion.div>
-                </article>
+                </motion.article>
               </div>
 
               <article className="mt-4 rounded-xl border border-border bg-card">
@@ -759,6 +795,14 @@ export default function LandingPage() {
                           key={invoice.invoice}
                           className="border-t border-border/70"
                           variants={REVEAL_ITEM}
+                          whileHover={
+                            shouldReduceMotion
+                              ? undefined
+                              : {
+                                ...INVOICE_ROW_HOVER,
+                                transition: { duration: 0.28, ease: EASE_OUT },
+                              }
+                          }
                         >
                           <td className="px-3 py-2.5 font-medium">
                             {invoice.invoice}
@@ -789,7 +833,7 @@ export default function LandingPage() {
                 </div>
               </article>
             </div>
-          </motion.div>
+          </div>
         </motion.section>
 
         <motion.section
@@ -817,14 +861,13 @@ export default function LandingPage() {
                   ? undefined
                   : { duration: LOGO_MARQUEE_DURATION, ease: "linear", repeat: Infinity }
               }
+              style={{ willChange: "transform" }}
             >
               {HOME_BUILDER_LOGO_WHEEL.map((logo, index) => (
                 <motion.div
                   key={`${logo.src}-${index}`}
                   className="flex h-20 w-44 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/90 px-4 py-3"
-                  whileHover={
-                    shouldReduceMotion ? undefined : { y: -4, scale: 1.03 }
-                  }
+                  whileHover={shouldReduceMotion ? undefined : LOGO_CARD_HOVER}
                   transition={HOVER_SPRING}
                 >
                   <Image
@@ -876,11 +919,11 @@ export default function LandingPage() {
               <motion.article
                 key={card.title}
                 variants={REVEAL_ITEM}
+                style={{ transformPerspective: 1200 }}
                 whileHover={
-                  shouldReduceMotion
-                    ? undefined
-                    : { y: -8, rotateX: 2, transition: HOVER_SPRING }
+                  shouldReduceMotion ? undefined : COLLABORATION_CARD_HOVER
                 }
+                transition={HOVER_SPRING}
               >
                 <div className="rounded-3xl border border-border bg-card p-5">
                   <CollaborationVisual visual={card.visual} />
