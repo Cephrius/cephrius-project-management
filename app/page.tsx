@@ -49,6 +49,23 @@ const LANDING_LIGHT_THEME_STYLE: CSSProperties = {
   "--input": "#d9dee8",
   "--ring": "#60a5fa",
 };
+const HERO_STAGGER_CONTAINER = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.08,
+    },
+  },
+};
+const HERO_ITEM = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: HERO_ENTER_DURATION * 0.66, ease: EASE_OUT },
+  },
+};
 const STAGGER_CONTAINER = {
   hidden: {},
   visible: {
@@ -324,9 +341,45 @@ export default function LandingPage() {
 
   return (
     <main
-      className="min-h-screen bg-background text-foreground"
+      className="relative min-h-screen overflow-hidden bg-background text-foreground"
       style={LANDING_LIGHT_THEME_STYLE}
     >
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <motion.div
+          className="absolute -top-40 left-[-10rem] h-[34rem] w-[34rem] rounded-full blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle at center, hsl(var(--primary) / 0.22) 0%, transparent 70%)",
+          }}
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : {
+                  x: [0, 120, 0],
+                  y: [0, 70, 0],
+                  scale: [1, 1.08, 1],
+                }
+          }
+          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute -bottom-56 right-[-12rem] h-[38rem] w-[38rem] rounded-full blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle at center, hsl(var(--accent) / 0.26) 0%, transparent 72%)",
+          }}
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : {
+                  x: [0, -90, 0],
+                  y: [0, -60, 0],
+                  scale: [1, 1.06, 1],
+                }
+          }
+          transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur">
         <motion.div
           className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-6 px-4 md:px-8"
@@ -352,8 +405,17 @@ export default function LandingPage() {
               />
             </Link>
           </div>
+          
 
-          <div className=" items-center gap-2 hidden md:block">
+          <div className=" items-center gap-2 justify-end hidden md:flex">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full px-4 bg-gray-200 text-black"
+              asChild
+            >
+              <Link href="/login">Sign in</Link>
+            </Button>
             <Button
               size="sm"
               className="rounded-xl px-4 "
@@ -371,45 +433,65 @@ export default function LandingPage() {
         </motion.div>
       </header>
 
-      <div className="mx-auto w-full max-w-7xl px-4 pb-24 pt-12 sm:pt-16 md:px-8 md:pt-20">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-24 pt-12 sm:pt-16 md:px-8 md:pt-20">
         <motion.section
           className="mx-auto max-w-3xl text-center"
-          initial={
-            shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }
-          }
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: HERO_ENTER_DURATION, ease: EASE_OUT, delay: 0.1 }}
+          variants={HERO_STAGGER_CONTAINER}
+          initial={shouldReduceMotion ? "visible" : "hidden"}
+          animate="visible"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-sm text-muted-foreground">
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+          <motion.div
+            variants={HERO_ITEM}
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-sm text-muted-foreground"
+          >
+            <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] text-white font-semibold uppercase">
               Live
             </span>
             JobSyte is now available for sub-contractors in early access.
-          </div>
-          <h1 className="mt-6 text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-6xl lg:text-7xl">
+          </motion.div>
+          <motion.h1
+            variants={HERO_ITEM}
+            className="mt-6 text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-6xl lg:text-7xl"
+          >
             Today&apos;s schedule, this week&apos;s pipeline, and billing at a
             glance.
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground md:text-xl">
+          </motion.h1>
+          <motion.p
+            variants={HERO_ITEM}
+            className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground md:text-xl"
+          >
             JobSyte brings dashboard metrics, jobs calendar, project activity,
             invoice totals, and global search into one workflow.
-          </p>
+          </motion.p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg" className="rounded-xl px-7" asChild>
-              <Link href={REQUEST_DEMO_HREF}>
-                Request a demo
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="hidden rounded-xl px-7 md:inline-flex"
-              asChild
+          <motion.div
+            variants={HERO_ITEM}
+            className="mt-8 flex flex-wrap items-center justify-center gap-3"
+          >
+            <motion.div
+              whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }}
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+              transition={HOVER_SPRING}
             >
-            </Button>
-          </div>
+              <Button size="lg" className="rounded-xl px-7" asChild>
+                <Link href={REQUEST_DEMO_HREF}>
+                  Request A demo
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </motion.div>
+          </motion.div>
+          <motion.div
+            variants={HERO_ITEM}
+            className="mt-7 hidden items-center justify-center text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground md:flex"
+            animate={
+              shouldReduceMotion ? undefined : { y: [0, 6, 0], opacity: [0.55, 1, 0.55] }
+            }
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            Scroll to explore
+            <ChevronDown className="ml-2 size-4" />
+          </motion.div>
         </motion.section>
 
         <motion.section
@@ -422,7 +504,11 @@ export default function LandingPage() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: SECTION_ENTER_DURATION, ease: EASE_OUT }}
         >
-          <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+          <motion.div
+            className="grid gap-4 lg:grid-cols-[220px_1fr]"
+            animate={shouldReduceMotion ? undefined : { y: [0, -4, 0] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+          >
             <aside className="hidden rounded-2xl border border-border/70 bg-background/70 p-3 lg:block">
               <div className="rounded-xl border border-border bg-card px-3 py-2">
                 <p className="text-sm font-semibold">Acme Construction LLC</p>
@@ -704,7 +790,7 @@ export default function LandingPage() {
                 </div>
               </article>
             </div>
-          </div>
+          </motion.div>
         </motion.section>
 
         <motion.section
@@ -734,9 +820,13 @@ export default function LandingPage() {
               }
             >
               {HOME_BUILDER_LOGO_WHEEL.map((logo, index) => (
-                <div
+                <motion.div
                   key={`${logo.src}-${index}`}
                   className="flex h-20 w-44 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/90 px-4 py-3"
+                  whileHover={
+                    shouldReduceMotion ? undefined : { y: -4, scale: 1.03 }
+                  }
+                  transition={HOVER_SPRING}
                 >
                   <Image
                     src={logo.src}
@@ -745,7 +835,7 @@ export default function LandingPage() {
                     height={68}
                     className="h-auto max-h-11 w-full object-contain"
                   />
-                </div>
+                </motion.div>
               ))}
             </motion.div>
           </div>
@@ -790,7 +880,7 @@ export default function LandingPage() {
                 whileHover={
                   shouldReduceMotion
                     ? undefined
-                    : { y: -6, transition: HOVER_SPRING }
+                    : { y: -8, rotateX: 2, transition: HOVER_SPRING }
                 }
               >
                 <div className="rounded-3xl border border-border bg-card p-5">

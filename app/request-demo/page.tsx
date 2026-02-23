@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { type CSSProperties, type FormEvent, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,6 +40,12 @@ const INITIAL_FORM_STATE: DemoFormState = {
 const REQUEST_DEMO_HREF = "/request-demo";
 const SALES_EMAIL = "sales@jobsyte.com";
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const HOVER_SPRING = {
+  type: "spring",
+  stiffness: 170,
+  damping: 18,
+  mass: 0.75,
+} as const;
 const REQUEST_DEMO_LIGHT_THEME_STYLE: CSSProperties = {
   colorScheme: "light",
   "--background": "#ffffff",
@@ -57,6 +63,23 @@ const REQUEST_DEMO_LIGHT_THEME_STYLE: CSSProperties = {
   "--border": "#d9dee8",
   "--input": "#d9dee8",
   "--ring": "#60a5fa",
+};
+const STAGGER_CONTAINER = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    },
+  },
+};
+const FADE_UP = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.48, ease: EASE_OUT },
+  },
 };
 
 export default function RequestDemoPage() {
@@ -185,12 +208,7 @@ export default function RequestDemoPage() {
             >
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button size="sm" className="rounded-full px-4" asChild>
-              <Link href={REQUEST_DEMO_HREF}>
-                Request demo
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
+            
           </div>
         </div>
       </motion.header>
@@ -199,13 +217,20 @@ export default function RequestDemoPage() {
         <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <motion.section
             className="space-y-6 lg:pt-8"
-            initial={
-              shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }
-            }
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: EASE_OUT }}
+            variants={STAGGER_CONTAINER}
+            initial={shouldReduceMotion ? "visible" : "hidden"}
+            animate="visible"
           >
-            <div className="space-y-4">
+            <motion.div className="space-y-4" variants={FADE_UP}>
+              <motion.div
+                className="h-1 w-28 rounded-full bg-gradient-to-r from-primary/60 to-primary/10"
+                animate={
+                  shouldReduceMotion
+                    ? undefined
+                    : { scaleX: [0.92, 1.08, 0.92], opacity: [0.65, 1, 0.65] }
+                }
+                transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+              />
               <h1 className="max-w-xl text-4xl font-semibold tracking-tight md:text-5xl text-black">
                 Got a question for our sales team?
               </h1>
@@ -224,9 +249,14 @@ export default function RequestDemoPage() {
                 </a>
                 .
               </p>
-            </div>
+            </motion.div>
 
-            <div className="max-w-xl space-y-4 rounded-2xl border border-border/70 bg-card/80 p-5">
+            <motion.div
+              variants={FADE_UP}
+              className="max-w-xl space-y-4 rounded-2xl border border-border/70 bg-card/80 p-5"
+              whileHover={shouldReduceMotion ? undefined : { y: -4, scale: 1.01 }}
+              transition={HOVER_SPRING}
+            >
               <p className="text-2xl font-semibold leading-tight tracking-tight text-black">
                 &quot;JobSyte is the best product we&apos;ve used for keeping
                 crews and billing aligned.&quot;
@@ -237,187 +267,209 @@ export default function RequestDemoPage() {
                 </span>
                 , Co-founder, Convelio
               </p>
-            </div>
+            </motion.div>
           </motion.section>
 
           <motion.section
-            initial={
-              shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
-            }
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: EASE_OUT, delay: 0.06 }}
+            variants={STAGGER_CONTAINER}
+            initial={shouldReduceMotion ? "visible" : "hidden"}
+            animate="visible"
+            transition={{ delay: 0.06 }}
           >
-            <Card className="relative overflow-hidden rounded-3xl border border-border/70 bg-card/95 p-6 shadow-xl md:p-8">
-              <div className="pointer-events-none absolute -bottom-24 -right-16 size-52 rounded-full bg-primary/10 blur-3xl" />
+            <motion.div
+              variants={FADE_UP}
+              whileHover={shouldReduceMotion ? undefined : { y: -4 }}
+              transition={HOVER_SPRING}
+            >
+              <Card className="relative overflow-hidden rounded-3xl border border-border/70 bg-card/95 p-6 shadow-xl md:p-8">
+                <div className="pointer-events-none absolute -bottom-24 -right-16 size-52 rounded-full bg-primary/10 blur-3xl" />
 
-              <form className="relative z-10 space-y-4" onSubmit={handleSubmit}>
-                <div className="space-y-2">
-                  <Label htmlFor="workEmail">Work Email</Label>
-                  <Input
-                    id="workEmail"
-                    type="email"
-                    value={form.workEmail}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        workEmail: event.target.value,
-                      }))
-                    }
-                    placeholder="you@company.com"
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                <form className="relative z-10 space-y-4" onSubmit={handleSubmit}>
+                  <motion.div className="space-y-2" variants={FADE_UP}>
+                    <Label htmlFor="workEmail">Work Email</Label>
                     <Input
-                      id="firstName"
-                      value={form.firstName}
+                      id="workEmail"
+                      type="email"
+                      value={form.workEmail}
                       onChange={(event) =>
                         setForm((current) => ({
                           ...current,
-                          firstName: event.target.value,
+                          workEmail: event.target.value,
                         }))
                       }
-                      placeholder="Jamie"
+                      placeholder="you@company.com"
                       required
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={form.lastName}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          lastName: event.target.value,
-                        }))
-                      }
-                      placeholder="Smith"
-                      required
-                    />
-                  </div>
-                </div>
+                  </motion.div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName">Company</Label>
-                    <Input
-                      id="companyName"
-                      value={form.companyName}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          companyName: event.target.value,
-                        }))
-                      }
-                      placeholder="Your company"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="jobTitle">Job Title</Label>
-                    <Input
-                      id="jobTitle"
-                      value={form.jobTitle}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          jobTitle: event.target.value,
-                        }))
-                      }
-                      placeholder="Director of Operations"
-                    />
-                  </div>
-                </div>
+                  <motion.div className="grid gap-4 sm:grid-cols-2" variants={FADE_UP}>
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={form.firstName}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            firstName: event.target.value,
+                          }))
+                        }
+                        placeholder="Jamie"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={form.lastName}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            lastName: event.target.value,
+                          }))
+                        }
+                        placeholder="Smith"
+                        required
+                      />
+                    </div>
+                  </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="companySize">Company Size</Label>
-                  <NativeSelect
-                    id="companySize"
-                    className="w-full"
-                    value={form.companySize}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        companySize: event.target.value,
-                      }))
-                    }
-                  >
-                    <NativeSelectOption value="">Select one</NativeSelectOption>
-                    <NativeSelectOption value="1-10">1-10</NativeSelectOption>
-                    <NativeSelectOption value="11-50">11-50</NativeSelectOption>
-                    <NativeSelectOption value="51-200">51-200</NativeSelectOption>
-                    <NativeSelectOption value="201+">201+</NativeSelectOption>
-                  </NativeSelect>
-                </div>
+                  <motion.div className="grid gap-4 sm:grid-cols-2" variants={FADE_UP}>
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company</Label>
+                      <Input
+                        id="companyName"
+                        value={form.companyName}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            companyName: event.target.value,
+                          }))
+                        }
+                        placeholder="Your company"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="jobTitle">Job Title</Label>
+                      <Input
+                        id="jobTitle"
+                        value={form.jobTitle}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            jobTitle: event.target.value,
+                          }))
+                        }
+                        placeholder="Director of Operations"
+                      />
+                    </div>
+                  </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-3">
+                  <motion.div className="space-y-2" variants={FADE_UP}>
+                    <Label htmlFor="companySize">Company Size</Label>
                     <NativeSelect
-                      id="phoneCountry"
+                      id="companySize"
                       className="w-full"
-                      value={form.phoneCountry}
+                      value={form.companySize}
                       onChange={(event) =>
                         setForm((current) => ({
                           ...current,
-                          phoneCountry: event.target.value,
+                          companySize: event.target.value,
                         }))
                       }
                     >
-                      <NativeSelectOption value="+1">US +1</NativeSelectOption>
-                      <NativeSelectOption value="+44">UK +44</NativeSelectOption>
-                      <NativeSelectOption value="+61">AU +61</NativeSelectOption>
-                      <NativeSelectOption value="+353">IE +353</NativeSelectOption>
+                      <NativeSelectOption value="">Select one</NativeSelectOption>
+                      <NativeSelectOption value="1-10">1-10</NativeSelectOption>
+                      <NativeSelectOption value="11-50">11-50</NativeSelectOption>
+                      <NativeSelectOption value="51-200">51-200</NativeSelectOption>
+                      <NativeSelectOption value="201+">201+</NativeSelectOption>
                     </NativeSelect>
-                    <Input
-                      id="phone"
-                      value={form.phone}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          phone: event.target.value,
-                        }))
-                      }
-                      placeholder="(555) 555-5555"
-                    />
-                  </div>
-                </div>
+                  </motion.div>
 
-                <div className="flex flex-wrap items-center gap-3 pt-2">
-                  <Button
-                    type="submit"
-                    disabled={submitting}
-                    className="rounded-full px-7"
+                  <motion.div className="space-y-2" variants={FADE_UP}>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-3">
+                      <NativeSelect
+                        id="phoneCountry"
+                        className="w-full"
+                        value={form.phoneCountry}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            phoneCountry: event.target.value,
+                          }))
+                        }
+                      >
+                        <NativeSelectOption value="+1">US +1</NativeSelectOption>
+                        <NativeSelectOption value="+44">UK +44</NativeSelectOption>
+                        <NativeSelectOption value="+61">AU +61</NativeSelectOption>
+                        <NativeSelectOption value="+353">IE +353</NativeSelectOption>
+                      </NativeSelect>
+                      <Input
+                        id="phone"
+                        value={form.phone}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            phone: event.target.value,
+                          }))
+                        }
+                        placeholder="(555) 555-5555"
+                      />
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    className="flex flex-wrap items-center gap-3 pt-2"
+                    variants={FADE_UP}
                   >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        Submit
-                        <ArrowRight className="size-4" />
-                      </>
-                    )}
-                  </Button>
-                  <Button variant="outline" type="button" asChild>
-                    <Link href="/login">I already have an account</Link>
-                  </Button>
-                </div>
-              </form>
+                    <motion.div
+                      whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }}
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                      transition={HOVER_SPRING}
+                    >
+                      <Button
+                        type="submit"
+                        disabled={submitting}
+                        className="rounded-full px-7"
+                      >
+                        {submitting ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            Submit
+                            <ArrowRight className="size-4" />
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
+                    <Button variant="outline" type="button" asChild>
+                      <Link href="/login">I already have an account</Link>
+                    </Button>
+                  </motion.div>
+                </form>
 
-              {submitted && (
-                <p className="relative z-10 mt-5 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-foreground">
-                  Request received. We will reach out with scheduling options and
-                  next signup steps.
-                </p>
-              )}
-            </Card>
+                <AnimatePresence>
+                  {submitted && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.35, ease: EASE_OUT }}
+                      className="relative z-10 mt-5 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-foreground"
+                    >
+                      Request received. We will reach out with scheduling options and
+                      next signup steps.
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </Card>
+            </motion.div>
           </motion.section>
         </div>
       </div>

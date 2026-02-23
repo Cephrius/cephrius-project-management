@@ -42,6 +42,7 @@ function money(cents: number) {
     style: "currency",
     currency: "USD",
   });
+  
 }
 
 export default async function DashboardPage() {
