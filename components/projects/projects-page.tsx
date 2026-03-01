@@ -1087,7 +1087,7 @@ export function ProjectsPageClient({
                     <div className="flex justify-end">
                       <Link
                         href={`/projects/${project.id}`}
-                        className="inline-flex items-center gap-1 text-lg font-medium text-primary dark:text-white dark:hover:text-muted-foreground/90 transition delay-100"
+                        className="inline-flex items-center gap-1 text-lg font-medium text-gray-500 hover:text-primary dark:text-white dark:hover:text-primary/90 transition delay-100"
                         onClick={() => setSelectedProjectId(project.id)}
                       >
                         Open Project
@@ -1196,7 +1196,7 @@ export function ProjectsPageClient({
               <div className="border-t pt-4">
                 <Link
                   href={`/projects/${selectedProject.id}`}
-                  className="inline-flex items-center gap-1 text-muted-foreground text-lg font-medium  hover:text-primary dark:text-white dark:hover:text-muted-foreground/90 transition delay-100"
+                  className="inline-flex items-center gap-1 text-muted-foreground text-lg font-medium text-gray-500 hover:text-primary dark:text-white dark:hover:text-primary/90 transition delay-100"
                 >
                   View Project
                   <ArrowRight className="size-4" />
