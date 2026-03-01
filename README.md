@@ -2,6 +2,30 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Local Environment Setup 
+
+Before running the development server, environment variables must be configured. 
+
+1. Install dependencies:
+   ```bash
+   npm ci
+
+2. Create a local environment file from the template: 
+   cp .env.example .env.local
+
+3. Open env.local and fill in the required values:
+-NEXT_PUBLIC_SUPABASE_URL
+-NEXT_PUBLIC_SUPABASE_ANON_KEY
+-SUPABASE_SERVICE_ROLE_KEY (if running cron/import scripts)
+-RESEND_API_KEY
+-RESEND_FROM_EMAIL
+-CRON_SECRET
+-NEXT_PUBLIC_APP_URL
+
+4. After configuring environmental variables, start the dev server:
+npm run dev   
+
+
 First, run the development server:
 
 ```bash
