@@ -211,7 +211,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-primary/20 bg-primary/[0.03] p-3 sm:p-4">
+        <Card className="border-primary/20 bg-primary/10 p-3 sm:p-4">
           <div className="text-[11px] font-medium text-primary/80 sm:text-xs">
             Schedule Focus
           </div>
@@ -226,7 +226,7 @@ export default async function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="border-primary/20 bg-primary/[0.03] p-3 sm:p-4">
+        <Card className="border-primary/20 bg-primary/10 p-3 sm:p-4">
           <div className="text-[11px] font-medium text-primary/80 sm:text-xs">
             Work Pipeline
           </div>
@@ -240,7 +240,7 @@ export default async function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="border-primary/20 bg-primary/[0.03] p-3 sm:p-4">
+        <Card className="border-primary/20 bg-primary/10 p-3 sm:p-4">
           <div className="text-[11px] font-medium text-primary/80 sm:text-xs">
             Projects
           </div>
@@ -261,7 +261,7 @@ export default async function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="border-primary/20 bg-primary/[0.03] p-3 sm:p-4">
+        <Card className="border-primary/20 bg-primary/10 p-3 sm:p-4">
           <div className="text-[11px] font-medium text-primary/80 sm:text-xs">
             Invoices ({monthName})
           </div>
@@ -293,8 +293,8 @@ export default async function DashboardPage() {
           />
         </Card>
         {/* WEEKS UPCOMING JOBS */}
-        <Card className="border-primary/20 p-3 sm:p-6">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="border-primary/20 p-3 sm:p-6 ">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between ">
             <div>
               <div className="text-sm font-semibold text-primary">Jobs This Week</div>
               <div className="text-xs text-muted-foreground">
@@ -303,7 +303,7 @@ export default async function DashboardPage() {
             </div>
             <Badge
               variant="outline"
-              className="w-fit border-primary/30 bg-primary/10 text-primary"
+              className="w-fit border-primary/30 bg-primary/10 text-black dark:text-white"
             >
               {upcomingJobs.length}
             </Badge>
@@ -322,7 +322,7 @@ export default async function DashboardPage() {
               }
             >
               {upcomingJobs.map((job) => (
-                <div key={job.id} className="rounded-md border border-primary/20 p-3">
+                <div key={job.id} className="rounded-md border border-primary/20 bg-primary/3 dark:bg-primary/7 p-3">
                   <div className="break-words text-sm font-medium">{job.title}</div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {job.scheduled_completion}
@@ -369,7 +369,7 @@ export default async function DashboardPage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {recentInvoices.map((invoice) => (
               <Link key={invoice.id} href={`/invoices/${invoice.id}`}>
-                <div className="rounded-md border border-primary/20 p-3 transition hover:bg-primary/5">
+                <div className="rounded-md border border-primary/20 p-3 transition bg-primary/3 dark:bg-primary/7 hover:bg-primary/10 dark:hover:bg-primary/13">
                   <div className="break-words text-sm font-medium">
                     {invoice.invoice_number}
                   </div>
