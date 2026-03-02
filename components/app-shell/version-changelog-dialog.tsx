@@ -13,7 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LATEST_RELEASE, RELEASE_NOTES, type ReleaseNote } from "@/lib/release-notes";
+import {
+  LATEST_RELEASE,
+  RELEASE_NOTES,
+  type ReleaseNote,
+} from "@/lib/release-notes";
 
 const LAST_SEEN_RELEASE_KEY = "jobsyte:last-seen-release-version";
 
@@ -40,7 +44,10 @@ function ReleaseSection({
       </div>
       <ul className="space-y-1.5 text-sm text-muted-foreground">
         {items.map((item) => (
-          <li key={item} className="rounded-md border border-primary/10 bg-primary/[0.03] px-3 py-2">
+          <li
+            key={item}
+            className="rounded-md border border-primary/10 bg-primary/[0.03] px-3 py-2"
+          >
             {item}
           </li>
         ))}
@@ -60,13 +67,21 @@ function ReleaseCard({
     <section
       className={cn(
         "rounded-xl border p-4",
-        latest ? "border-primary/30 bg-primary/[0.04]" : "border-primary/15 bg-background",
+        latest
+          ? "border-primary/30 bg-primary/[0.04]"
+          : "border-primary/15 bg-background",
       )}
     >
       <div className="mb-4 flex flex-wrap items-center gap-2 ">
-        <div className="text-base font-semibold text-primary">{release.version}</div>
-        {latest && <Badge className="bg-primary text-primary-foreground">Latest</Badge>}
-        <div className="text-xs text-muted-foreground">{release.releasedOn}</div>
+        <div className="text-base font-semibold text-primary">
+          {release.version}
+        </div>
+        {latest && (
+          <Badge className="bg-primary text-primary-foreground">Latest</Badge>
+        )}
+        <div className="text-xs text-muted-foreground">
+          {release.releasedOn}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -75,8 +90,16 @@ function ReleaseCard({
           items={release.majorAdditions ?? []}
           icon="major"
         />
-        <ReleaseSection title="Changes" items={release.changes} icon="changes" />
-        <ReleaseSection title="Bug Fixes" items={release.bugFixes} icon="fixes" />
+        <ReleaseSection
+          title="Changes"
+          items={release.changes}
+          icon="changes"
+        />
+        <ReleaseSection
+          title="Bug Fixes"
+          items={release.bugFixes}
+          icon="fixes"
+        />
       </div>
     </section>
   );
@@ -88,11 +111,16 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
 
   useEffect(() => {
     try {
-      const lastSeenVersion = window.localStorage.getItem(LAST_SEEN_RELEASE_KEY);
+      const lastSeenVersion = window.localStorage.getItem(
+        LAST_SEEN_RELEASE_KEY,
+      );
       if (lastSeenVersion === LATEST_RELEASE.version) return;
 
       // Auto-open once for newly published versions and mark as seen.
-      window.localStorage.setItem(LAST_SEEN_RELEASE_KEY, LATEST_RELEASE.version);
+      window.localStorage.setItem(
+        LAST_SEEN_RELEASE_KEY,
+        LATEST_RELEASE.version,
+      );
       const timer = window.setTimeout(() => setOpen(true), 500);
       return () => window.clearTimeout(timer);
     } catch {
@@ -105,7 +133,10 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
     if (!nextOpen) return;
 
     try {
-      window.localStorage.setItem(LAST_SEEN_RELEASE_KEY, LATEST_RELEASE.version);
+      window.localStorage.setItem(
+        LAST_SEEN_RELEASE_KEY,
+        LATEST_RELEASE.version,
+      );
     } catch {
       // Ignore storage errors.
     }
@@ -117,7 +148,7 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
         <button
           type="button"
           className={cn(
-            "cursor-pointer rounded-md px-1 py-0.5 transition hover:bg-primary/10 hover:text-primary",
+            "cursor-pointer rounded-md px-1 py-0.5 transition bg-gray-500 text-white hover:bg-primary/80 hover:text-primary-foreground",
             collapsed && "mx-auto",
           )}
           aria-label={`Open release notes (${LATEST_RELEASE.version})`}
@@ -132,9 +163,12 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
             <History className="size-3.5" />
             Release Notes
           </div>
-          <DialogTitle className="text-xl">What&apos;s New in JobSyte</DialogTitle>
+          <DialogTitle className="text-xl">
+            What&apos;s New in JobSyte
+          </DialogTitle>
           <DialogDescription>
-            Latest updates plus previous versions, including shipped changes and bug fixes.
+            Latest updates plus previous versions, including shipped changes and
+            bug fixes.
           </DialogDescription>
         </DialogHeader>
 

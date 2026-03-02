@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, FolderKanban, FileText, Settings } from "lucide-react";
+import { Home, FolderKanban, FileText, Settings, LayoutDashboard } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -31,8 +31,8 @@ export function SidebarNav({
       <nav className="grid grid-cols-4 gap-1">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
               : pathname.startsWith(item.href);
           const Icon = item.icon;
 
@@ -60,7 +60,7 @@ export function SidebarNav({
     <nav className={cn("p-3 text-sm space-y-1", collapsed && "px-2")}>
       {navItems.map((item) => {
         const isActive =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
         const Icon = item.icon;
         const linkClass = cn(
           "flex items-center rounded-md border border-transparent transition",

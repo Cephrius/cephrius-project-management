@@ -114,7 +114,7 @@ export function MonthJobsCalendar({
         ) : (
           <div className="max-h-[20rem] space-y-2 overflow-y-auto pr-1">
             {selectedJobs.map((job) => (
-              <div key={job.id} className="rounded-md border p-2.5 sm:p-3">
+              <div key={job.id} className="rounded-md border bg-primary/2 dark:bg-primary/7 p-2.5 sm:p-3">
                 <div className="break-words text-sm font-medium">{job.title}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Project: {job.project_address}
@@ -126,9 +126,9 @@ export function MonthJobsCalendar({
                 )}
                 <div className="mt-2">
                   {job.is_completed ? (
-                    <Badge>Completed</Badge>
+                    <Badge className="border-gray-300 border dark:border-gray-500">Completed</Badge>
                   ) : (
-                    <Badge variant="secondary">Incomplete</Badge>
+                    <Badge className="border-gray-300 border dark:border-gray-500" variant="secondary">Incomplete</Badge>
                   )}
                 </div>
               </div>
