@@ -165,7 +165,16 @@ export function InvoicesPageClient({
           </Link>
         </div>
         <Card className="p-8">
-          <div className="text-sm text-muted-foreground">You don't have any invoices yet.</div>
+          <div className="flex justify-center">
+          <img src={"empty_project.png"} alt="Project" className="w-48 h-48"/>
+          </div>
+          <div className="text-lg text-muted-foreground text-center">You currently don't have any invoices.</div>
+          <div className="text-md text-center"> Want to create an invoice? <br/> Create one here.</div>
+        <div className="flex justify-center">
+          <Link href="/invoices/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">Create Invoice</Button>
+          </Link>
+          </div>
         </Card>
       </div>
     );
