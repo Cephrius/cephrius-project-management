@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 
 type ProjectRow = {
   id: string;
@@ -53,6 +54,9 @@ export default async function AppHome() {
 
   if (userError || !user) redirect("/login");
 
+  const companyId = await getActiveCompanyId();
+  if (!companyId) redirect("/login");
+
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
   const weekStartDate = startOfWeek(now, { weekStartsOn: 0 });
@@ -78,16 +82,18 @@ export default async function AppHome() {
     recentInvoicesRes,
     upcomingJobsRes,
   ] = await Promise.all([
-    supabase.from("projects").select("id, project_address").is("deleted_at", null),
+    supabase.from("projects").select("id, project_address").eq("company_id", companyId).is("deleted_at", null),
     supabase
       .from("jobs")
       .select("id")
+      .eq("company_id", companyId)
       .eq("is_completed", false)
       .is("deleted_at", null)
       .eq("scheduled_completion", today),
     supabase
       .from("jobs")
       .select("id")
+      .eq("company_id", companyId)
       .eq("is_completed", false)
       .is("deleted_at", null)
       .gte("scheduled_completion", weekStart)
@@ -97,6 +103,7 @@ export default async function AppHome() {
       .select(
         "id, title, scheduled_completion, is_completed, project_id, superintendent, price_cents",
       )
+      .eq("company_id", companyId)
       .is("deleted_at", null)
       .gte("scheduled_completion", monthStart)
       .lte("scheduled_completion", calendarEnd)
@@ -104,11 +111,13 @@ export default async function AppHome() {
     supabase
       .from("jobs")
       .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
       .eq("is_completed", false)
       .is("deleted_at", null),
     supabase
       .from("jobs")
       .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
       .eq("is_completed", true)
       .is("deleted_at", null)
       .gte("completed_at", `${monthStart}T00:00:00`)
@@ -116,18 +125,21 @@ export default async function AppHome() {
     supabase
       .from("invoices")
       .select("id, subtotal_cents")
+      .eq("company_id", companyId)
       .is("deleted_at", null)
       .gte("invoice_date", monthStart)
       .lte("invoice_date", monthEnd),
     supabase
       .from("invoices")
       .select("id, invoice_number, invoice_date, subtotal_cents")
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .is("deleted_at", null)
       .limit(5),
     supabase
       .from("jobs")
       .select("id, title, scheduled_completion, project_id, superintendent")
+      .eq("company_id", companyId)
       .eq("is_completed", false)
       .is("deleted_at", null)
       .gte("scheduled_completion", weekStart)

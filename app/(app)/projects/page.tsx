@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { ProjectsPageClient } from "@/components/projects/projects-page";
 import type { LookupItem, ProjectListItem } from "@/components/projects/types";
@@ -35,12 +36,14 @@ function toStatus(
 
 async function getProjectsPageData(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  companyId: string,
 ) {
   const [projectsRes, buildersRes, subdivisionsRes, jobsRes] =
     await Promise.all([
       supabase
         .from("projects")
         .select("id, project_address, builder_name, subdivision, created_at")
+        .eq("company_id", companyId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false }),
       supabase.from("builders").select("id, name").order("name"),
@@ -48,6 +51,7 @@ async function getProjectsPageData(
       supabase
         .from("jobs")
         .select("id, project_id, is_completed, superintendent, created_at")
+        .eq("company_id", companyId)
         .is("deleted_at", null),
     ]);
 
@@ -122,8 +126,11 @@ export default async function ProjectsPage() {
 
   if (userError || !user) redirect("/login");
 
+  const companyId = await getActiveCompanyId();
+  if (!companyId) redirect("/login");
+
   const { projects, builders, subdivisions } =
-    await getProjectsPageData(supabase);
+    await getProjectsPageData(supabase, companyId);
 
   return (
     <div className="space-y-6">

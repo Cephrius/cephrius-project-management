@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import { Separator } from "@/components/ui/separator";
 import { SidebarNav } from "./sidebar-nav";
 import { cn } from "@/lib/utils";
 import { useSidebarState } from "./sidebar-state";
 import { VersionChangelogDialog } from "./version-changelog-dialog";
+import { CompanySwitcher } from "./company-switcher";
+import { useCompany } from "@/lib/company-context";
 
 function companyInitials(name: string) {
   return name
@@ -17,9 +18,10 @@ function companyInitials(name: string) {
     .join("");
 }
 
-export function DesktopSidebar({ companyName }: { companyName: string }) {
+export function DesktopSidebar() {
   const { collapsed } = useSidebarState();
-  const initials = useMemo(() => companyInitials(companyName), [companyName]);
+  const { activeCompany } = useCompany();
+  const initials = companyInitials(activeCompany?.name ?? "");
 
   return (
     <aside
@@ -34,14 +36,16 @@ export function DesktopSidebar({ companyName }: { companyName: string }) {
           collapsed ? "justify-center" : "justify-between",
         )}
       >
-        <div className={cn("min-w-0", collapsed && "text-center")}>
-          <div className="truncate text-sm font-semibold text-primary">
-            {collapsed ? initials || "JS" : companyName}
-          </div>
-          {!collapsed && (
-            <div className="text-xs text-muted-foreground">JobSyte Portal</div>
-          )}
-        </div>
+        {/* // Replace the header section: */}
+      <div className={cn("p-2", collapsed && "text-center")}>
+      {collapsed ? (
+      <div className="truncate text-sm font-semibold text-primary">
+      {initials || "JS"}
+    </div>
+  ) : (
+    <CompanySwitcher />
+  )}
+</div>
       </div>
 
       <Separator />
