@@ -1,12 +1,11 @@
-"use client";
+"use client"; 
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState } from "react"; 
 import {
   Bell,
   Building2,
   Download,
-  Info,
   KeyRound,
   LogOut,
   Mail,
@@ -14,34 +13,35 @@ import {
   Shield,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";   
+import { createClient } from "@/lib/supabase/client";  
 import {
   updateAccountEmail,
   updateAccountPassword,
-  updateCompanyProfile,
+  updateCompanyProfile,   
   updatePreferences,
 } from "@/app/(app)/settings/actions";
+import { SettingsAccountDetailsCard } from "@/components/settings/settings-account-details-card"; 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";         
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
-type SettingsPageClientProps = {
-  initialProfile: {
+type SettingsPageClientProps = {   
+  initialProfile: {  
     companyName: string;
     address: string;
     phone: string;
   };
-  account: {
+  account: {     
     email: string;
     createdAt: string | null;
     lastSignInAt: string | null;
   };
-  initialPreferences: {
+  initialPreferences: {   
     emailInvoiceReminders: boolean;
     weeklySummary: boolean;
     productUpdates: boolean;
@@ -49,39 +49,24 @@ type SettingsPageClientProps = {
   };
 };
 
-const PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT = [
+const PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT = [   
   "projects:selected-project-id",
   "projects:expanded-subdivisions",
   "projects:expanded-builders",
 ];
 
-function formatDate(value: string | null) {
-  if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "N/A";
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function clampDueDays(value: number) {
+function clampDueDays(value: number) {  
   if (!Number.isFinite(value)) return 30;
   return Math.min(180, Math.max(0, Math.round(value)));
 }
 
-export function SettingsPageClient({
+export function SettingsPageClient({  
   initialProfile,
   account,
   initialPreferences,
 }: SettingsPageClientProps) {
-  const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();  
+  const supabase = useMemo(() => createClient(), []);  
 
   const [companyName, setCompanyName] = useState(initialProfile.companyName);
   const [address, setAddress] = useState(initialProfile.address);
@@ -91,7 +76,7 @@ export function SettingsPageClient({
   const [emailInvoiceReminders, setEmailInvoiceReminders] = useState(
     initialPreferences.emailInvoiceReminders,
   );
-  const [weeklySummary, setWeeklySummary] = useState(
+  const [weeklySummary, setWeeklySummary] = useState(                 
     initialPreferences.weeklySummary,
   );
   const [productUpdates, setProductUpdates] = useState(
@@ -111,7 +96,9 @@ export function SettingsPageClient({
 
   const [signingOutAll, setSigningOutAll] = useState(false);
 
-  async function onSaveProfile() {
+
+
+  async function onSaveProfile() {    
     setSavingProfile(true);
     const res = await updateCompanyProfile({
       companyName,
@@ -129,7 +116,7 @@ export function SettingsPageClient({
     router.refresh();
   }
 
-  async function onSavePreferences() {
+  async function onSavePreferences() { 
     setSavingPreferences(true);
 
     const parsed = Number(defaultDueDays);
@@ -152,7 +139,7 @@ export function SettingsPageClient({
     router.refresh();
   }
 
-  async function onUpdateEmail() {
+  async function onUpdateEmail() {  
     setSavingEmail(true);
     const res = await updateAccountEmail({ email: newEmail });
     setSavingEmail(false);
@@ -166,7 +153,7 @@ export function SettingsPageClient({
     setNewEmail("");
   }
 
-  async function onUpdatePassword() {
+  async function onUpdatePassword() { 
     setSavingPassword(true);
     const res = await updateAccountPassword({
       nextPassword,
@@ -184,7 +171,7 @@ export function SettingsPageClient({
     toast.success(res.message ?? "Password updated.");
   }
 
-  async function onSignOutEverywhere() {
+  async function onSignOutEverywhere() { 
     setSigningOutAll(true);
 
     for (const key of PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT) {
@@ -213,31 +200,7 @@ export function SettingsPageClient({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="space-y-4 p-5">
-          <div className="flex items-center gap-2 text-lg font-semibold">
-            <Info className="size-4 text-primary" />
-            Account Details
-          </div>
-
-          <div className="space-y-2 text-sm">
-            <div>
-              <div className="font-medium text-primary/80">Current Email</div>
-              <div className="text-muted-foreground">{account.email}</div>
-            </div>
-            <div>
-              <div className="font-medium text-primary/80">Account Created</div>
-              <div className="text-muted-foreground">
-                {formatDate(account.createdAt)}
-              </div>
-            </div>
-            <div>
-              <div className="font-medium text-primary/80">Last Sign In</div>
-              <div className="text-muted-foreground">
-                {formatDate(account.lastSignInAt)}
-              </div>
-            </div>
-          </div>
-        </Card>
+        <SettingsAccountDetailsCard account={account} />   
 
         <Card className="space-y-4 p-5">
           <div className="flex items-center gap-2 text-lg font-semibold">
