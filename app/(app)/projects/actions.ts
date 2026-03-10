@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 import { revalidatePath } from "next/cache";
 
 type IdName = { id: string; name: string };
@@ -429,12 +430,16 @@ export async function createProject(formData: FormData) {
   }
 
   // Insert project
+  const companyId = await getActiveCompanyId();
+  if (!companyId) return { ok: false, message: "No active company found." };
+
   const { data, error } = await (
     await supabase
   )
     .from("projects")
     .insert({
       user_id: user.id,
+      company_id: companyId,
       project_address,
       builder_id: finalBuilderId,
       subdivision_id: finalSubdivisionId,
@@ -642,6 +647,11 @@ export async function importProjectsJobsCsv(
   }
   const userId = user.id;
 
+  const companyId = await getActiveCompanyId();
+  if (!companyId) {
+    return { ok: false, message: "No active company found." };
+  }
+
   const file = formData.get("file");
   if (!(file instanceof File)) {
     return { ok: false, message: "Select a CSV file to import." };
@@ -834,6 +844,7 @@ export async function importProjectsJobsCsv(
       .from("projects")
       .insert({
         user_id: userId,
+        company_id: companyId,
         project_address: projectAddress,
         builder_id: input.builderId,
         subdivision_id: input.subdivisionId,
@@ -960,6 +971,7 @@ export async function importProjectsJobsCsv(
       if (!dryRun) {
         const { error: insertJobError } = await supabase.from("jobs").insert({
           project_id: projectId,
+          company_id: companyId,
           title,
           price_cents: priceCents,
           scheduled_completion: scheduledCompletion,

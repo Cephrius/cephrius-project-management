@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 import { resolveInvoiceDueDate } from "@/lib/settings/preferences";
 import { redirect } from "next/navigation";
 
@@ -130,6 +131,9 @@ export async function createInvoiceForBuilder(formData: FormData) {
 
   const invoice_number = formatInvoiceNumber();
 
+  const companyId = await getActiveCompanyId();
+  if (!companyId) return { ok: false, message: "No active company found." };
+
   // Insert invoice (project_id is null for multi-project)
   const { data: invoice, error: invErr } = await (
     await supabase
@@ -138,6 +142,7 @@ export async function createInvoiceForBuilder(formData: FormData) {
     .insert({
       project_id: null,
       user_id: user.id,
+      company_id: companyId,
       invoice_number,
       invoice_date,
       due_date,

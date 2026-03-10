@@ -28,6 +28,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { cn } from "@/lib/utils";
 import { useSidebarState } from "./sidebar-state";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
+import { MobileCompanySwitcher } from "./mobile-company-switcher";
 
 type SuggestionType = "project" | "job" | "invoice";
 
@@ -338,10 +339,14 @@ export function Header() {
           </div>
         </div>
 
-        <form
-          onSubmit={handleGlobalSearch}
-          className="col-start-1 row-start-1 flex w-full min-w-0 items-center gap-2 md:col-start-2 md:justify-self-center md:max-w-[30rem] lg:max-w-[34rem] xl:max-w-[40rem]"
-        >
+        <div className="col-start-1 row-start-1 flex w-full min-w-0 items-center gap-2 md:col-start-2 md:justify-self-center md:max-w-[30rem] lg:max-w-[34rem] xl:max-w-[40rem]">
+          <div className="md:hidden shrink-0">
+            <MobileCompanySwitcher />
+          </div>
+          <form
+            onSubmit={handleGlobalSearch}
+            className="flex w-full min-w-0 items-center gap-2"
+          >
           <div
             className="relative min-w-0 flex-1"
             ref={searchContainerRef}
@@ -460,8 +465,7 @@ export function Header() {
           >
             <Search className="h-4 w-4" />
           </Button>
-        </form>
-
+        </form>        </div>
         <div className="col-start-2 row-start-1 ml-auto flex min-w-0 items-center justify-end gap-2 md:col-start-3">
           <div className="hidden min-w-0 max-w-[16rem] overflow-hidden lg:block">
             {rightSlot}

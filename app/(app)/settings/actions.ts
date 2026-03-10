@@ -42,6 +42,7 @@ async function getAuthenticatedClient() {
 }
 
 export async function updateCompanyProfile(input: {
+  companyId: string;
   companyName: string;
   address: string;
   phone: string;
@@ -57,7 +58,34 @@ export async function updateCompanyProfile(input: {
     return { ok: false, message: "Company name is required." };
   }
 
-  const { error: profileError } = await supabase.from("contractor_profiles").upsert(
+  // Verify the user is a member of this company
+  const { data: membership } = await supabase
+    .from("company_members")
+    .select("role")
+    .eq("company_id", input.companyId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!membership) {
+    return { ok: false, message: "You don't have access to this company." };
+  }
+
+  // Update the companies table (source of truth for company profile)
+  const { error: companyError } = await supabase
+    .from("companies")
+    .update({
+      name: companyName,
+      address: address || null,
+      phone: phone || null,
+    })
+    .eq("id", input.companyId);
+
+  if (companyError) {
+    return { ok: false, message: companyError.message };
+  }
+
+  // Keep contractor_profiles + user_metadata in sync for backward compatibility
+  await supabase.from("contractor_profiles").upsert(
     {
       user_id: user.id,
       company_name: companyName,
@@ -67,23 +95,10 @@ export async function updateCompanyProfile(input: {
     { onConflict: "user_id" },
   );
 
-  if (profileError) {
-    return { ok: false, message: profileError.message };
-  }
-
   const currentMetadata = isObject(user.user_metadata) ? user.user_metadata : {};
-  const nextMetadata = {
-    ...currentMetadata,
-    company_name: companyName,
-  };
-
-  const { error: metadataError } = await supabase.auth.updateUser({
-    data: nextMetadata,
+  await supabase.auth.updateUser({
+    data: { ...currentMetadata, company_name: companyName },
   });
-
-  if (metadataError) {
-    return { ok: false, message: metadataError.message };
-  }
 
   return { ok: true, message: "Profile updated." };
 }

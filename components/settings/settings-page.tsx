@@ -32,6 +32,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 
 type SettingsPageClientProps = {
   initialProfile: {
+    companyId: string;
     companyName: string;
     address: string;
     phone: string;
@@ -114,6 +115,7 @@ export function SettingsPageClient({
   async function onSaveProfile() {
     setSavingProfile(true);
     const res = await updateCompanyProfile({
+      companyId: initialProfile.companyId,
       companyName,
       address,
       phone,

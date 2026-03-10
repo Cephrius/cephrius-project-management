@@ -5,6 +5,7 @@ import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 
 type SearchPageProps = {
   searchParams: Promise<{ q?: string }>;
@@ -65,6 +66,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   if (userError || !user) redirect("/login");
 
+  const companyId = await getActiveCompanyId();
+  if (!companyId) redirect("/login");
+
   if (!q) {
     return (
       <div className="space-y-6">
@@ -88,6 +92,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     supabase
       .from("projects")
       .select("id, project_address, builder_name, subdivision, created_at")
+      .eq("company_id", companyId)
       .is("deleted_at", null)
       .or(
         `project_address.ilike.${pattern},builder_name.ilike.${pattern},subdivision.ilike.${pattern}`,
@@ -97,6 +102,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     supabase
       .from("jobs")
       .select("id, title, project_id, superintendent, is_completed, created_at")
+      .eq("company_id", companyId)
       .is("deleted_at", null)
       .or(`title.ilike.${pattern},superintendent.ilike.${pattern}`)
       .order("created_at", { ascending: false })
@@ -106,6 +112,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       .select(
         "id, invoice_number, bill_to_name, contractor_name, invoice_date, subtotal_cents, created_at",
       )
+      .eq("company_id", companyId)
       .is("deleted_at", null)
       .or(
         `invoice_number.ilike.${pattern},bill_to_name.ilike.${pattern},contractor_name.ilike.${pattern}`,
