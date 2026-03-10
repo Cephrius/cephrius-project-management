@@ -29,7 +29,7 @@ const PRIMARY_COLORS = [
   { id: "amber", label: "Amber", primary: "#d97706", foreground: "#ffffff" },
   { id: "rose", label: "Rose", primary: "#e11d48", foreground: "#ffffff" },
   { id: "violet", label: "Violet", primary: "#7c3aed", foreground: "#ffffff" },
-  { id: "white", label: "White", primary: "#ffffff", foreground: "#000000" },
+  { id: "white", label: "White", primary: "#000000", foreground: "#000000" },
 ] as const;
 
 type PrimaryColorKey = (typeof PRIMARY_COLORS)[number]["id"];
@@ -72,7 +72,7 @@ export function ThemeSwitcher({
   const selectedTheme: ThemeMode =
     theme === "light" || theme === "dark" || theme === "system"
       ? theme
-      : "system";
+      : "light";
 
   const [primaryColor, setPrimaryColor] = useState<PrimaryColorKey>(
     DEFAULT_PRIMARY_COLOR,

@@ -636,9 +636,21 @@ export function ProjectsPageClient({
           </div>
         </div>
         <Card className="p-8">
-          <div className="text-sm text-muted-foreground">
-            No projects yet. Create your first project to get started.
+          <div className="flex justify-center">
+          <img src={"project.png"} alt="Project" className="w-48 h-48"/>
           </div>
+          <div className="text-xl text-bold text-muted-foreground text-center">
+            You currently don't <br/>have any projects.
+          </div>
+          <div className="text-center text-md">To get started, create a<br/> project here. </div>
+            <div className="flex justify-center">
+              <NewProjectButton 
+                initialBuilders={builders}
+                initialSubdivisions={subdivisions}
+                buttonClassName="w-full sm:w-auto  "
+                buttonLabel="Create Project"
+              />
+         </div>
         </Card>
       </div>
     );
