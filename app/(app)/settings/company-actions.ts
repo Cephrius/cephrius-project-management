@@ -7,6 +7,10 @@ type ActionResult =
   | { ok: true; companyId: string; message?: string }
   | { ok: false; message: string };
 
+type DeleteResult =
+  | { ok: true; message?: string; fallbackCompanyId: string | null }
+  | { ok: false; message: string };
+
 export async function createCompany(
   name: string,
   address?: string,
@@ -64,4 +68,116 @@ export async function createCompany(
   }
 
   return { ok: true, companyId: company.id };
+}
+
+export async function deleteCompany(companyId: string): Promise<DeleteResult> {
+  // Verify the caller is authenticated
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { ok: false, message: "Session expired. Please log in again." };
+  }
+
+  if (!companyId?.trim()) {
+    return { ok: false, message: "Company ID is required." };
+  }
+
+  // Verify the user is an owner of this company
+  const { data: membership } = await supabase
+    .from("company_members")
+    .select("role")
+    .eq("company_id", companyId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!membership) {
+    return { ok: false, message: "You don't have access to this company." };
+  }
+
+  if (membership.role !== "owner") {
+    return { ok: false, message: "Only the company owner can delete it." };
+  }
+
+  // Use admin client to bypass RLS for cascading deletes
+  const admin = createAdminClient();
+
+  // 1. Get all project IDs for this company so we can delete their jobs
+  const { data: projects } = await admin
+    .from("projects")
+    .select("id")
+    .eq("company_id", companyId);
+
+  const projectIds = (projects ?? []).map((p) => p.id);
+
+  // 2. Delete jobs belonging to those projects
+  if (projectIds.length > 0) {
+    const { error: jobsError } = await admin
+      .from("jobs")
+      .delete()
+      .in("project_id", projectIds);
+
+    if (jobsError) {
+      return { ok: false, message: `Failed to delete jobs: ${jobsError.message}` };
+    }
+  }
+
+  // 3. Delete invoices belonging to this company
+  const { error: invoicesError } = await admin
+    .from("invoices")
+    .delete()
+    .eq("company_id", companyId);
+
+  if (invoicesError) {
+    return { ok: false, message: `Failed to delete invoices: ${invoicesError.message}` };
+  }
+
+  // 4. Delete projects belonging to this company
+  if (projectIds.length > 0) {
+    const { error: projectsError } = await admin
+      .from("projects")
+      .delete()
+      .eq("company_id", companyId);
+
+    if (projectsError) {
+      return { ok: false, message: `Failed to delete projects: ${projectsError.message}` };
+    }
+  }
+
+  // 5. Delete company memberships
+  const { error: membersError } = await admin
+    .from("company_members")
+    .delete()
+    .eq("company_id", companyId);
+
+  if (membersError) {
+    return { ok: false, message: `Failed to remove members: ${membersError.message}` };
+  }
+
+  // 6. Delete the company itself
+  const { error: companyError } = await admin
+    .from("companies")
+    .delete()
+    .eq("id", companyId);
+
+  if (companyError) {
+    return { ok: false, message: `Failed to delete company: ${companyError.message}` };
+  }
+
+  // 7. Find a fallback company the user still belongs to
+  const { data: remaining } = await admin
+    .from("company_members")
+    .select("company_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    ok: true,
+    message: "Company and all associated data deleted.",
+    fallbackCompanyId: remaining?.company_id ?? null,
+  };
 }

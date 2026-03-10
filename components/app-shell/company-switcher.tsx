@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ChevronsUpDown, Plus, Check } from "lucide-react";
+import { ChevronsUpDown, Plus, Check, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCompany, type Company } from "@/lib/company-context";
-import { createCompany } from "@/app/(app)/settings/company-actions";
+import { createCompany, deleteCompany } from "@/app/(app)/settings/company-actions";
 
 import {
   DropdownMenu,
@@ -25,6 +25,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 function companyInitials(name: string) {
   return name
@@ -42,6 +52,30 @@ export function CompanySwitcher() {
   const [newAddress, setNewAddress] = React.useState("");
   const [newPhone, setNewPhone] = React.useState("");
   const [creating, setCreating] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<Company | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
+  async function onDeleteCompany() {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    const result = await deleteCompany(deleteTarget.id);
+    setDeleting(false);
+
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success(`"${deleteTarget.name}" deleted.`);
+    setDeleteTarget(null);
+
+    // Switch to a remaining company or redirect if none left
+    if (result.fallbackCompanyId) {
+      setActiveCompanyId(result.fallbackCompanyId);
+    }
+    router.refresh();
+  }
 
   async function onCreateCompany() {
     const name = newName.trim();
@@ -103,7 +137,7 @@ export function CompanySwitcher() {
             <DropdownMenuItem
               key={company.id}
               onClick={() => onSwitch(company)}
-              className="gap-2 p-2"
+              className="gap-2 p-2 group/item"
             >
               <div className="flex size-6 items-center justify-center rounded-md border text-xs font-bold">
                 {companyInitials(company.name)}
@@ -112,19 +146,32 @@ export function CompanySwitcher() {
               {company.id === activeCompany.id && (
                 <Check className="size-4 text-primary" />
               )}
+              {company.role === "owner" && (
+                <button
+                  type="button"
+                  className="size-6 flex items-center justify-center rounded-md opacity-0 group-hover/item:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(company);
+                  }}
+                  aria-label={`Delete ${company.name}`}
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              )}
             </DropdownMenuItem>
           ))}
 
           <DropdownMenuSeparator />
-
+          {/* Add Company button */}
           <DropdownMenuItem
-            className="gap-2 p-2"
+            className="gap-2 p-2 delay-200"
             onClick={() => setDialogOpen(true)}
           >
-            <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+            <div className="flex size-6 items-center  justify-center rounded-md border bg-transparent ">
               <Plus className="size-4" />
             </div>
-            <span className="text-muted-foreground font-medium">
+            <span className="text-muted-foreground font-medium ">
               Add Company
             </span>
           </DropdownMenuItem>
@@ -188,6 +235,38 @@ export function CompanySwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Company Confirmation */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Company</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.name}
+              </span>
+              ? This will permanently delete all projects, jobs, and invoices
+              associated with this company. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={onDeleteCompany}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete Company"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

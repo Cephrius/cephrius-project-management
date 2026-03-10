@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#extras
+TODO.json
+create-github-issues.sh
+create-sanitize-issue.sh

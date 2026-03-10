@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCompany, type Company } from "@/lib/company-context";
-import { createCompany } from "@/app/(app)/settings/company-actions";
+import { createCompany, deleteCompany } from "@/app/(app)/settings/company-actions";
 
 import {
   Drawer,
@@ -25,6 +25,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 function companyInitials(name: string) {
@@ -44,6 +54,35 @@ export function MobileCompanySwitcher() {
   const [newAddress, setNewAddress] = React.useState("");
   const [newPhone, setNewPhone] = React.useState("");
   const [creating, setCreating] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<Company | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
+  async function onDeleteCompany() {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    const result = await deleteCompany(deleteTarget.id);
+    setDeleting(false);
+
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success(`"${deleteTarget.name}" deleted.`);
+    setDeleteTarget(null);
+    setDrawerOpen(false);
+
+    if (result.fallbackCompanyId) {
+      setActiveCompanyId(result.fallbackCompanyId);
+    }
+    router.refresh();
+  }
+
+  function openDeleteConfirmation(company: Company) {
+    setDrawerOpen(false);
+    setTimeout(() => setDeleteTarget(company), 150);
+  }
 
   async function onCreateCompany() {
     const name = newName.trim();
@@ -105,39 +144,50 @@ export function MobileCompanySwitcher() {
             {companies.map((company) => {
               const isActive = company.id === activeCompany.id;
               return (
-                <button
-                  key={company.id}
-                  type="button"
-                  onClick={() => onSwitch(company)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-muted",
-                  )}
-                >
-                  <div
+                <div key={company.id} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onSwitch(company)}
                     className={cn(
-                      "flex size-10 items-center justify-center rounded-lg text-sm font-bold",
+                      "flex flex-1 min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors",
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "border bg-muted text-muted-foreground",
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted",
                     )}
                   >
-                    {companyInitials(company.name)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">
-                      {company.name}
+                    <div
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-lg text-sm font-bold shrink-0",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "border bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {companyInitials(company.name)}
                     </div>
-                    <div className="text-xs text-muted-foreground capitalize">
-                      {company.role}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
+                        {company.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground capitalize">
+                        {company.role}
+                      </div>
                     </div>
-                  </div>
-                  {isActive && (
-                    <Check className="size-5 shrink-0 text-primary" />
+                    {isActive && (
+                      <Check className="size-5 shrink-0 text-primary" />
+                    )}
+                  </button>
+                  {company.role === "owner" && (
+                    <button
+                      type="button"
+                      className="flex size-10 items-center justify-center rounded-lg shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      onClick={() => openDeleteConfirmation(company)}
+                      aria-label={`Delete ${company.name}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -218,6 +268,38 @@ export function MobileCompanySwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Company Confirmation */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Company</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.name}
+              </span>
+              ? This will permanently delete all projects, jobs, and invoices
+              associated with this company. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={onDeleteCompany}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete Company"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
