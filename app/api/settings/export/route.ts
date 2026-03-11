@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,6 +13,11 @@ export async function GET() {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const companyId = await getActiveCompanyId();
+  if (!companyId) {
+    return NextResponse.json({ message: "No active company" }, { status: 400 });
+  }
+
   const [profileRes, projectsRes, jobsRes, invoicesRes, invoiceItemsRes] =
     await Promise.all([
       supabase
@@ -22,14 +28,17 @@ export async function GET() {
       supabase
         .from("projects")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
       supabase
         .from("jobs")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
       supabase
         .from("invoices")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
       supabase
         .from("invoice_items")

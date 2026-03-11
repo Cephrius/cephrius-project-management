@@ -1,11 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { SidebarNav } from "./sidebar-nav";
 import { cn } from "@/lib/utils";
 import { useSidebarState } from "./sidebar-state";
 import { VersionChangelogDialog } from "./version-changelog-dialog";
+import { CompanySwitcher } from "./company-switcher";
+import { useCompany } from "@/lib/company-context";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 function companyInitials(name: string) {
   return name
@@ -17,9 +24,10 @@ function companyInitials(name: string) {
     .join("");
 }
 
-export function DesktopSidebar({ companyName }: { companyName: string }) {
+export function DesktopSidebar() {
   const { collapsed } = useSidebarState();
-  const initials = useMemo(() => companyInitials(companyName), [companyName]);
+  const { activeCompany } = useCompany();
+  const initials = companyInitials(activeCompany?.name ?? "");
 
   return (
     <aside
@@ -34,12 +42,41 @@ export function DesktopSidebar({ companyName }: { companyName: string }) {
           collapsed ? "justify-center" : "justify-between",
         )}
       >
-        <div className={cn("min-w-0", collapsed && "text-center")}>
-          <div className="truncate text-sm font-semibold text-primary">
-            {collapsed ? initials || "JS" : companyName}
-          </div>
-          {!collapsed && (
-            <div className="text-xs text-muted-foreground">JobSyte Portal</div>
+        <div className={cn("p-2", collapsed && "text-center")}>
+          {collapsed ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center justify-center rounded-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                  aria-label={`Switch company — ${activeCompany?.name}`}
+                >
+                  {activeCompany?.logo_url ? (
+                    <Image
+                      src={activeCompany.logo_url}
+                      alt={activeCompany.name}
+                      width={36}
+                      height={36}
+                      className="size-9 rounded-lg object-contain"
+                    />
+                  ) : (
+                    <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold">
+                      {initials || "JS"}
+                    </div>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                side="right"
+                align="start"
+                sideOffset={12}
+                className="w-72 p-0"
+              >
+                <CompanySwitcher />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <CompanySwitcher />
           )}
         </div>
       </div>

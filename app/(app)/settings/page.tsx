@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { SettingsPageClient } from "@/components/settings/settings-page";
@@ -17,26 +18,44 @@ export default async function SettingsPage() {
 
   if (userError || !user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("contractor_profiles")
-    .select("company_name, address, phone")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // Read active company from cookie (set by CompanyProvider)
+  const cookieStore = await cookies();
+  const activeCompanyId = cookieStore.get("jobsyte:active-company-id")?.value;
 
-  const metadata = isObject(user.user_metadata) ? user.user_metadata : {};
+  // Fetch company profile from the companies table
+  let company: { id: string; name: string; address: string | null; phone: string | null } | null = null;
+
+  if (activeCompanyId) {
+    const { data } = await supabase
+      .from("companies")
+      .select("id, name, address, phone")
+      .eq("id", activeCompanyId)
+      .maybeSingle();
+    company = data;
+  }
+
+  // Fallback: get the first company the user belongs to
+  if (!company) {
+    const { data: membership } = await supabase
+      .from("company_members")
+      .select("company:companies(id, name, address, phone)")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    company = (membership as any)?.company ?? null;
+  }
+
   const settings = readPreferenceSettings(user.user_metadata);
-
-  const companyNameFromMetadata =
-    typeof metadata.company_name === "string" ? metadata.company_name : "";
 
   return (
     <div className="space-y-6">
       <BreadcrumbSetter crumbs={[{ label: "Settings", href: "/settings" }]} />
       <SettingsPageClient
         initialProfile={{
-          companyName: profile?.company_name ?? companyNameFromMetadata,
-          address: profile?.address ?? "",
-          phone: profile?.phone ?? "",
+          companyId: company?.id ?? "",
+          companyName: company?.name ?? "",
+          address: company?.address ?? "",
+          phone: company?.phone ?? "",
         }}
         account={{
           email: user.email ?? "",

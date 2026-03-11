@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 import { Card } from "@/components/ui/card";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { CreateInvoiceByBuilder } from "@/components/invoices/create-invoice-by-builder";
@@ -14,18 +15,22 @@ export default async function NewInvoicePage() {
   } = await (await supabase).auth.getUser();
 
   if (error || !user) redirect("/login");
+
+  const companyId = await getActiveCompanyId();
+  if (!companyId) redirect("/login");
+
   const settings = readPreferenceSettings(user.user_metadata);
 
-  const { data: builders } = await (await supabase)
-    .from("builders")
-    .select("id, name")
-    .order("name");
+  const [buildersRes, companyRes] = await Promise.all([
+    (await supabase).from("builders").select("id, name").order("name"),
+    (await supabase)
+      .from("companies")
+      .select("name, address, phone")
+      .eq("id", companyId)
+      .maybeSingle(),
+  ]);
 
-  const { data: profile } = await (await supabase)
-    .from("contractor_profiles")
-    .select("company_name, address, phone")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const company = companyRes.data;
 
   return (
     <div className="space-y-6">
@@ -45,12 +50,12 @@ export default async function NewInvoicePage() {
 
       <Card className="p-4 sm:p-6">
         <CreateInvoiceByBuilder
-          builders={builders ?? []}
+          builders={buildersRes.data ?? []}
           defaultDueDays={settings.default_due_days}
           initialContractor={{
-            company_name: profile?.company_name ?? "",
-            address: profile?.address ?? "",
-            phone: profile?.phone ?? "",
+            company_name: company?.name ?? "",
+            address: company?.address ?? "",
+            phone: company?.phone ?? "",
           }}
         />
       </Card>
