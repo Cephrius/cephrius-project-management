@@ -5,8 +5,23 @@ export type ReleaseNote = {
   changes: string[];
   bugFixes: string[];
 };
-
+// New releases every tuesday
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    version: "v0.1.7a",
+    releasedOn: "Mar 10, 2026",
+    majorAdditions: [
+      "Added multi-company support with a company switcher in the sidebar and header for both desktop and mobile views.",
+      "Introduced company creation and deletion with full cascading data cleanup.",
+    ],
+    changes: [
+      "All pages, jobs, projects, invoices, and search results now filter by the active company context.",
+      "Active company selection is persisted across sessions using cookies and local storage.",
+      "Settings and profile management updated to include company-specific data.",
+      "Search suggestions now respect the active company context.",
+    ],
+    bugFixes: [],
+  },
   {
     version: "v0.1.6a",
     releasedOn: "Feb 18, 2026",
