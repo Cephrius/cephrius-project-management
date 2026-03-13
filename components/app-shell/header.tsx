@@ -284,7 +284,7 @@ export function Header() {
   return (
     <header
       data-app-shell-header
-      className="rounded-xl border-b border-primary/20 bg-background px-3 py-2 sm:px-4 sm:py-3"
+      className="rounded-xl border border-primary/20 bg-background/40 px-3 py-2 sm:px-4 sm:py-3"
     >
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
         <div className="hidden min-w-0 items-center gap-2 md:flex">
