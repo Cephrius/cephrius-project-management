@@ -32,7 +32,7 @@ export function DesktopSidebar() {
   return (
     <aside
       className={cn(
-        "hidden overflow-hidden rounded-2xl border border-primary/20 bg-background/95 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/40 md:sticky md:top-3 md:flex md:h-[calc(100vh-1.5rem)] md:shrink-0 md:flex-col md:self-start transition-[width] duration-300 ease-in-out",
+        "hidden overflow-hidden rounded-2xl border border-primary/20 bg-sidebar/40 shadow-lg backdrop-blur supports-backdrop-filter:bg-sidebar/40 md:sticky md:top-3 md:flex md:h-[calc(100vh-1.5rem)] md:shrink-0 md:flex-col md:self-start transition-[width] duration-300 ease-in-out",
         collapsed ? "md:w-20" : "md:w-64",
       )}
     >
