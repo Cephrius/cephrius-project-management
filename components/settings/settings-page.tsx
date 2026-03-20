@@ -31,8 +31,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
-type SettingsPageClientProps = {   
-  initialProfile: {  
+type SettingsPageClientProps = {
+  initialProfile: {
+    companyId: string;
     companyName: string;
     address: string;
     phone: string;
@@ -102,6 +103,7 @@ export function SettingsPageClient({
   async function onSaveProfile() {    
     setSavingProfile(true);
     const res = await updateCompanyProfile({
+      companyId: initialProfile.companyId,
       companyName,
       address,
       phone,

@@ -40,4 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.env.local
+
+#extras
+TODO.json
+create-github-issues.sh
+create-sanitize-issue.sh

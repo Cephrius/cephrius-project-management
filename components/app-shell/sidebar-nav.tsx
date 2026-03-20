@@ -28,7 +28,7 @@ export function SidebarNav({
 
   if (mobile) {
     return (
-      <nav className="grid grid-cols-4 gap-1">
+      <nav className="grid grid-cols-4 gap-1 ">
         {navItems.map((item) => {
           const isActive =
             item.href === "/dashboard"

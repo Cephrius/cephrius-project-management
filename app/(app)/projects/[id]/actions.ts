@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
 import { redirect } from "next/navigation";
 
 type ProjectStatus = "not-started" | "active" | "completed";
@@ -104,8 +105,12 @@ export async function createJob(projectId: string, formData: FormData) {
   if (price_cents === null)
     return { ok: false, message: "Enter a valid price." };
 
+  const companyId = await getActiveCompanyId();
+  if (!companyId) return { ok: false, message: "No active company found." };
+
   const { error } = await supabase.from("jobs").insert({
     project_id: projectId,
+    company_id: companyId,
     title,
     price_cents,
     scheduled_completion: scheduledCompletion,
