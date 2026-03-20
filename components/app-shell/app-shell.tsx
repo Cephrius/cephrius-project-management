@@ -3,6 +3,7 @@ import { Header } from "./header";
 import { BreadcrumbProvider } from "./breadcrumb-context";
 import { SidebarStateProvider } from "./sidebar-state";
 import { RouteTransition } from "./route-transition";
+import { MainView } from "./mainview";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -11,11 +12,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen bg-muted/30">
           <div className="flex gap-3 p-3">
             <Sidebar />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 flex flex-col md:h-[calc(100vh-1.5rem)]">
               <Header />
-              <main data-app-shell-main className="p-4 pb-24 sm:p-6 sm:pb-28 md:pb-6">
-                <RouteTransition>{children}</RouteTransition>
-              </main>
+              <MainView>
+                <main data-app-shell-main className="flex min-h-0 h-full flex-1 flex-col p-4 sm:p-6 md:pb-4">
+                  <RouteTransition>{children}</RouteTransition>
+                </main>
+              </MainView>
             </div>
           </div>
         </div>

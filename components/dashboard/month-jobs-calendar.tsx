@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { format, isValid, parse } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
+import { ToggleJobCompleteButton } from "@/components/dashboard/toggle-job-complete-button";
 
 export type CalendarJob = {
   id: string;
@@ -78,7 +79,7 @@ export function MonthJobsCalendar({
     <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="flex w-full justify-center overflow-x-auto pb-1 lg:justify-start">
         <Calendar
-          className="min-w-[17.5rem] rounded-xl"
+          className="min-w-70 rounded-xl"
           mode="single"
           required
           defaultMonth={monthDate}
@@ -131,6 +132,7 @@ export function MonthJobsCalendar({
                     <Badge className="border-gray-300 border dark:border-gray-500" variant="secondary">Incomplete</Badge>
                   )}
                 </div>
+                {!job.is_completed && <ToggleJobCompleteButton jobId={job.id} />}
               </div>
             ))}
           </div>
