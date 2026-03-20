@@ -12,12 +12,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen bg-muted/30">
           <div className="flex gap-3 p-3">
             <Sidebar />
-            <div className="min-w-0 flex-1 flex flex-col h-screen">
-              <div className="flex-shrink-0">
-                <Header />
-              </div>
+            <div className="min-w-0 flex-1 flex flex-col md:h-[calc(100vh-1.5rem)]">
+              <Header />
               <MainView>
-                <main data-app-shell-main className="flex flex-1 flex-col p-4 sm:p-6 md:pb-4">
+                <main data-app-shell-main className="flex min-h-0 h-full flex-1 flex-col p-4 sm:p-6 md:pb-4">
                   <RouteTransition>{children}</RouteTransition>
                 </main>
               </MainView>
