@@ -5,8 +5,26 @@ export type ReleaseNote = {
   changes: string[];
   bugFixes: string[];
 };
-// New releases every tuesday
+// New releases every tuesday (Or whenever I finish a batch of features and fixes that feel worth sharing)
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    version: "v0.1.8a",
+    releasedOn: "Mar 24, 2026",
+    majorAdditions: [
+      "Introduced quick job completion directly from the projects view — an inline checklist lets users toggle individual job statuses with optimistic UI updates, and a companion modal drawer provides a focused job-by-job review flow.",
+      "Refactored the settings page into discrete, focused card components: Account Details, Business Profile, Appearance, Preferences, Security, and Data & Session.",
+    ],
+    changes: [
+      "Redesigned the dashboard layout with improved color consistency, visual hierarchy, and responsiveness across mobile and desktop widths.",
+      "Added a Mark Complete toggle button on dashboard job cards for one-click completion directly from the daily calendar view.",
+      "Extended project server actions to support toggling job completion state from the projects page.",
+      "Removed a duplicate dashboard page implementation left over from an earlier build to eliminate conflicting route handlers.",
+    ],
+    bugFixes: [
+      "Corrected dashboard calendar styling regressions introduced during the layout refactor.",
+      "Fixed app-shell and sidebar layout inconsistencies exposed when the dashboard view was restructured.",
+    ],
+  },
   {
     version: "v0.1.7a",
     releasedOn: "Mar 10, 2026",

@@ -12,6 +12,7 @@ import {
   Hammer,
   Home,
   List,
+  ListTodo,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -22,6 +23,9 @@ import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog
 import { ImportProjectJobsButton } from "@/components/projects/import-project-jobs-button";
 import { NewProjectButton } from "@/components/projects/new-project-button";
 import type { LookupItem, ProjectListItem } from "@/components/projects/types";
+import { QuickJobComplete, type QuickJobItem } from "@/components/projects/quick-job-complete";
+import { QuickJobDrawer } from "@/components/projects/quick-job-drawer";
+import { getProjectJobs } from "@/components/projects/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,11 +138,13 @@ function ProjectCardActionsDropdown({
   builders,
   subdivisions,
   onViewProject,
+  onQuickComplete,
 }: {
   project: ProjectListItem;
   builders: LookupItem[];
   subdivisions: LookupItem[];
   onViewProject?: (projectId: string) => void;
+  onQuickComplete?: (projectId: string) => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [addJobOpen, setAddJobOpen] = useState(false);
@@ -179,6 +185,18 @@ function ProjectCardActionsDropdown({
             <Plus className="size-4" />
             New Job
           </DropdownMenuItem>
+          {/* Quick Complete button only visible when selected project sidebar is not visible (< xl) */}
+          <div className="xl:hidden">
+            <DropdownMenuItem className="cursor-pointer"
+              onSelect={(event) => {
+                event.preventDefault();
+                onQuickComplete?.(project.id);
+              }}
+            >
+              <ListTodo className="size-4" />
+              Quick Complete
+            </DropdownMenuItem>
+          </div>
           <DropdownMenuItem asChild className="cursor-pointer">
             <Link
               href={`/projects/${project.id}`}
@@ -275,6 +293,9 @@ export function ProjectsPageClient({
       return savedProjectId || projects[0]?.id || null;
     },
   );
+  const [selectedProjectJobs, setSelectedProjectJobs] = useState<QuickJobItem[]>([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [quickCompleteDrawerOpen, setQuickCompleteDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -283,6 +304,50 @@ export function ProjectsPageClient({
       return;
     }
     window.sessionStorage.setItem(PROJECTS_SELECTED_STORAGE_KEY, selectedProjectId);
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setSelectedProjectJobs([]);
+      return;
+    }
+
+    // Clear previous project's jobs immediately to avoid showing stale data
+    setSelectedProjectJobs([]);
+
+    let isMounted = true;
+
+    const fetchJobs = async () => {
+      setIsLoadingJobs(true);
+      try {
+        const result = await getProjectJobs(selectedProjectId);
+        if (!isMounted) {
+          return;
+        }
+
+        if (result.ok) {
+          setSelectedProjectJobs(result.jobs);
+        } else {
+          // On error, ensure we don't keep stale jobs in the UI
+          setSelectedProjectJobs([]);
+          console.error(
+            "Failed to load jobs for project",
+            selectedProjectId,
+            result,
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingJobs(false);
+        }
+      }
+    };
+
+    fetchJobs();
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedProjectId]);
 
   useEffect(() => {
@@ -989,6 +1054,10 @@ export function ProjectsPageClient({
                                                           builders={builders}
                                                           subdivisions={subdivisions}
                                                           onViewProject={setSelectedProjectId}
+                                                          onQuickComplete={(projectId) => {
+                                                            setSelectedProjectId(projectId);
+                                                            setQuickCompleteDrawerOpen(true);
+                                                          }}
                                                         />
                                                       </div>
                                                       <div
@@ -1088,6 +1157,10 @@ export function ProjectsPageClient({
                             builders={builders}
                             subdivisions={subdivisions}
                             onViewProject={setSelectedProjectId}
+                            onQuickComplete={(projectId) => {
+                              setSelectedProjectId(projectId);
+                              setQuickCompleteDrawerOpen(true);
+                            }}
                           />
                         </div>
                         <div onClick={(event) => event.stopPropagation()}>
@@ -1144,6 +1217,21 @@ export function ProjectsPageClient({
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-3 border-t pt-4">
+                <div className="text-sm font-medium text-muted-foreground">
+                  Jobs
+                </div>
+                {isLoadingJobs ? (
+                  <div className="animate-pulse rounded-md border border-dashed border-primary/20 p-4">
+                    <p className="text-sm text-muted-foreground">Loading jobs...</p>
+                  </div>
+                ) : (
+                  <div className="hidden xl:block">
+                    <QuickJobComplete jobs={selectedProjectJobs} />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3 border-t pt-4">
@@ -1222,6 +1310,15 @@ export function ProjectsPageClient({
           )}
         </Card>
       </div>
+
+      {/* Quick Complete Drawer for mobile/card actions */}
+      {selectedProjectJobs.length > 0 && (
+        <QuickJobDrawer 
+          jobs={selectedProjectJobs}
+          open={quickCompleteDrawerOpen}
+          onOpenChange={setQuickCompleteDrawerOpen}
+        />
+      )}
     </div>
   );
 }
