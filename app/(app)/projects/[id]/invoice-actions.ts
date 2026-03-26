@@ -136,12 +136,17 @@ export async function createInvoice(projectId: string, formData: FormData) {
 
   const { error: itemsErr } = await (await supabase)
     .from("invoice_items")
-    .insert(items);
+    .upsert(items, { onConflict: "job_id" });
 
   if (itemsErr) {
-    // If this fails due to unique constraint (job already invoiced), return a clear message.
     return { ok: false, message: itemsErr.message };
   }
+
+  // Mark all jobs on this invoice as invoiced
+  await (await supabase)
+    .from("jobs")
+    .update({ is_invoiced: true })
+    .in("id", jobIds);
 
   return { ok: true, invoiceId: invoice.id as string };
 }

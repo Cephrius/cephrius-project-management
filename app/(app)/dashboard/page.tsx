@@ -254,7 +254,7 @@ export default async function DashboardPage() {
     .reduce((sum, j) => sum + (j.price_cents ?? 0), 0);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col">
       <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/" }]} />
 
       {/* ─── Page heading ─── */}

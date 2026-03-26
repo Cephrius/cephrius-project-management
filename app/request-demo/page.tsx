@@ -143,7 +143,7 @@ export default function RequestDemoPage() {
 
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-background"
+      className="relative min-h-screen overflow-x-hidden bg-background"
       style={REQUEST_DEMO_LIGHT_THEME_STYLE}
     >
       <div

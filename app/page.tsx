@@ -372,7 +372,7 @@ export default function LandingPage() {
 
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-background text-foreground"
+      className="relative min-h-screen overflow-x-hidden bg-background text-foreground"
       style={LANDING_LIGHT_THEME_STYLE}
     >
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">

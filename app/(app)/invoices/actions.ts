@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
 import { resolveInvoiceDueDate } from "@/lib/settings/preferences";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 function formatInvoiceNumber() {
   const d = new Date();
@@ -180,8 +181,14 @@ export async function createInvoiceForBuilder(formData: FormData) {
 
   const { error: itemsErr } = await (await supabase)
     .from("invoice_items")
-    .insert(items);
+    .upsert(items, { onConflict: "job_id" });
   if (itemsErr) return { ok: false, message: itemsErr.message };
+
+  // Mark all jobs on this invoice as invoiced
+  await (await supabase)
+    .from("jobs")
+    .update({ is_invoiced: true })
+    .in("id", jobIds);
 
   return { ok: true, invoiceId: invoice.id as string };
 }
@@ -207,6 +214,17 @@ export async function deleteInvoice(invoiceId: string) {
   if (invoiceCheckErr) return { ok: false, message: invoiceCheckErr.message };
   if (!invoice) return { ok: false, message: "Invoice not found." };
 
+  // Fetch all job_ids tied to this invoice before deleting it.
+  const { data: items } = await (await supabase)
+    .from("invoice_items")
+    .select("job_id")
+    .eq("invoice_id", invoiceId);
+
+  const allJobIds = (items ?? [])
+    .map((i) => i.job_id)
+    .filter((id): id is string => Boolean(id));
+
+  // Soft-delete the invoice.
   const { error } = await (await supabase)
     .from("invoices")
     .update({ deleted_at: new Date().toISOString() })
@@ -217,6 +235,26 @@ export async function deleteInvoice(invoiceId: string) {
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  // Hard-delete all invoice_items rows for this invoice.
+  await (await supabase)
+    .from("invoice_items")
+    .delete()
+    .eq("invoice_id", invoiceId);
+
+  // Reset all associated jobs back to plain "completed" status —
+  // clear both is_invoiced and is_paid so they appear as just completed
+  // and can be added to a new invoice.
+  if (allJobIds.length > 0) {
+    await (await supabase)
+      .from("jobs")
+      .update({ is_invoiced: false, is_paid: false, paid_at: null })
+      .in("id", allJobIds);
+  }
+
+  revalidatePath("/invoices", "layout");
+  revalidatePath("/projects", "layout");
+
   return { ok: true };
 }
 
@@ -409,3 +447,177 @@ export async function editInvoice(formData: FormData) {
 
 //   if (itemsErr) return { ok: false, message: itemsErr.message };
 // }
+
+/**
+ * Fully refactored invoice edit:
+ * - Updates header fields (contractor, bill-to, dates)
+ * - Removes items not in keepItemIds (un-marks those jobs as invoiced)
+ * - Adds new jobs from addJobIds (marks them as invoiced)
+ * - Recalculates subtotal automatically
+ */
+export async function editInvoiceWithJobs({
+  invoiceId,
+  contractorName,
+  contractorAddress,
+  contractorPhone,
+  billToName,
+  billToAddress,
+  invoiceDate,
+  dueDate,
+  keepItemIds,
+  addJobIds,
+}: {
+  invoiceId: string;
+  contractorName: string;
+  contractorAddress: string;
+  contractorPhone: string;
+  billToName: string;
+  billToAddress: string;
+  invoiceDate: string;
+  dueDate: string;
+  keepItemIds: string[];
+  addJobIds: string[];
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) redirect("/login");
+
+  // Verify ownership
+  const { data: invoice, error: invoiceFetchErr } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (invoiceFetchErr) return { ok: false, message: invoiceFetchErr.message };
+  if (!invoice) return { ok: false, message: "Invoice not found." };
+
+  // Get current items
+  const { data: currentItems, error: currentItemsErr } = await supabase
+    .from("invoice_items")
+    .select("id, job_id, is_paid")
+    .eq("invoice_id", invoiceId);
+
+  if (currentItemsErr) return { ok: false, message: currentItemsErr.message };
+
+  const keepSet = new Set(keepItemIds);
+  const itemsToRemove = (currentItems ?? []).filter(
+    (item) => !keepSet.has(item.id) && !item.is_paid, // never remove paid items
+  );
+
+  // Remove items + un-mark their jobs as invoiced
+  if (itemsToRemove.length > 0) {
+    const removeIds = itemsToRemove.map((i) => i.id);
+    const removeJobIds = itemsToRemove
+      .map((i) => i.job_id)
+      .filter((id): id is string => Boolean(id));
+
+    const { error: deleteItemsErr } = await supabase
+      .from("invoice_items")
+      .delete()
+      .in("id", removeIds);
+
+    if (deleteItemsErr) return { ok: false, message: deleteItemsErr.message };
+
+    if (removeJobIds.length > 0) {
+      await supabase
+        .from("jobs")
+        .update({ is_invoiced: false })
+        .in("id", removeJobIds);
+    }
+  }
+
+  // Add new jobs
+  if (addJobIds.length > 0) {
+    const { data: newJobs, error: newJobsErr } = await supabase
+      .from("jobs")
+      .select("id, title, price_cents, project_id, is_completed")
+      .in("id", addJobIds)
+      .is("deleted_at", null);
+
+    if (newJobsErr) return { ok: false, message: newJobsErr.message };
+
+    const completedJobs = (newJobs ?? []).filter((j) => j.is_completed);
+    const projectIds = Array.from(
+      new Set(completedJobs.map((j) => j.project_id)),
+    );
+
+    const { data: projects, error: projectsErr } = await supabase
+      .from("projects")
+      .select("id, project_address, builder_name, subdivision")
+      .in("id", projectIds);
+
+    if (projectsErr) return { ok: false, message: projectsErr.message };
+
+    const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
+
+    const newItems = completedJobs.map((j) => {
+      const p = projectMap.get(j.project_id);
+      return {
+        invoice_id: invoiceId,
+        job_id: j.id,
+        project_id_snapshot: j.project_id,
+        project_address_snapshot: p?.project_address ?? "",
+        subdivision_name_raw_snapshot:
+          (p?.subdivision ?? "").trim() || "Unassigned",
+        builder_name_snapshot: p?.builder_name ?? "",
+        job_title_snapshot: j.title,
+        job_price_cents_snapshot: j.price_cents,
+      };
+    });
+
+    if (newItems.length > 0) {
+      const { error: insertItemsErr } = await supabase
+        .from("invoice_items")
+        .upsert(newItems, { onConflict: "job_id" });
+
+      if (insertItemsErr) return { ok: false, message: insertItemsErr.message };
+
+      await supabase
+        .from("jobs")
+        .update({ is_invoiced: true })
+        .in("id", addJobIds);
+    }
+  }
+
+  // Recalculate subtotal from all remaining items
+  const { data: allItems, error: allItemsErr } = await supabase
+    .from("invoice_items")
+    .select("job_price_cents_snapshot")
+    .eq("invoice_id", invoiceId);
+
+  if (allItemsErr) return { ok: false, message: allItemsErr.message };
+
+  const subtotalCents = (allItems ?? []).reduce(
+    (sum, i) => sum + (i.job_price_cents_snapshot ?? 0),
+    0,
+  );
+
+  // Update header
+  const { error: updateErr } = await supabase
+    .from("invoices")
+    .update({
+      contractor_name: contractorName,
+      contractor_address: contractorAddress || null,
+      contractor_phone: contractorPhone || null,
+      bill_to_name: billToName,
+      bill_to_address: billToAddress,
+      invoice_date: invoiceDate,
+      due_date: dueDate || null,
+      subtotal_cents: subtotalCents,
+    })
+    .eq("id", invoiceId)
+    .eq("user_id", user.id);
+
+  if (updateErr) return { ok: false, message: updateErr.message };
+
+  revalidatePath("/invoices", "layout");
+  revalidatePath("/projects", "layout");
+
+  return { ok: true };
+}

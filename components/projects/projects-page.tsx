@@ -312,14 +312,29 @@ export function ProjectsPageClient({
       return;
     }
 
+    // Clear previous project's jobs immediately to avoid showing stale data
+    setSelectedProjectJobs([]);
+
     let isMounted = true;
 
     const fetchJobs = async () => {
       setIsLoadingJobs(true);
       try {
         const result = await getProjectJobs(selectedProjectId);
-        if (isMounted && result.ok) {
+        if (!isMounted) {
+          return;
+        }
+
+        if (result.ok) {
           setSelectedProjectJobs(result.jobs);
+        } else {
+          // On error, ensure we don't keep stale jobs in the UI
+          setSelectedProjectJobs([]);
+          console.error(
+            "Failed to load jobs for project",
+            selectedProjectId,
+            result,
+          );
         }
       } finally {
         if (isMounted) {
