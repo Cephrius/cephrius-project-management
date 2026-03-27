@@ -237,19 +237,27 @@ export async function deleteInvoice(invoiceId: string) {
   }
 
   // Hard-delete all invoice_items rows for this invoice.
-  await (await supabase)
+  const { error: deleteItemsError } = await (await supabase)
     .from("invoice_items")
     .delete()
     .eq("invoice_id", invoiceId);
+
+  if (deleteItemsError) {
+    return { ok: false, message: deleteItemsError.message };
+  }
 
   // Reset all associated jobs back to plain "completed" status —
   // clear both is_invoiced and is_paid so they appear as just completed
   // and can be added to a new invoice.
   if (allJobIds.length > 0) {
-    await (await supabase)
+    const { error: resetJobsError } = await (await supabase)
       .from("jobs")
       .update({ is_invoiced: false, is_paid: false, paid_at: null })
       .in("id", allJobIds);
+
+    if (resetJobsError) {
+      return { ok: false, message: resetJobsError.message };
+    }
   }
 
   revalidatePath("/invoices", "layout");
