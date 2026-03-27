@@ -23,7 +23,7 @@ export default async function InvoicesPage() {
   const { data: invoices, error: invErr } = await supabase
     .from("invoices")
     .select(
-      "id, invoice_number, invoice_date, due_date, subtotal_cents, bill_to_name, contractor_name, created_at",
+      "id, invoice_number, invoice_date, due_date, subtotal_cents, bill_to_name, contractor_name, created_at, is_paid",
     )
     .eq("company_id", companyId)
     .is("deleted_at", null)

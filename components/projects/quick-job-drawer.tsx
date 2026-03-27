@@ -29,6 +29,8 @@ export type QuickJobItem = {
   is_completed: boolean;
   scheduled_completion: string | null;
   price_cents: number | null;
+  is_invoiced: boolean;
+  is_paid: boolean;
 };
 
 export function QuickJobDrawer({
@@ -130,7 +132,15 @@ export function QuickJobDrawer({
                       className="flex items-center justify-between gap-2 rounded-md border border-primary/10 bg-primary/2 p-3 text-sm hover:bg-primary/5"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{job.title}</div>
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="truncate font-medium">{job.title}</span>
+                          {job.is_paid && (
+                            <span className="shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-400">Paid</span>
+                          )}
+                          {!job.is_paid && job.is_invoiced && (
+                            <span className="shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-400">Invoiced</span>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground space-y-1 mt-1">
                           <div className="flex justify-between gap-2">
                             <span>Price:</span>
@@ -149,8 +159,8 @@ export function QuickJobDrawer({
                         size="sm"
                         variant="ghost"
                         className="h-7 w-7 cursor-pointer p-0 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-950 dark:hover:text-green-400"
-                        disabled={isPending}
-                        title="Mark as complete"
+                        disabled={isPending || job.is_paid || job.is_invoiced}
+                        title={job.is_paid ? "Paid — manage from Invoices" : job.is_invoiced ? "Invoiced — manage from Invoices" : "Mark as complete"}
                         onClick={() => handleMarkComplete(job.id)}
                       >
                         <CheckCircle2 className="size-4" />
@@ -175,8 +185,14 @@ export function QuickJobDrawer({
                         className="flex items-center justify-between gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-900 dark:bg-green-950/20"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium line-through text-muted-foreground">
-                            {job.title}
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="truncate font-medium line-through text-muted-foreground">{job.title}</span>
+                            {job.is_paid && (
+                              <span className="shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-400">Paid</span>
+                            )}
+                            {!job.is_paid && job.is_invoiced && (
+                              <span className="shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-400">Invoiced</span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground space-y-1 mt-1">
                             <div className="flex justify-between gap-2">
@@ -196,8 +212,8 @@ export function QuickJobDrawer({
                           size="sm"
                           variant="ghost"
                           className="h-7 w-7 cursor-pointer p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-950 dark:hover:text-amber-400"
-                          disabled={isPending}
-                          title="Mark as incomplete"
+                          disabled={isPending || job.is_paid || job.is_invoiced}
+                          title={job.is_paid ? "Paid — manage from Invoices" : job.is_invoiced ? "Invoiced — manage from Invoices" : "Mark as incomplete"}
                           onClick={() => handleMarkIncomplete(job.id)}
                         >
                           <CheckCircle2 className="size-4" />

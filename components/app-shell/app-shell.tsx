@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="min-w-0 flex-1 flex flex-col md:h-[calc(100vh-1.5rem)]">
               <Header />
               <MainView>
-                <main data-app-shell-main className="flex min-h-0 h-full flex-1 flex-col p-4 sm:p-6 md:pb-4">
+                <main data-app-shell-main className="flex min-h-0 h-full flex-1 flex-col overflow-y-auto p-4 sm:p-6 md:pb-4">
                   <RouteTransition>{children}</RouteTransition>
                 </main>
               </MainView>

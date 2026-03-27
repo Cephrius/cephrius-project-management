@@ -32,6 +32,8 @@ export type JobRow = {
   scheduled_completion: string | null;
   is_completed: boolean;
   superintendent: string | null;
+  is_invoiced: boolean;
+  is_paid: boolean;
 };
 
 function formatMoney(cents: number) {
@@ -171,7 +173,18 @@ export function JobsTable({
                     <TableCell>{job.superintendent ?? ""}</TableCell>
                   )}
                   <TableCell>
-                    {job.is_completed ? (
+                    {job.is_paid ? (
+                      <Badge className="bg-green-600 text-white hover:bg-green-600">
+                        Paid
+                      </Badge>
+                    ) : job.is_invoiced ? (
+                      <Badge
+                        variant="outline"
+                        className="border-violet-300 bg-violet-50 text-violet-700"
+                      >
+                        Invoiced
+                      </Badge>
+                    ) : job.is_completed ? (
                       <Badge>Completed</Badge>
                     ) : (
                       <Badge variant="secondary">In progress</Badge>
@@ -212,12 +225,17 @@ export function JobsTable({
                               router.refresh();
                             });
                           }}
-                          disabled={isPending}
+                          disabled={isPending || job.is_paid || job.is_invoiced}
                         >
                           <CheckCircle2 className="size-4" />
                           {job.is_completed
                             ? "Unmark Completed"
                             : "Mark Completed"}
+                          {(job.is_paid || job.is_invoiced) && (
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {job.is_paid ? "Paid" : "Invoiced"}
+                            </span>
+                          )}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="cursor-pointer text-destructive focus:text-destructive"

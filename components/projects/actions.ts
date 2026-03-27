@@ -10,6 +10,8 @@ type JobRow = {
   is_completed: boolean;
   scheduled_completion: string | null;
   price_cents: number | null;
+  is_invoiced: boolean;
+  is_paid: boolean;
 };
 
 export async function getProjectJobs(projectId: string) {
@@ -26,7 +28,7 @@ export async function getProjectJobs(projectId: string) {
 
   const { data, error } = await supabase
     .from("jobs")
-    .select("id, title, is_completed, scheduled_completion, price_cents")
+    .select("id, title, is_completed, scheduled_completion, price_cents, is_invoiced, is_paid")
     .eq("project_id", projectId)
     .eq("company_id", companyId)
     .is("deleted_at", null)
