@@ -181,7 +181,7 @@ export async function createInvoiceForBuilder(formData: FormData) {
 
   const { error: itemsErr } = await (await supabase)
     .from("invoice_items")
-    .upsert(items, { onConflict: "job_id" });
+    .insert(items);
   if (itemsErr) return { ok: false, message: itemsErr.message };
 
   // Mark all jobs on this invoice as invoiced
