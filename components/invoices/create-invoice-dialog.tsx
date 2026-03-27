@@ -27,7 +27,6 @@ type Job = {
   scheduled_completion: string | null;
   is_completed: boolean;
 };
-type InvoicedItemRow = { job_id: string | null };
 
 type ContractorPreset = {
   id: string;
@@ -298,38 +297,20 @@ export function CreateInvoiceDialog({
         setContractorPhone(profile?.phone ?? "");
       }
 
-      // 1) Fetch completed jobs for project
-      const { data: completed } = await supabase
+      // Fetch completed, not-yet-invoiced jobs for this project.
+      // is_invoiced is set true when a job is added to an invoice and
+      // reset to false when an invoice is deleted — it is the authoritative
+      // source of truth and avoids a fragile cross-check against invoice_items.
+      const { data: eligible } = await supabase
         .from("jobs")
         .select("id, title, price_cents, scheduled_completion, is_completed")
         .eq("project_id", projectId)
         .eq("is_completed", true)
+        .eq("is_invoiced", false)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
-      const comp = (completed ?? []) as Job[];
-      const ids = comp.map((j) => j.id);
-
-      if (ids.length === 0) {
-        setJobs([]);
-        setSelected({});
-        return;
-      }
-
-      // 2) Exclude jobs already invoiced
-      const { data: invoicedItems } = await supabase
-        .from("invoice_items")
-        .select("job_id")
-        .in("job_id", ids);
-
-      const invoicedSet = new Set(
-        ((invoicedItems ?? []) as InvoicedItemRow[])
-          .map((item) => item.job_id)
-          .filter((jobId): jobId is string => Boolean(jobId)),
-      );
-
-      const eligible = comp.filter((j) => !invoicedSet.has(j.id));
-      setJobs(eligible);
+      setJobs((eligible ?? []) as Job[]);
 
       // Default: select none (user must choose)
       setSelected({});
@@ -645,7 +626,7 @@ export function CreateInvoiceDialog({
                         <div>
                           <div className="text-sm font-medium">{j.title}</div>
                           <div className="text-xs text-muted-foreground">
-                            Scheduled: {j.scheduled_completion ?? "â€”"}
+                            Scheduled: {j.scheduled_completion ?? "No scheduled date"}
                           </div>
                         </div>
                       </div>

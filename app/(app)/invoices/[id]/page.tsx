@@ -5,13 +5,10 @@ import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { PrintButton } from "@/components/invoices/print-button";
 import { EditInvoiceDialog } from "@/components/invoices/edit-invoice-dialog";
 import { DeleteInvoiceButton } from "@/components/invoices/delete-invoice-button";
-
-function money(cents: number) {
-  return (cents / 100).toLocaleString(undefined, {
-    style: "currency",
-    currency: "USD",
-  });
-}
+import {
+  InvoicePaymentControls,
+  type InvoiceItemWithPayment,
+} from "@/components/invoices/invoice-payment-controls";
 
 export default async function InvoiceViewPage({
   params,
@@ -40,13 +37,36 @@ export default async function InvoiceViewPage({
       <div className="text-sm text-muted-foreground">Invoice not found.</div>
     );
 
-  const { data: items } = await (await supabase)  
+  const { data: items, error: itemsError } = await (await supabase)
     .from("invoice_items")
     .select(
-      "id, job_title_snapshot, job_price_cents_snapshot, project_address_snapshot, subdivision_name_raw_snapshot, builder_name_snapshot",
+      "id, job_id, job_title_snapshot, job_price_cents_snapshot, project_address_snapshot, subdivision_name_raw_snapshot, builder_name_snapshot, is_paid, paid_at",
     )
     .eq("invoice_id", invoice.id)
     .order("created_at", { ascending: true });
+
+  // If the payment columns don't exist yet (migration not applied), fall back to
+  // a query without them so items still render instead of disappearing.
+  let resolvedItems: InvoiceItemWithPayment[];
+  if (itemsError) {
+    const { data: basicItems } = await (await supabase)
+      .from("invoice_items")
+      .select(
+        "id, job_id, job_title_snapshot, job_price_cents_snapshot, project_address_snapshot, subdivision_name_raw_snapshot, builder_name_snapshot",
+      )
+      .eq("invoice_id", invoice.id)
+      .order("created_at", { ascending: true });
+    resolvedItems = (basicItems ?? []).map((item) => ({
+      ...item,
+      is_paid: false,
+      paid_at: null,
+    })) as InvoiceItemWithPayment[];
+  } else {
+    resolvedItems = (items ?? []).map((item) => ({
+      ...item,
+      is_paid: item.is_paid ?? false,
+    })) as InvoiceItemWithPayment[];
+  }
 
   return (
     <div id="invoice-print-root" className="space-y-6 print:space-y-0">
@@ -107,56 +127,12 @@ export default async function InvoiceViewPage({
           </div>
         </div>
 
-        <div className="mt-6 overflow-x-auto rounded-md border print:border-0">
-          <div className="min-w-[720px] print:min-w-0">
-            <div className="grid grid-cols-14 gap-2 border-b p-3 text-xs font-semibold text-muted-foreground">
-              <div className="col-span-7">Description</div>
-              <div className="col-span-2">Project</div>
-              <div className="col-span-4">Subdivision</div>
-              <div className="col-span-1 text-right">Amount</div>
-            </div>
-
-            {(items ?? []).map((it) => (
-              <div
-                key={it.id}
-                className="grid grid-cols-14 gap-2 border-b p-3 last:border-b-0"
-              >
-                <div className="col-span-7">
-                  <div className="text-sm font-medium">
-                    {it.job_title_snapshot}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {it.builder_name_snapshot}
-                  </div>
-                </div>
-                <div className="col-span-2 text-sm text-muted-foreground">
-                  {it.project_address_snapshot}
-                </div>
-                <div className="col-span-1 text-xs text-muted-foreground">
-                  {it.subdivision_name_raw_snapshot}
-                </div>
-                <div className="col-span-4 text-right text-sm font-medium">
-                  {money(it.job_price_cents_snapshot)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <div className="w-full max-w-xs space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium">
-                {money(invoice.subtotal_cents)}
-              </span>
-            </div>
-            <div className="flex justify-between text-base font-semibold">
-              <span>Total</span>
-              <span>{money(invoice.subtotal_cents)}</span>
-            </div>
-          </div>
-        </div>
+        <InvoicePaymentControls
+          invoiceId={invoice.id}
+          items={resolvedItems}
+          invoiceIsPaid={invoice.is_paid ?? false}
+          subtotalCents={invoice.subtotal_cents}
+        />
       </Card>
     </div>
   );

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-type InvoiceStatus = "issued" | "due" | "overdue";
+type InvoiceStatus = "issued" | "due" | "overdue" | "paid";
 type StatusFilter = "all" | InvoiceStatus;
 
 export type InvoiceListItem = {
@@ -34,6 +34,7 @@ export type InvoiceListItem = {
   bill_to_name: string | null;
   contractor_name: string | null;
   created_at: string | null;
+  is_paid: boolean | null;
 };
 
 function money(cents: number | null) {
@@ -55,7 +56,11 @@ function formatDate(value: string | null): string {
   });
 }
 
-function getInvoiceStatus(dueDate: string | null): InvoiceStatus {
+function getInvoiceStatus(
+  dueDate: string | null,
+  isPaid: boolean | null,
+): InvoiceStatus {
+  if (isPaid) return "paid";
   if (!dueDate) return "issued";
 
   const due = new Date(`${dueDate}T00:00:00`);
@@ -70,6 +75,7 @@ function getInvoiceStatus(dueDate: string | null): InvoiceStatus {
 function statusLabel(status: InvoiceStatus): string {
   if (status === "overdue") return "Overdue";
   if (status === "due") return "Due";
+  if (status === "paid") return "Paid";
   return "Issued";
 }
 
@@ -79,6 +85,9 @@ function statusClasses(status: InvoiceStatus): string {
   }
   if (status === "due") {
     return "border-amber-300 bg-amber-100 text-amber-800";
+  }
+  if (status === "paid") {
+    return "border-green-300 bg-green-100 text-green-800";
   }
   return "border-blue-300 bg-blue-100 text-blue-800";
 }
@@ -109,7 +118,7 @@ export function InvoicesPageClient({
 
     return invoices
       .filter((invoice) => {
-        const status = getInvoiceStatus(invoice.due_date);
+        const status = getInvoiceStatus(invoice.due_date, invoice.is_paid);
         const matchesBillTo =
           billToFilter === "all" || invoice.bill_to_name === billToFilter;
         const matchesStatus = statusFilter === "all" || statusFilter === status;
@@ -251,6 +260,7 @@ export function InvoicesPageClient({
               <SelectItem value="issued">Issued</SelectItem>
               <SelectItem value="due">Due</SelectItem>
               <SelectItem value="overdue">Overdue</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -266,7 +276,7 @@ export function InvoicesPageClient({
             </Card>
           ) : (
             filteredInvoices.map((invoice) => {
-              const status = getInvoiceStatus(invoice.due_date);
+              const status = getInvoiceStatus(invoice.due_date, invoice.is_paid);
               const isSelected = effectiveSelectedInvoiceId === invoice.id;
 
               return (
