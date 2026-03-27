@@ -626,7 +626,7 @@ export function CreateInvoiceDialog({
                         <div>
                           <div className="text-sm font-medium">{j.title}</div>
                           <div className="text-xs text-muted-foreground">
-                            Scheduled: {j.scheduled_completion ?? " No Scheduled date"}
+                            Scheduled: {j.scheduled_completion ?? "No scheduled date"}
                           </div>
                         </div>
                       </div>
