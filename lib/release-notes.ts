@@ -8,6 +8,28 @@ export type ReleaseNote = {
 // New releases every tuesday (Or whenever I finish a batch of features and fixes that feel worth sharing)
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.1.9a",
+    releasedOn: "Mar 27, 2026",
+    majorAdditions: [
+      "Added invoice payment tracking — each line item on an invoice can now be individually marked as paid or unpaid directly from the invoice detail page, with optimistic UI updates and toast confirmations.",
+      "Added a bulk 'Mark All as Paid' action on invoice detail pages, with a confirmation dialog that locks all jobs on the invoice simultaneously.",
+    ],
+    changes: [
+      "Invoice list now shows Issued, Due, Overdue, and Paid status badges on each card, with a status filter dropdown to narrow results.",
+      "Invoice list gained a Bill-To filter dropdown so invoices can be scoped to a specific builder.",
+      "Deleting an invoice now resets all associated jobs back to plain completed status — clearing is_invoiced, is_paid, and paid_at — so those jobs immediately become eligible for a new invoice.",
+      "Paid invoice items are protected in the edit dialog and cannot be removed from an invoice once payment has been recorded.",
+      "Edit invoice now supports adding new jobs to an existing invoice and automatically recalculates the subtotal from the updated line items.",
+      "Job eligibility for invoicing now uses the is_invoiced flag directly instead of cross-checking the invoice_items table, making the create invoice flow more reliable.",
+      "Jobs table and quick-job checklist now display Invoiced and Paid badges, and paid jobs have their completion toggle locked to prevent accidental status changes.",
+    ],
+    bugFixes: [
+      "Fixed a race condition where optimistic payment toggle updates were being reverted to stale server data before router.refresh() had delivered new props.",
+      "Resolved unique constraint errors when re-invoicing jobs that still had stale invoice_items rows from RLS-blocked deletes, by switching inserts to upsert with conflict resolution on job_id.",
+      "Fixed invoice item queries silently returning no rows when payment tracking columns had not yet been migrated, by falling back to a basic column query and defaulting is_paid to false.",
+    ],
+  },
+  {
     version: "v0.1.8a",
     releasedOn: "Mar 24, 2026",
     majorAdditions: [
