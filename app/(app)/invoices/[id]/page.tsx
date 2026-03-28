@@ -98,7 +98,7 @@ export default async function InvoiceViewPage({
           <div className="flex items-center gap-2 print:hidden">
             <EditInvoiceDialog invoice={invoice} items={items ?? []} />
             <DeleteInvoiceButton invoiceId={invoice.id} redirectTo="/invoices" />
-            <PrintButton />
+            <PrintButton documentTitle={invoice.invoice_number} />
           </div>
         </div>
 
