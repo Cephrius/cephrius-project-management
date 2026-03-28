@@ -2,12 +2,39 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
 
-export function PrintButton() {
+function getPrintDocumentTitle(documentTitle?: string) {
+  const normalizedTitle = documentTitle?.trim();
+  if (!normalizedTitle) {
+    return "Invoice";
+  }
+
+  const safeTitle = normalizedTitle.replace(/[\\/:*?"<>|]+/g, "-").trim();
+  return safeTitle || "Invoice";
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+export function PrintButton({
+  documentTitle,
+}: {
+  documentTitle?: string;
+}) {
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
   async function handlePrint() {
     const invoiceRoot = document.getElementById("invoice-print-root");
+    const printDocumentTitle = getPrintDocumentTitle(documentTitle);
+    const escapedPrintDocumentTitle = escapeHtml(printDocumentTitle);
+
     if (!invoiceRoot) {
       window.print();
       return;
@@ -58,7 +85,7 @@ export function PrintButton() {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Invoice Print</title>
+    <title>${escapedPrintDocumentTitle}</title>
     ${styles}
     <style>
       @page {
@@ -115,8 +142,9 @@ export function PrintButton() {
   </body>
 </html>`);
       printDocument.close();
+  printDocument.title = printDocumentTitle;
 
-  // Give copied styles and fonts a moment to resolve before opening print.
+      // Give copied styles and fonts a moment to resolve before opening print.
       await printDocument.fonts.ready.catch(() => undefined);
       await new Promise((resolve) => window.setTimeout(resolve, 150));
 
@@ -138,11 +166,12 @@ export function PrintButton() {
 
   return (
     <Button
-      className="rounded-md border px-3 py-2 text-sm hover:bg-muted print:hidden"
+      className="rounded-md border px-3 py-2 text-sm hover:bg-primary/70 print:hidden cursor-pointer"
       disabled={isPreparingPrint}
       onClick={handlePrint}
       type="button"
     >
+      <Printer className="h-4 w-4" />
       {isPreparingPrint ? "Preparing..." : "Print"}
     </Button>
   );
