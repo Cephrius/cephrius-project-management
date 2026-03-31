@@ -66,7 +66,12 @@ function money(cents: number) {
     currency: "USD",
   });
 }
-
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  }
+}
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -235,8 +240,8 @@ export default async function DashboardPage() {
   const completionRate =
     openJobsCount + completedThisMonth > 0
       ? Math.round(
-          (completedThisMonth / (openJobsCount + completedThisMonth)) * 100,
-        )
+        (completedThisMonth / (openJobsCount + completedThisMonth)) * 100,
+      )
       : 0;
 
   const overdueJobs = upcomingJobs.filter((j) => {
@@ -641,7 +646,7 @@ export default async function DashboardPage() {
                 <CardTitle className="text-muted-foreground">
                   💡 Widget Ideas
                 </CardTitle>
- 
+
               </CardHeader>
               <CardContent>
                 Future Notifications panel: upcoming deadlines, expiring documents, etc.

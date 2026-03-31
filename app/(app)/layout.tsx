@@ -1,7 +1,21 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CompanyProvider } from "@/lib/company-context";
+
+// Keep authenticated product routes out of search results.
+export const metadata: Metadata = {
+  title: "App | JobSyte",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
 
 export default async function AppLayout({
   children,

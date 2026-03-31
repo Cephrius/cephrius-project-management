@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Space_Grotesk } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { DocumentTitleSync } from "@/components/document-title-sync";
@@ -11,10 +11,57 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
 });
 
+const siteUrl = new URL("https://jobsyte.co");
+const defaultTitle =
+  "JobSyte | Construction Project Management Software for Contractors";
+const defaultDescription =
+  "JobSyte helps contractors manage projects, schedule jobs, track invoices, and keep field and office teams aligned in one workflow.";
+
+// Keep the root metadata focused on the public marketing site.
 export const metadata: Metadata = {
-  title: "JobSyte - Contractor Operations, Simplified",
-  description:
-    "Manage projects, schedule jobs, and send invoices from one place. The all-in-one platform built for contractors.",
+  metadataBase: siteUrl,
+  title: {
+    default: defaultTitle,
+    template: "%s | JobSyte",
+  },
+  applicationName: "JobSyte",
+  keywords: [
+    "construction project management",
+    "construction project management software",
+    "contractor project management software",
+    "builder job tracking",
+    "construction scheduling software",
+    "contractor invoice management",
+    "contractor invoicing software",
+    "construction workflow automation",
+    "builder job site management",
+    "home builder software",
+    "builder change order tracking",
+    "residential construction software",
+  ],
+  description: defaultDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "JobSyte",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: [
+      {
+        url: "/banner_light_trans.png",
+        alt: "JobSyte construction project management software",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: ["/banner_light_trans.png"],
+  },
   icons: {
     icon: [
       {
