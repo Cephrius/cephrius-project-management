@@ -38,6 +38,7 @@ const INITIAL_FORM_STATE: DemoFormState = {
 };
 
 const REQUEST_DEMO_HREF = "/request-demo";
+const SITE_URL = "https://jobsyte.co";
 const SALES_EMAIL = "sales@jobsyte.com";
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const HOVER_SPRING = {
@@ -79,6 +80,32 @@ const FADE_UP = {
     opacity: 1,
     y: 0,
     transition: { duration: 0.48, ease: EASE_OUT },
+  },
+};
+const REQUEST_DEMO_STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  name: "Request a Demo | JobSyte",
+  url: `${SITE_URL}${REQUEST_DEMO_HREF}`,
+  description:
+    "Request a demo of JobSyte construction project management software for contractors.",
+  mainEntity: {
+    "@type": "Organization",
+    name: "JobSyte",
+    url: SITE_URL,
+    email: SALES_EMAIL,
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: SALES_EMAIL,
+      contactType: "sales",
+    },
+  },
+  about: {
+    "@type": "SoftwareApplication",
+    name: "JobSyte",
+    applicationCategory: "ProjectManagementApplication",
+    operatingSystem: "Web",
+    url: SITE_URL,
   },
 };
 
@@ -146,6 +173,14 @@ export default function RequestDemoPage() {
       className="relative min-h-screen overflow-x-hidden bg-background"
       style={REQUEST_DEMO_LIGHT_THEME_STYLE}
     >
+      {/* Keep demo intent visible to crawlers without waiting for hydration. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(REQUEST_DEMO_STRUCTURED_DATA),
+        }}
+      />
+
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -240,16 +275,15 @@ export default function RequestDemoPage() {
                 }}
               />
               <h1 className="max-w-xl text-4xl font-semibold tracking-tight md:text-5xl text-black">
-                Got a question for our sales team?
+                Request a demo of JobSyte
               </h1>
               <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-                We are looking forward to learning more about your team&apos;s
-                workflow and how JobSyte can help you move projects faster with
-                fewer handoffs.
+                See how JobSyte helps contractors manage projects, schedules,
+                invoices, and team handoffs from one place.
               </p>
               <p className="max-w-xl text-base italic text-muted-foreground md:text-lg">
-                For any question about JobSyte and about how we can fit your
-                needs reach us at{" "}
+                Tell us about your workflow and we&apos;ll show you how JobSyte
+                fits it. For questions, reach us at{" "}
                 <a
                   href={`mailto:${SALES_EMAIL}`}
                   className="underline decoration-foreground/50 underline-offset-4 hover:decoration-foreground"

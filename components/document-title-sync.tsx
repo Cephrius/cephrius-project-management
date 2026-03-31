@@ -3,15 +3,16 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-function getPageTitle(pathname: string): string {
+function getPageTitle(pathname: string): string | null {
   if (pathname === "/dashboard") return "Dashboard";
   if (pathname.startsWith("/projects")) return "Projects";
   if (pathname.startsWith("/invoices")) return "Invoices";
   if (pathname.startsWith("/settings")) return "Settings";
-  if (pathname.startsWith("/login")) return "Login";
-  if (pathname.startsWith("/signup")) return "Sign Up";
-  if (pathname.startsWith("/verify")) return "Verify";
-  return "JobSyte";
+  if (pathname.startsWith("/search")) return "Search";
+  if (pathname.startsWith("/login")) return "Sign In";
+  if (pathname.startsWith("/signup")) return "Create Account";
+  if (pathname.startsWith("/verify")) return "Verify Email";
+  return null;
 }
 
 export function DocumentTitleSync() {
@@ -19,7 +20,12 @@ export function DocumentTitleSync() {
 
   useEffect(() => {
     const pageTitle = getPageTitle(pathname);
-    document.title = pageTitle === "JobSyte" ? "JobSyte" : `${pageTitle} | JobSyte`;
+
+    // Public marketing pages rely on route metadata for SEO, so only patch
+    // titles for authenticated and account surfaces here.
+    if (!pageTitle) return;
+
+    document.title = `${pageTitle} | JobSyte`;
   }, [pathname]);
 
   return null;
