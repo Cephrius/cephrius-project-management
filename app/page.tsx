@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
 import type { CSSProperties } from "react";
 import {
   ArrowRight,
@@ -18,6 +17,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 const REQUEST_DEMO_HREF = "/request-demo";
+const SITE_URL = "https://jobsyte.co";
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const HEADER_ENTER_DURATION = 1.15;
 const HERO_ENTER_DURATION = 1.35;
@@ -80,6 +80,42 @@ const LANDING_LIGHT_THEME_STYLE: CSSProperties & Record<string, string> = {
   "--input": "#d9dee8",
   "--ring": "#60a5fa",
 };
+const HOME_PAGE_STRUCTURED_DATA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "JobSyte",
+    url: SITE_URL,
+    logo: `${SITE_URL}/image.png`,
+    email: "sales@jobsyte.com",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "JobSyte",
+    applicationCategory: "ProjectManagementApplication",
+    operatingSystem: "Web",
+    url: SITE_URL,
+    description:
+      "JobSyte helps contractors manage projects, schedule jobs, track invoices, and keep field and office teams aligned in one workflow.",
+    featureList: [
+      "Project management",
+      "Job scheduling",
+      "Invoice tracking",
+      "Dashboard reporting",
+      "Global search",
+    ],
+    audience: {
+      "@type": "Audience",
+      audienceType: "Contractors, subcontractors, and home builders",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "JobSyte",
+      url: SITE_URL,
+    },
+  },
+];
 const HERO_STAGGER_CONTAINER = {
   hidden: {},
   visible: {
@@ -115,21 +151,6 @@ const REVEAL_ITEM = {
     transition: { duration: CARD_REVEAL_DURATION, ease: EASE_OUT },
   },
 };
-
-const HEADER_LINKS = [
-  { label: "Dashboard", hasChevron: false },
-  { label: "Projects", hasChevron: false },
-  { label: "Invoices", hasChevron: false },
-  { label: "Settings", hasChevron: false },
-  { label: "Search", hasChevron: true },
-];
-
-type SidebarItem = {
-  label: string;
-  icon: LucideIcon;
-};
-
-
 
 const FAVORITES = [
   { label: "North Ridge", tone: "bg-amber-500" },
@@ -375,6 +396,15 @@ export default function LandingPage() {
       className="relative min-h-screen overflow-x-hidden bg-background text-foreground"
       style={LANDING_LIGHT_THEME_STYLE}
     >
+      {/* Keep marketing schema in the HTML so crawlers can match it with the page copy. */}
+      {HOME_PAGE_STRUCTURED_DATA.map((schema, index) => (
+        <script
+          key={`jobsyte-home-schema-${index}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute -top-40 left-[-10rem] h-[34rem] w-[34rem] rounded-full blur-3xl"
@@ -486,15 +516,15 @@ export default function LandingPage() {
             variants={HERO_ITEM}
             className="mt-6 text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-6xl lg:text-7xl"
           >
-            Today&apos;s schedule, this week&apos;s pipeline, and billing at a
-            glance.
+            Construction project management software for contractors
           </motion.h1>
           <motion.p
             variants={HERO_ITEM}
             className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground md:text-xl"
           >
-            JobSyte brings dashboard metrics, jobs calendar, project activity,
-            invoice totals, and global search into one workflow.
+            JobSyte keeps projects, job schedules, invoices, dashboard
+            reporting, and global search in one workflow so field and office
+            teams stay aligned.
           </motion.p>
 
           <motion.div
