@@ -4,17 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CompanyProvider } from "@/lib/company-context";
 
-type CompanyMembership = {
-  role: string;
-  company: {
-    id: string;
-    name: string;
-    address: string | null;
-    phone: string | null;
-    logo_url: string | null;
-  };
-};
-
 // Keep authenticated product routes out of search results.
 export const metadata: Metadata = {
   title: "App | JobSyte",
@@ -44,9 +33,9 @@ export default async function AppLayout({
     .select("role, company:companies(id, name, address, phone, logo_url)")
     .eq("user_id", data.user.id);
 
-  const companies = ((memberships ?? []) as CompanyMembership[]).map((membership) => ({
-    ...membership.company,
-    role: membership.role,
+  const companies = (memberships ?? []).map((m: any) => ({
+    ...m.company,
+    role: m.role,
   }));
 
   return (
