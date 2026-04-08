@@ -27,7 +27,7 @@ function SmallMetricCard({
   meta: string;
 }) {
   return (
-    <Card className="p-4">
+    <Card className="h-full p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-end justify-between gap-3">
         <div className="text-2xl font-semibold leading-none">{value}</div>
@@ -245,9 +245,9 @@ export default async function ProjectDashboardPage({
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_minmax(0,1fr)] xl:items-start">
-        <div>
-          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_minmax(0,1fr)] xl:items-stretch">
+        <div className="h-full">
+          <div className="grid gap-3 sm:grid-cols-3 xl:h-full xl:grid-cols-1 xl:grid-rows-3">
             <SmallMetricCard
               label="Jobs"
               value={String(totalJobs)}
@@ -266,7 +266,7 @@ export default async function ProjectDashboardPage({
           </div>
         </div>
 
-        <Card className="p-4 space-y-4">
+        <Card className="flex h-full flex-col p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-semibold">Job Value</div>
             <span className="rounded-md bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
@@ -274,7 +274,7 @@ export default async function ProjectDashboardPage({
             </span>
           </div>
 
-          <div className="space-y-1">
+          <div className="mt-4 space-y-1">
             <div className="text-3xl font-semibold leading-none">
               {formatMoney(netProfitForDisplay)}
             </div>
@@ -283,13 +283,13 @@ export default async function ProjectDashboardPage({
             </div>
           </div>
 
-          <div className="border-t pt-3 space-y-3">
+          <div className="mt-4 border-t pt-3 space-y-3">
             <MetricRow label="Revenue" value={formatMoney(revenueForDisplay)} />
             <MetricRow label="Direct Costs" value={formatMoney(dir_total)} muted={dir_total === 0} />
             <MetricRow label="Indirect Costs" value={formatMoney(ind_total)} muted={ind_total === 0} />
           </div>
 
-          <div className="border-t pt-3 space-y-2">
+          <div className="mt-4 border-t pt-3 space-y-2">
             <MetricRow
               label="Net Margin"
               value={`${marginPct}%`}
@@ -298,7 +298,7 @@ export default async function ProjectDashboardPage({
             <MetricRow label="Remaining" value={formatMoney(remainingValue)} muted={remainingValue === 0} />
           </div>
 
-          <div className="border-t pt-3">
+          <div className="mt-auto border-t pt-3">
             <Link
               href={`/projects/${project.id}/accounting`}
               className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -309,15 +309,15 @@ export default async function ProjectDashboardPage({
           </div>
         </Card>
 
-        <Card className="p-4 space-y-4">
+        <Card className="flex h-full flex-col p-4">
           <div className="text-sm font-semibold">Project Status</div>
 
-          <div className="space-y-3">
+          <div className="mt-4 space-y-3">
             <MetricRow label={`${invoicedJobs} Invoiced`} value={formatMoney(invoicedValue)} />
             <MetricRow label="Remaining" value={formatMoney(totalValue - invoicedValue)} muted={totalValue - invoicedValue === 0} />
           </div>
 
-          <div className="border-t pt-4 space-y-3">
+          <div className="mt-4 border-t pt-4 space-y-3">
             <div className="text-sm font-medium">Revenue vs. Expenses</div>
             <ComparisonBar
               label="Revenue"

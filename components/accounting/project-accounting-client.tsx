@@ -77,27 +77,38 @@ export function ProjectAccountingClient({
   const actualExpenseCount = expenses.filter((expense) => expense.value_type === "actual").length;
   const estimatedExpenseCount = expenses.filter((expense) => expense.value_type === "estimated").length;
 
+  const revenueFill = "var(--color-revenue)";
+  const directFill = "var(--color-direct)";
+  const indirectFill = "var(--color-indirect)";
+  const netFill = "var(--color-net)";
+
   const financialChartData = [
-    { label: "Revenue", amount: revenue, fill: "hsl(0 0% 65.1%)" },
-    { label: "Direct", amount: directCosts, fill: "hsl(221 83% 53%)" },
-    { label: "Indirect", amount: indirectCosts, fill: "hsl(25 95% 53%)" },
-    { label: "Net", amount: netProfit, fill: netProfit < 0 ? "hsl(var(--destructive))" : "hsl(142 71% 45%)" },
+    { label: "Revenue", amount: revenue, fill: revenueFill },
+    { label: "Direct", amount: directCosts, fill: directFill },
+    { label: "Indirect", amount: indirectCosts, fill: indirectFill },
+    { label: "Net", amount: netProfit, fill: netFill },
   ];
 
   const pieChartData = [
-    { label: "Direct Costs", amount: directCosts, fill: "hsl(221 83% 53%)" },
-    { label: "Indirect Costs", amount: indirectCosts, fill: "hsl(25 95% 53%)" },
+    { label: "Direct Costs", amount: directCosts, fill: directFill },
+    { label: "Indirect Costs", amount: indirectCosts, fill: indirectFill },
     {
       label: netProfit < 0 ? "Loss" : "Net Profit",
       amount: Math.abs(netProfit),
-      fill: netProfit < 0 ? "hsl(var(--destructive))" : "hsl(142 71% 45%)",
+      fill: netFill,
     },
   ].filter((entry) => entry.amount > 0);
 
   const pieTotal = pieChartData.reduce((sum, item) => sum + item.amount, 0);
 
   const chartConfig = {
-    revenue: { label: "Revenue", color: "hsl(0 0% 65.1%)" },
+    revenue: {
+      label: "Revenue",
+      theme: {
+        light: "hsl(220 9% 46%)",
+        dark: "hsl(220 7% 36%)",
+      },
+    },
     direct: { label: "Direct", color: "hsl(221 83% 53%)" },
     indirect: { label: "Indirect", color: "hsl(25 95% 53%)" },
     net: { label: "Net", color: netProfit < 0 ? "hsl(var(--destructive))" : "hsl(142 71% 45%)" },
