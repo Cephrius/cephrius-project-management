@@ -45,3 +45,6 @@ next-env.d.ts
 TODO.json
 create-github-issues.sh
 create-sanitize-issue.sh
+
+# local scripts
+/scripts

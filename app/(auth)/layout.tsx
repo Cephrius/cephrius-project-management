@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 // Keep account flows out of search results.
 export const metadata: Metadata = {
-  title: "Account | JobSyte",
+  title: "Sign In",
   description: "Secure account access for JobSyte customers.",
   robots: {
     index: false,
