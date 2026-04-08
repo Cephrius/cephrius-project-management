@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
-  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   Search,
@@ -109,18 +108,6 @@ function statusBadge(status: ProjectStatus) {
   return <Badge variant="outline" className="border-gray-300 bg-gray-100 text-gray-600">Not Started</Badge>;
 }
 
-type RiskLevel = "healthy" | "watch" | "at-risk";
-
-function riskBadge(risk: RiskLevel) {
-  if (risk === "healthy") {
-    return <Badge variant="outline" className="border-green-300 bg-green-100 text-green-800">Healthy</Badge>;
-  }
-  if (risk === "watch") {
-    return <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-800">Watch</Badge>;
-  }
-  return <Badge variant="outline" className="border-red-300 bg-red-100 text-red-800">At Risk</Badge>;
-}
-
 function formatPresetLabel(value: AccountingDateRangePreset) {
   if (value === "30d") return "30D";
   if (value === "90d") return "90D";
@@ -186,7 +173,6 @@ function InsightCard({
 }
 
 type StatusFilter = "all" | ProjectStatus;
-type RiskFilter = "all" | RiskLevel;
 
 type OverviewRowMetrics = AccountingOverviewRow & {
   displayRevenue: number;
@@ -197,7 +183,6 @@ type OverviewRowMetrics = AccountingOverviewRow & {
   overdueReceivablesCents: number;
   paidReceivablesCents: number;
   hasActivityInRange: boolean;
-  risk: RiskLevel;
 };
 
 export function AccountingOverviewClient({
@@ -214,7 +199,6 @@ export function AccountingOverviewClient({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatus] = useState<StatusFilter>("all");
-  const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
   const [dateRange, setDateRange] = useState<AccountingDateRangePreset>("90d");
 
   const rangeStart = useMemo(() => getRangeStart(dateRange), [dateRange]);
@@ -330,10 +314,6 @@ export function AccountingOverviewClient({
           paidReceivables > 0 ||
           outstandingReceivables > 0;
 
-        let risk: RiskLevel = "healthy";
-        if (displayNetProfit < 0 || marginPct < 0) risk = "at-risk";
-        else if (marginPct < 15 || overdueReceivables > 0) risk = "watch";
-
         return {
           ...row,
           revenue_cents: actualRevenue,
@@ -355,7 +335,6 @@ export function AccountingOverviewClient({
           overdueReceivablesCents: overdueReceivables,
           paidReceivablesCents: paidReceivables,
           hasActivityInRange,
-          risk,
         };
       })
       .filter((row) => dateRange === "all" || row.hasActivityInRange);
@@ -367,9 +346,6 @@ export function AccountingOverviewClient({
       active: periodRows.filter((row) => row.status === "active").length,
       completed: periodRows.filter((row) => row.status === "completed").length,
       "not-started": periodRows.filter((row) => row.status === "not-started").length,
-      healthy: periodRows.filter((row) => row.risk === "healthy").length,
-      watch: periodRows.filter((row) => row.risk === "watch").length,
-      "at-risk": periodRows.filter((row) => row.risk === "at-risk").length,
     };
   }, [periodRows]);
 
@@ -378,16 +354,15 @@ export function AccountingOverviewClient({
 
     return periodRows.filter((row) => {
       const matchesStatus = statusFilter === "all" || row.status === statusFilter;
-      const matchesRisk = riskFilter === "all" || row.risk === riskFilter;
       const matchesQuery =
         q.length === 0 ||
         row.project_address.toLowerCase().includes(q) ||
         (row.builder_name ?? "").toLowerCase().includes(q) ||
         (row.subdivision ?? "").toLowerCase().includes(q);
 
-      return matchesStatus && matchesRisk && matchesQuery;
+      return matchesStatus && matchesQuery;
     });
-  }, [periodRows, query, statusFilter, riskFilter]);
+  }, [periodRows, query, statusFilter]);
 
   const totals = useMemo(() => {
     const revenue = filtered.reduce((sum, row) => sum + row.revenue_cents, 0);
@@ -586,7 +561,7 @@ export function AccountingOverviewClient({
 
         <div className="grid gap-4 p-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
           <div className="space-y-4">
-            <Card className="overflow-hidden border bg-background shadow-none">
+            <Card className="overflow-hidden border shadow-none">
               <div className="border-b p-4">
                 <div className="text-sm font-semibold">Profitability Trend</div>
                 <div className="text-xs text-muted-foreground">
@@ -625,7 +600,7 @@ export function AccountingOverviewClient({
               </div>
             </Card>
 
-            <Card className="overflow-hidden border bg-background shadow-none">
+            <Card className="overflow-hidden border shadow-none">
               <div className="border-b p-4">
                 <div className="text-sm font-semibold">Estimate vs Actual</div>
                 <div className="text-xs text-muted-foreground">
@@ -671,8 +646,8 @@ export function AccountingOverviewClient({
                     <div className="mt-1 text-lg font-semibold">{filtered.length}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">At Risk</div>
-                    <div className="mt-1 text-lg font-semibold">{filtered.filter((row) => row.risk === "at-risk").length}</div>
+                    <div className="text-xs text-muted-foreground">Completed</div>
+                    <div className="mt-1 text-lg font-semibold">{filtered.filter((row) => row.status === "completed").length}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Outstanding A/R</div>
@@ -705,31 +680,6 @@ export function AccountingOverviewClient({
                 <div>
                   <div className="text-xs text-muted-foreground">Paid</div>
                   <div className="mt-1 text-lg font-semibold tabular-nums text-green-600">{money(totals.paidReceivables)}</div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs text-muted-foreground">Margin Alerts</div>
-                  <div className="mt-1 text-sm font-medium">Surface low-margin and negative-profit projects faster</div>
-                </div>
-                <AlertTriangle className="size-4 text-destructive" />
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-3 border-t pt-4">
-                <div>
-                  <div className="text-xs text-muted-foreground">At Risk</div>
-                  <div className="mt-1 text-lg font-semibold">{counts["at-risk"]}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Watch</div>
-                  <div className="mt-1 text-lg font-semibold">{counts.watch}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Healthy</div>
-                  <div className="mt-1 text-lg font-semibold">{counts.healthy}</div>
                 </div>
               </div>
             </Card>
@@ -808,35 +758,6 @@ export function AccountingOverviewClient({
           </div>
         </div>
 
-          <div className="border-b px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Risk</span>
-              {([
-                { key: "all", label: "All" },
-                { key: "at-risk", label: "At Risk" },
-                { key: "watch", label: "Watch" },
-                { key: "healthy", label: "Healthy" },
-              ] as { key: RiskFilter; label: string }[]).map((option) => {
-                const active = riskFilter === option.key;
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => setRiskFilter(option.key)}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs transition-colors",
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -846,14 +767,13 @@ export function AccountingOverviewClient({
                 <TableHead className="hidden h-11 lg:table-cell text-right">Revenue</TableHead>
                 <TableHead className="hidden h-11 lg:table-cell text-right">Expenses</TableHead>
                 <TableHead className="hidden h-11 xl:table-cell text-right">Variance</TableHead>
-                <TableHead className="hidden h-11 xl:table-cell">Alert</TableHead>
                 <TableHead className="h-11 text-right">Net Profit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     No projects match the current filters.
                   </TableCell>
                 </TableRow>
@@ -864,11 +784,7 @@ export function AccountingOverviewClient({
                   return (
                     <TableRow
                       key={row.project_id}
-                      className={cn(
-                        "group h-14 cursor-pointer",
-                        row.risk === "at-risk" && "bg-destructive/5 hover:bg-destructive/10",
-                        row.risk === "watch" && "bg-amber-50/60 hover:bg-amber-50",
-                      )}
+                      className="group h-14 cursor-pointer"
                       onClick={() => router.push(`/accounting/${row.project_id}`)}
                     >
                       <TableCell>
@@ -876,10 +792,7 @@ export function AccountingOverviewClient({
                         <div className="text-xs text-muted-foreground">
                           {[row.builder_name, row.subdivision].filter(Boolean).join(" • ")}
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 md:hidden">
-                          {statusBadge(row.status)}
-                          {riskBadge(row.risk)}
-                        </div>
+                        <div className="mt-1 md:hidden">{statusBadge(row.status)}</div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         {statusBadge(row.status)}
@@ -898,7 +811,6 @@ export function AccountingOverviewClient({
                           {money(row.varianceCents)}
                         </span>
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell">{riskBadge(row.risk)}</TableCell>
                       <TableCell className="text-right">
                         <ProfitabilityInline
                           netProfit={row.displayNetProfit}
