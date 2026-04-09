@@ -96,8 +96,21 @@ export async function createJob(projectId: string, formData: FormData) {
   const superintendentRaw = toTitleCase(
     String(formData.get("superintendent") || ""),
   );
+  const completedByTypeRaw = String(formData.get("completed_by_type") || "")
+    .trim()
+    .toLowerCase();
+  const completedByIdRaw = String(formData.get("completed_by_id") || "").trim();
+  const completedByNameRaw = toTitleCase(
+    String(formData.get("completed_by_name") || ""),
+  );
   const superintendent = superintendentRaw || null;
   const scheduledCompletion = scheduled_completion || null;
+  const completedByType =
+    completedByTypeRaw === "employee" || completedByTypeRaw === "crew"
+      ? completedByTypeRaw
+      : null;
+  const completedById = completedByIdRaw || null;
+  const completedByName = completedByNameRaw || null;
 
   if (!title) return { ok: false, message: "Job title is required." };
 
@@ -115,6 +128,9 @@ export async function createJob(projectId: string, formData: FormData) {
     price_cents,
     scheduled_completion: scheduledCompletion,
     superintendent,
+    completed_by_type: completedByType,
+    completed_by_id: completedById,
+    completed_by_name: completedByName,
   });
 
   if (error) return { ok: false, message: error.message };
@@ -173,8 +189,21 @@ export async function editJob(formData: FormData) {
   const superintendentRaw = toTitleCase(
     String(formData.get("superintendent") || ""),
   );
+  const completedByTypeRaw = String(formData.get("completed_by_type") || "")
+    .trim()
+    .toLowerCase();
+  const completedByIdRaw = String(formData.get("completed_by_id") || "").trim();
+  const completedByNameRaw = toTitleCase(
+    String(formData.get("completed_by_name") || ""),
+  );
   const superintendent = superintendentRaw || null;
   const scheduledCompletion = scheduled_completion || null;
+  const completedByType =
+    completedByTypeRaw === "employee" || completedByTypeRaw === "crew"
+      ? completedByTypeRaw
+      : null;
+  const completedById = completedByIdRaw || null;
+  const completedByName = completedByNameRaw || null;
 
   if (!jobId) return { ok: false, message: "Job id is required." };
   if (!title) return { ok: false, message: "Job title is required." };
@@ -190,6 +219,9 @@ export async function editJob(formData: FormData) {
       price_cents,
       scheduled_completion: scheduledCompletion,
       superintendent,
+      completed_by_type: completedByType,
+      completed_by_id: completedById,
+      completed_by_name: completedByName,
     })
     .eq("id", jobId)
     .is("deleted_at", null);

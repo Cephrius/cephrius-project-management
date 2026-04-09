@@ -13,9 +13,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CreatableCombobox,
   type ComboboxItem,
 } from "@/components/projects/createable-combobox";
+import { CompletedByCombobox } from "@/components/jobs/completed-by-combobox";
 
 function normalizeWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -88,6 +99,16 @@ type JobSeedRow = {
   price_cents: number | null;
 };
 
+type EmployeeSeedRow = {
+  id: string;
+  name: string;
+};
+
+type CrewSeedRow = {
+  id: string;
+  name: string;
+};
+
 export function AddJobDialog({
   projectId,
   open,
@@ -103,6 +124,7 @@ export function AddJobDialog({
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showUnassignedConfirm, setShowUnassignedConfirm] = useState(false);
 
   const [titleOptions, setTitleOptions] = useState<ComboboxItem[]>([]);
   const [priceOptions, setPriceOptions] = useState<ComboboxItem[]>([]);
@@ -125,6 +147,9 @@ export function AddJobDialog({
   const [superintendent, setSuperintendent] = useState<ComboboxItem | null>(
     null,
   );
+  const [employees, setEmployees] = useState<EmployeeSeedRow[]>([]);
+  const [crews, setCrews] = useState<CrewSeedRow[]>([]);
+  const [completedByValue, setCompletedByValue] = useState("");
   const canSubmit = Boolean(title?.name.trim() && price.trim());
 
   useEffect(() => {
@@ -133,17 +158,30 @@ export function AddJobDialog({
     let isActive = true;
 
     (async () => {
-      const { data } = await supabase
-        .from("jobs")
-        .select("title, superintendent, price_cents")
-        .eq("project_id", projectId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(500);
+      const [jobsRes, employeesRes, crewsRes] = await Promise.all([
+        supabase
+          .from("jobs")
+          .select("title, superintendent, price_cents")
+          .eq("project_id", projectId)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("employees")
+          .select("id, name")
+          .is("deleted_at", null)
+          .order("name", { ascending: true }),
+        supabase
+          .from("crews")
+          .select("id, name")
+          .is("deleted_at", null)
+          .order("name", { ascending: true }),
+      ]);
 
-      if (!isActive || !data) return;
+      if (!isActive) return;
+      if (!jobsRes.data) return;
 
-      const rows = data as JobSeedRow[];
+      const rows = jobsRes.data as JobSeedRow[];
       const nextTitleOptions = toOptions(rows.map((job) => job.title));
       const nextSuperintendentOptions = toOptions(
         rows.map((job) => job.superintendent),
@@ -174,6 +212,8 @@ export function AddJobDialog({
       setPriceOptions(nextPriceOptions);
       setDefaultPriceByTitleId(priceDefaultsByTitle);
       setSuperintendentOptions(nextSuperintendentOptions);
+      setEmployees((employeesRes.data ?? []) as EmployeeSeedRow[]);
+      setCrews((crewsRes.data ?? []) as CrewSeedRow[]);
     })();
 
     return () => {
@@ -220,14 +260,31 @@ export function AddJobDialog({
     setPrice(nextPrice?.name ?? "");
   }
 
-  function submit() {
+  function submit(forceUnassigned = false) {
     setError(null);
+
+    const [completedByType, completedById] = completedByValue.split(":");
+    const hasAssignee = Boolean(completedByType && completedById);
+
+    if (!hasAssignee && !forceUnassigned) {
+      setShowUnassignedConfirm(true);
+      return;
+    }
+
+    const completedByName = hasAssignee
+      ? completedByType === "crew"
+        ? crews.find((crew) => crew.id === completedById)?.name ?? ""
+        : employees.find((employee) => employee.id === completedById)?.name ?? ""
+      : "";
 
     const fd = new FormData();
     fd.set("title", toTitleCase(title?.name ?? ""));
     fd.set("price", price);
     fd.set("scheduled_completion", scheduled);
     fd.set("superintendent", toTitleCase(superintendent?.name ?? ""));
+    fd.set("completed_by_type", hasAssignee ? completedByType : "");
+    fd.set("completed_by_id", hasAssignee ? completedById : "");
+    fd.set("completed_by_name", hasAssignee ? completedByName : "");
 
     startTransition(async () => {
       const res = await createJob(projectId, fd);
@@ -241,12 +298,14 @@ export function AddJobDialog({
       setPrice("");
       setScheduled("");
       setSuperintendent(null);
+      setCompletedByValue("");
       router.refresh();
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Job</DialogTitle>
@@ -308,6 +367,16 @@ export function AddJobDialog({
           </div>
 
           <div className="space-y-2">
+            <CompletedByCombobox
+              value={completedByValue}
+              onChange={setCompletedByValue}
+              employees={employees}
+              crews={crews}
+              helperText="Assign a person or crew now to streamline payroll tracking."
+            />
+          </div>
+
+          <div className="space-y-2">
             <CreatableCombobox
               label="Superintendent / General Contractor (Optional)"
               placeholder="Select or create contractor name..."
@@ -354,6 +423,31 @@ export function AddJobDialog({
           </div>
         </form>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <AlertDialog
+        open={showUnassignedConfirm}
+        onOpenChange={setShowUnassignedConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No one is assigned to this job</AlertDialogTitle>
+            <AlertDialogDescription>
+              This job has no employee or crew assigned. Do you want to
+              continue and save it as unassigned?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={() => submit(true)}
+            >
+              {isPending ? "Saving..." : "Continue"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

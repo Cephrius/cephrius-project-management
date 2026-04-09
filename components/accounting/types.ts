@@ -21,6 +21,8 @@ export type ProjectExpense = {
   project_id: string;
   company_id: string;
   created_by: string;
+  payment_id: string | null;
+  source_type: "manual" | "payroll";
   name: string;
   description: string | null;
   category: string | null;

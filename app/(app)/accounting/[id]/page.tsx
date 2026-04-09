@@ -44,7 +44,7 @@ export default async function ProjectAccountingPage({
       .is("deleted_at", null),
     supabase
       .from("project_expenses")
-      .select("id, project_id, company_id, created_by, name, description, category, cost_type, value_type, amount_cents, expense_date, created_at, updated_at")
+      .select("id, project_id, company_id, created_by, payment_id, source_type, name, description, category, cost_type, value_type, amount_cents, expense_date, created_at, updated_at")
       .eq("project_id", id)
       .eq("company_id", companyId)
       .order("created_at", { ascending: false }),

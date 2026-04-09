@@ -114,7 +114,7 @@ export default async function ProjectDashboardPage({
   const [jobsRes, expensesRes] = await Promise.all([
     supabase
       .from("jobs")
-      .select("id, title, price_cents, scheduled_completion, is_completed, superintendent, is_invoiced, is_paid")
+      .select("id, title, price_cents, scheduled_completion, is_completed, superintendent, completed_by_type, completed_by_id, completed_by_name, is_invoiced, is_paid")
       .eq("project_id", project.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false }),

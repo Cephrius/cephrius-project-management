@@ -38,6 +38,9 @@ export type JobRow = {
   scheduled_completion: string | null;
   is_completed: boolean;
   superintendent: string | null;
+  completed_by_type: "employee" | "crew" | null;
+  completed_by_id: string | null;
+  completed_by_name: string | null;
   is_invoiced: boolean;
   is_paid: boolean;
 };
@@ -90,6 +93,7 @@ export function JobsTable({
       return (
         j.title.toLowerCase().includes(q) ||
         (j.superintendent ?? "").toLowerCase().includes(q) ||
+        (j.completed_by_name ?? "").toLowerCase().includes(q) ||
         (j.scheduled_completion ?? "").toLowerCase().includes(q)
       );
     });
@@ -101,6 +105,10 @@ export function JobsTable({
 
   const showSuperintendent = useMemo(
     () => jobs.some((j) => (j.superintendent ?? "").trim().length > 0),
+    [jobs],
+  );
+  const showCompletedBy = useMemo(
+    () => jobs.some((j) => (j.completed_by_name ?? "").trim().length > 0),
     [jobs],
   );
   const showScheduled = useMemo(
@@ -271,6 +279,11 @@ export function JobsTable({
                   Superintendent / GC: {job.superintendent}
                 </div>
               )}
+              {showCompletedBy && (
+                <div className="text-xs text-muted-foreground">
+                  Completed By: {job.completed_by_name ?? "Unassigned"}
+                </div>
+              )}
 
               <DeleteJobDialog
                 jobId={job.id}
@@ -290,6 +303,7 @@ export function JobsTable({
               <TableHead className="h-11">Price</TableHead>
               {showScheduled && <TableHead className="h-11">Scheduled For</TableHead>}
               {showSuperintendent && <TableHead className="h-11">Superintendent / GC</TableHead>}
+              {showCompletedBy && <TableHead className="h-11">Completed By</TableHead>}
               <TableHead className="h-11">Status</TableHead>
               <TableHead className="h-11 text-right">Actions</TableHead>
             </TableRow>
@@ -301,6 +315,7 @@ export function JobsTable({
                 <TableCell
                   colSpan={
                     4 + (showScheduled ? 1 : 0) + (showSuperintendent ? 1 : 0)
+                    + (showCompletedBy ? 1 : 0)
                   }
                   className="text-sm text-muted-foreground"
                 >
@@ -316,6 +331,11 @@ export function JobsTable({
                     <TableCell className="text-muted-foreground">{formatDate(job.scheduled_completion)}</TableCell>
                   )}
                   {showSuperintendent && <TableCell className="text-muted-foreground">{job.superintendent ?? "—"}</TableCell>}
+                  {showCompletedBy && (
+                    <TableCell className="text-muted-foreground">
+                      {job.completed_by_name ?? "Unassigned"}
+                    </TableCell>
+                  )}
                   <TableCell>
                     {job.is_paid ? (
                       <Badge className="bg-green-600 text-white hover:bg-green-600">

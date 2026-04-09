@@ -94,6 +94,14 @@ export function ExpenseTable({
     { key: "estimated", label: "Estimated", count: counts.estimated },
   ] as const;
 
+  function isPayrollExpense(expense: ProjectExpense) {
+    return (
+      expense.source_type === "payroll" ||
+      Boolean(expense.payment_id) ||
+      (expense.description ?? "").includes("[Payroll Sync")
+    );
+  }
+
   if (expenses.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
@@ -148,7 +156,9 @@ export function ExpenseTable({
               No expenses match this filter.
             </div>
           ) : (
-            filtered.map((expense) => (
+            filtered.map((expense) => {
+              const payrollExpense = isPayrollExpense(expense);
+              return (
               <div key={expense.id} className="rounded-md border p-3 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -172,6 +182,7 @@ export function ExpenseTable({
                     <DropdownMenuContent align="end" className="w-44">
                       <DropdownMenuItem
                         className="cursor-pointer"
+                        disabled={payrollExpense}
                         onSelect={(event) => {
                           event.preventDefault();
                           setEditingExpense(expense);
@@ -182,6 +193,7 @@ export function ExpenseTable({
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-destructive focus:text-destructive"
+                        disabled={payrollExpense}
                         onSelect={(event) => {
                           event.preventDefault();
                         }}
@@ -204,6 +216,11 @@ export function ExpenseTable({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {payrollExpense && (
+                    <Badge variant="outline" className="border-violet-300 bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300">
+                      Payroll Synced
+                    </Badge>
+                  )}
                   {expense.category && (
                     <span className="text-xs text-muted-foreground">{expense.category}</span>
                   )}
@@ -231,10 +248,15 @@ export function ExpenseTable({
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{formatDate(expense.expense_date)}</span>
-                  {expense.description ? <span className="line-clamp-1 max-w-[60%] text-right">{expense.description}</span> : null}
+                  {payrollExpense ? (
+                    <span className="text-right">Managed from Payroll</span>
+                  ) : expense.description ? (
+                    <span className="line-clamp-1 max-w-[60%] text-right">{expense.description}</span>
+                  ) : null}
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -258,18 +280,31 @@ export function ExpenseTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((expense) => (
+                filtered.map((expense) => {
+                  const payrollExpense = isPayrollExpense(expense);
+                  return (
                   <TableRow key={expense.id} className="h-14">
                     <TableCell>
                       <div className="font-medium">{expense.name}</div>
-                      {expense.description && (
+                      {payrollExpense ? (
+                        <div className="line-clamp-1 text-xs text-muted-foreground">
+                          Managed from Payroll
+                        </div>
+                      ) : expense.description && (
                         <div className="line-clamp-1 text-xs text-muted-foreground">
                           {expense.description}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {expense.category ?? "—"}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{expense.category ?? "—"}</span>
+                        {payrollExpense && (
+                          <Badge variant="outline" className="border-violet-300 bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300">
+                            Payroll
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">
@@ -317,6 +352,7 @@ export function ExpenseTable({
                         <DropdownMenuContent align="end" className="w-44">
                           <DropdownMenuItem
                             className="cursor-pointer"
+                            disabled={payrollExpense}
                             onSelect={(event) => {
                               event.preventDefault();
                               setEditingExpense(expense);
@@ -327,6 +363,7 @@ export function ExpenseTable({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer text-destructive focus:text-destructive"
+                            disabled={payrollExpense}
                             onSelect={(event) => {
                               event.preventDefault();
                             }}
@@ -348,7 +385,8 @@ export function ExpenseTable({
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

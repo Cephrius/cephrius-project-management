@@ -1,0 +1,132 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+export type CompletedByOption = {
+  id: string;
+  name: string;
+};
+
+function optionValue(type: "employee" | "crew", id: string) {
+  return `${type}:${id}`;
+}
+
+export function CompletedByCombobox({
+  value,
+  onChange,
+  employees,
+  crews,
+  label = "Completed By (Optional)",
+  helperText,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  employees: CompletedByOption[];
+  crews: CompletedByOption[];
+  label?: string;
+  helperText?: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const selectedLabel = useMemo(() => {
+    if (!value) return "Unassigned";
+
+    const employee = employees.find((item) => optionValue("employee", item.id) === value);
+    if (employee) return `${employee.name} (Employee)`;
+
+    const crew = crews.find((item) => optionValue("crew", item.id) === value);
+    if (crew) return `${crew.name} (Crew)`;
+
+    return "Unassigned";
+  }, [crews, employees, value]);
+
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-medium">{label}</div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            <span className="truncate">{selectedLabel}</span>
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search employee or crew..." />
+            <CommandEmpty>No assignee found.</CommandEmpty>
+            <CommandGroup heading="Selection">
+              <CommandItem
+                value="unassigned"
+                onSelect={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+              >
+                <Check className={cn("mr-2 size-4", value === "" ? "opacity-100" : "opacity-0")} />
+                Unassigned
+              </CommandItem>
+            </CommandGroup>
+            {employees.length > 0 && (
+              <CommandGroup heading="Employees">
+                {employees.map((employee) => {
+                  const nextValue = optionValue("employee", employee.id);
+                  return (
+                    <CommandItem
+                      key={employee.id}
+                      value={`${employee.name} employee`}
+                      onSelect={() => {
+                        onChange(nextValue);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check className={cn("mr-2 size-4", value === nextValue ? "opacity-100" : "opacity-0")} />
+                      {employee.name}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+            {crews.length > 0 && (
+              <CommandGroup heading="Crews">
+                {crews.map((crew) => {
+                  const nextValue = optionValue("crew", crew.id);
+                  return (
+                    <CommandItem
+                      key={crew.id}
+                      value={`${crew.name} crew`}
+                      onSelect={() => {
+                        onChange(nextValue);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check className={cn("mr-2 size-4", value === nextValue ? "opacity-100" : "opacity-0")} />
+                      {crew.name}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {helperText && <p className="text-xs text-muted-foreground">{helperText}</p>}
+    </div>
+  );
+}

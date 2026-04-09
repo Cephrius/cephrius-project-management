@@ -111,6 +111,22 @@ export async function updateExpense(formData: FormData) {
   const amount_cents = parsePriceToCents(amountRaw);
   if (amount_cents === null) return { ok: false, message: "Enter a valid amount." };
 
+  const { data: existingExpense, error: existingExpenseError } = await supabase
+    .from("project_expenses")
+    .select("id, source_type, payment_id")
+    .eq("id", expense_id)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (existingExpenseError) return { ok: false, message: existingExpenseError.message };
+  if (!existingExpense) return { ok: false, message: "Expense not found." };
+  if (existingExpense.source_type === "payroll" || existingExpense.payment_id) {
+    return {
+      ok: false,
+      message: "Payroll-synced expenses must be changed from Payroll, not Accounting.",
+    };
+  }
+
   const { error } = await supabase
     .from("project_expenses")
     .update({ name, description, category, cost_type, value_type, amount_cents, expense_date })
@@ -135,6 +151,22 @@ export async function deleteExpense(expenseId: string, projectId: string) {
 
   const companyId = await getActiveCompanyId();
   if (!companyId) return { ok: false, message: "No active company found." };
+
+  const { data: existingExpense, error: existingExpenseError } = await supabase
+    .from("project_expenses")
+    .select("id, source_type, payment_id")
+    .eq("id", expenseId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (existingExpenseError) return { ok: false, message: existingExpenseError.message };
+  if (!existingExpense) return { ok: false, message: "Expense not found." };
+  if (existingExpense.source_type === "payroll" || existingExpense.payment_id) {
+    return {
+      ok: false,
+      message: "Payroll-synced expenses must be removed from Payroll, not Accounting.",
+    };
+  }
 
   const { error } = await supabase
     .from("project_expenses")

@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { DollarSign, FileText, FolderKanban, LayoutDashboard, Settings } from "lucide-react";
+import {
+  DollarSign,
+  FileText,
+  FolderKanban,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -17,6 +25,8 @@ function getActiveHref(pathname: string) {
   }
   if (pathname.startsWith("/projects")) return "/projects";
   if (pathname.startsWith("/invoices")) return "/invoices";
+  if (pathname.startsWith("/employees")) return "/employees";
+  if (pathname.startsWith("/payroll")) return "/payroll";
   if (pathname.startsWith("/settings")) return "/settings";
   return "";
 }
@@ -26,6 +36,8 @@ const navItems = [
   { href: "/projects",   label: "Projects",   icon: FolderKanban },
   { href: "/invoices",   label: "Invoices",   icon: FileText },
   { href: "/accounting", label: "Accounting", icon: DollarSign },
+  { href: "/employees",  label: "Employees",  icon: Users },
+  { href: "/payroll",    label: "Payroll",    icon: Wallet },
   { href: "/settings",   label: "Settings",   icon: Settings },
 ];
 
@@ -41,7 +53,7 @@ export function SidebarNav({
 
   if (mobile) {
     return (
-      <nav className="grid grid-cols-5 gap-1 ">
+      <nav className="grid grid-cols-7 gap-1 ">
         {navItems.map((item) => {
           const isActive = activeHref === item.href;
           const Icon = item.icon;
