@@ -8,7 +8,9 @@ function getPageTitle(pathname: string): string | null {
   if (pathname.startsWith("/projects")) return "Projects";
   if (pathname.startsWith("/invoices")) return "Invoices";
   if (pathname.startsWith("/settings")) return "Settings";
-  if(pathname.startsWith("/accounting")) return "Accounting";
+  if (pathname.startsWith("/accounting")) return "Accounting";
+  if (pathname.startsWith("/payroll")) return "Payroll";
+  if (pathname.startsWith("/employees")) return "Employees";
   if (pathname.startsWith("/search")) return "Search";
   if (pathname.startsWith("/login")) return "Sign In";
   if (pathname.startsWith("/signup")) return "Create Account";

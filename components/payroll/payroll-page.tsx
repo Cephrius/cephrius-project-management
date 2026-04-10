@@ -11,6 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -44,6 +52,7 @@ import {
   deletePayrollPayment,
   refundPayrollPayment,
 } from "@/app/(app)/payroll/actions";
+
 
 export type PayrollAssignment = {
   id: string;
@@ -418,27 +427,39 @@ export function PayrollPageClient({
               />
             </InputGroup>
 
-            <select
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-              value={payeeFilter}
-              onChange={(event) => setPayeeFilter(event.target.value as "all" | "employee" | "crew")}
-            >
-              <option value="all">All Payees</option>
-              <option value="employee">Employees</option>
-              <option value="crew">Crews</option>
-            </select>
 
-            <select
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-              value={dateRange}
-              onChange={(event) => setDateRange(event.target.value as "all" | "30d" | "90d" | "365d")}
-            >
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-              <option value="365d">Last 365 days</option>
-              <option value="all">All time</option>
-            </select>
+            <Select value={payeeFilter} onValueChange={(value) => setPayeeFilter(value as "all" | "employee" | "crew")} >
+              <SelectTrigger className="w-[180px] text-sm">
+                <SelectValue placeholder="Select payee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All Payees</SelectItem>
+                  <SelectItem value="employee">Employees</SelectItem>
+                  <SelectItem value="crew">Crews</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+
+
+            <Select value={dateRange} onValueChange={(value) => setDateRange(value as "all" | "30d" | "90d" | "365d")} >
+              <SelectTrigger className="w-[180px] text-sm">
+                <SelectValue placeholder="Select date range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="30d">Last 30 Days</SelectItem>
+                  <SelectItem value="90d">Last 90 Days</SelectItem>
+                  <SelectItem value="365d">Last 365 Days</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
           </div>
+
+
         </Card>
 
         <Card className="p-4">
