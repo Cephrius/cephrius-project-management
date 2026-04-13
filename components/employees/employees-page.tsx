@@ -2,17 +2,18 @@
 
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import {
-  Activity,
+  AlertTriangle,
+  ArrowRight,
   Banknote,
   Briefcase,
-  CheckCircle2,
-  Clock3,
-  Plus,
+  DollarSign,
   Search,
+  TrendingUp,
   UserCheck,
   UserPlus,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +28,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   InputGroup,
   InputGroupAddon,
@@ -41,17 +42,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteCrew, deleteEmployee } from "@/app/(app)/employees/actions";
+import { deleteCrew, deleteEmployee } from "@/app/(app)/employees-crews/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { buildWorkforceDashboardModel } from "./dashboard-data";
 import { EmployeeDialog } from "./employee-dialog";
 import { CrewDialog } from "./crew-dialog";
-import {
-  WorkforceAnalyticsPanel,
-  WorkforceQuickInsightsCard,
-  WorkforceRecentActivityCard,
-} from "./workforce-insights";
+import { WorkforceAnalyticsPanel } from "./workforce-insights";
 import {
   PAY_TYPE_LABELS,
   type CrewProfile,
@@ -77,14 +74,6 @@ function money(cents: number) {
   });
 }
 
-function compactMoney(cents: number) {
-  return (cents / 100).toLocaleString(undefined, {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  });
-}
 
 function formatDate(value: string | null) {
   if (!value) return "No date";
@@ -131,34 +120,6 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
-function WorkforceStatCard({
-  title,
-  value,
-  detail,
-  icon,
-}: {
-  title: string;
-  value: string;
-  detail: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <Card className="bg-primary/[0.035] ring-primary/15 shadow-none">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            {title}
-          </div>
-          <div className="flex size-9 items-center justify-center rounded-xl bg-background text-primary shadow-xs ring-1 ring-border">
-            {icon}
-          </div>
-        </div>
-        <div className="mt-3 text-3xl font-semibold tabular-nums">{value}</div>
-        <div className="mt-2 text-sm text-muted-foreground">{detail}</div>
-      </CardContent>
-    </Card>
-  );
-}
 
 export function EmployeesPageClient({
   employees,
@@ -197,16 +158,6 @@ export function EmployeesPageClient({
   const crewById = useMemo(
     () => new Map(crews.map((crew) => [crew.id, crew])),
     [crews],
-  );
-
-  const recentEmployeeRows = useMemo(
-    () =>
-      model.recentEmployees
-        .map((employee) =>
-          model.employeeRoster.find((row) => row.employee.id === employee.id),
-        )
-        .filter((row): row is (typeof model.employeeRoster)[number] => Boolean(row)),
-    [model],
   );
 
   const employeeFilterTabs = useMemo(
@@ -263,169 +214,251 @@ export function EmployeesPageClient({
     });
   }, [deferredEmployeeQuery, employeeFilter, model.employeeRoster]);
 
+  const utilizationPct =
+    model.summary.activeEmployees > 0
+      ? Math.round(
+          (model.summary.employeesWithActiveJobs / model.summary.activeEmployees) * 100,
+        )
+      : 0;
+
   return (
-    <div className="space-y-6 pb-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl space-y-2">
+    <div className="space-y-4 pb-6">
+      {/* Header with actions */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
           <h1 className="text-2xl font-semibold text-primary">Employees &amp; Crews</h1>
           <p className="text-sm text-muted-foreground">
-            A workforce dashboard for staffing coverage, crew health, payroll visibility,
-            and employee operations in one place.
+            Manage your workforce — add employees and crews to assign jobs and track payroll.
           </p>
         </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => {
               setEditingCrew(null);
               setCrewDialogOpen(true);
             }}
           >
-            <Plus className="mr-1 size-4" />
+            <Users className="mr-1.5 size-4" />
             Add Crew
           </Button>
           <Button
+            size="sm"
             onClick={() => {
               setEditingEmployee(null);
               setEmployeeDialogOpen(true);
             }}
           >
-            <Plus className="mr-1 size-4" />
+            <UserPlus className="mr-1.5 size-4" />
             Add Employee
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <WorkforceStatCard
-          title="Total Employees"
-          value={String(model.summary.totalEmployees)}
-          detail={`${model.summary.activeEmployees} active · ${model.summary.inactiveEmployees} inactive`}
-          icon={<Users className="size-4" />}
-        />
-        <WorkforceStatCard
-          title="Crew Coverage"
-          value={String(model.summary.assignedEmployees)}
-          detail={`${model.summary.unassignedEmployees} unassigned · ${model.summary.activeCrews} active crews`}
-          icon={<UserCheck className="size-4" />}
-        />
-        <WorkforceStatCard
-          title="Recently Added"
-          value={String(model.summary.recentEmployees)}
-          detail="Employees added in the last 30 days"
-          icon={<UserPlus className="size-4" />}
-        />
-        <WorkforceStatCard
-          title="On Active Jobs"
-          value={String(model.summary.employeesWithActiveJobs)}
-          detail="Employees participating in open assigned work"
-          icon={<Briefcase className="size-4" />}
-        />
-        <WorkforceStatCard
-          title="Completed Work"
-          value={String(model.summary.employeesWithCompletedJobs)}
-          detail="Employees tied to completed assigned jobs"
-          icon={<CheckCircle2 className="size-4" />}
-        />
-        <WorkforceStatCard
-          title="Payroll Logged"
-          value={money(model.summary.payrollLoggedCents)}
-          detail={`${money(model.summary.employeePayrollLoggedCents)} direct employees · ${money(model.summary.crewPayrollLoggedCents)} crews`}
-          icon={<Banknote className="size-4" />}
-        />
-        <WorkforceStatCard
-          title="Avg Hourly Rate"
-          value={
-            model.summary.avgHourlyRate != null
-              ? `$${model.summary.avgHourlyRate.toFixed(2)}`
-              : "—"
-          }
-          detail={
-            model.summary.avgSalary != null
-              ? `Avg salary ${compactMoney(model.summary.avgSalary * 100)}/yr`
-              : "No hourly or salary rates configured"
-          }
-          icon={<Clock3 className="size-4" />}
-        />
-        <WorkforceStatCard
-          title="Workforce Activity"
-          value={String(model.activity.length)}
-          detail="Recent payroll, job completion, and hiring events surfaced"
-          icon={<Activity className="size-4" />}
-        />
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
-        <WorkforceAnalyticsPanel model={model} />
-
-        <div className="space-y-6">
-          <WorkforceQuickInsightsCard
-            alerts={model.alerts}
-            recentEmployees={recentEmployeeRows}
-          />
-          <WorkforceRecentActivityCard activity={model.activity} />
-        </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.95fr)]">
-        <Card className="overflow-hidden ring-primary/15 shadow-none">
-          <div className="border-b p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <div className="text-base font-semibold">Employee Roster</div>
-                <div className="text-sm text-muted-foreground">
-                  Search, filter, and review employee role, crew, compensation, and workload at a glance.
-                </div>
+      {/* Key Metrics Strip */}
+      <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
+        <Card className="px-3 py-3 shadow-none">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Users className="size-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold tabular-nums leading-tight">
+                {model.summary.totalEmployees}
               </div>
+              <div className="text-[11px] text-muted-foreground">Total</div>
+            </div>
+          </div>
+        </Card>
 
-              <div className="flex w-full flex-col gap-3 sm:w-auto">
-                <InputGroup className="w-full sm:w-80">
-                  <InputGroupAddon>
-                    <Search className="size-4" />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    value={employeeQuery}
-                    onChange={(event) => setEmployeeQuery(event.target.value)}
-                    placeholder="Search employees, crews, roles..."
-                  />
-                </InputGroup>
-                <div className="flex flex-wrap items-center gap-1 sm:justify-end">
-                  {employeeFilterTabs.map((tab) => {
-                    const active = employeeFilter === tab.key;
-                    return (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => setEmployeeFilter(tab.key)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                          active
-                            ? "border-primary bg-primary/10 text-foreground"
-                            : "border-border text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <span>{tab.label}</span>
-                        <span className="text-xs tabular-nums">{tab.count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+        <Card className="px-3 py-3 shadow-none">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-green-500/10 text-green-600 dark:text-green-400">
+              <UserCheck className="size-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold tabular-nums leading-tight">
+                {model.summary.activeEmployees}
+                <span className="ml-0.5 text-xs font-medium text-muted-foreground">
+                  / {model.summary.totalEmployees}
+                </span>
+              </div>
+              <div className="text-[11px] text-muted-foreground">Active</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="px-3 py-3 shadow-none">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <Briefcase className="size-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold tabular-nums leading-tight">
+                {utilizationPct}%
+              </div>
+              <div className="text-[11px] text-muted-foreground">Utilization</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="px-3 py-3 shadow-none">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="size-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold tabular-nums leading-tight">
+                {money(model.summary.payrollLoggedCents)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">Payroll</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="px-3 py-3 shadow-none">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <DollarSign className="size-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold tabular-nums leading-tight">
+                {model.summary.avgHourlyRate != null
+                  ? `$${model.summary.avgHourlyRate.toFixed(0)}`
+                  : "—"}
+                <span className="text-xs font-medium text-muted-foreground">/hr</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground">Avg Hourly</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="px-3 py-3 shadow-none">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+              <TrendingUp className="size-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold tabular-nums leading-tight">
+                {model.summary.activeCrews}
+                <span className="ml-0.5 text-xs font-medium text-muted-foreground">
+                  crews
+                </span>
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {model.summary.assignedEmployees} assigned
               </div>
             </div>
           </div>
+        </Card>
+      </div>
 
-          <div className="overflow-x-auto">
+      {/* Workforce Alerts (only if any exist) */}
+      {model.alerts.length > 0 && (
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {model.alerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={cn(
+                "flex items-start gap-2.5 rounded-lg border p-3",
+                alert.tone === "warning"
+                  ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30"
+                  : "border-primary/15 bg-primary/[0.04]",
+              )}
+            >
+              <AlertTriangle
+                className={cn(
+                  "mt-0.5 size-4 shrink-0",
+                  alert.tone === "warning" ? "text-amber-500" : "text-primary",
+                )}
+              />
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{alert.title}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{alert.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick links */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+          <Link href="/employees-crews/roster">
+            View Full Roster
+            <ArrowRight className="ml-1.5 size-4" />
+          </Link>
+        </Button>
+        <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+          <Link href="/employees-crews/crews">
+            View All Crews
+            <ArrowRight className="ml-1.5 size-4" />
+          </Link>
+        </Button>
+      </div>
+
+      {/* Two-column layout: Rosters (left) + Analytics (right) */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        {/* Left column: Employee Roster + Crew Overview */}
+        <div className="min-w-0 space-y-4">
+          <Card className="flex flex-col overflow-hidden shadow-none">
+            <div className="shrink-0 border-b p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="text-sm font-semibold">Employee Roster</div>
+                  <div className="text-xs text-muted-foreground">
+                    Search, filter, and review your employees at a glance.
+                  </div>
+                </div>
+
+                <div className="flex w-full flex-col gap-3 sm:w-auto">
+                  <InputGroup className="w-full sm:w-80">
+                    <InputGroupAddon>
+                      <Search className="size-4" />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      value={employeeQuery}
+                      onChange={(event) => setEmployeeQuery(event.target.value)}
+                      placeholder="Search employees, crews, roles..."
+                    />
+                  </InputGroup>
+                  <div className="flex flex-wrap items-center gap-1 sm:justify-end">
+                    {employeeFilterTabs.map((tab) => {
+                      const active = employeeFilter === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setEmployeeFilter(tab.key)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                            active
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <span>{tab.label}</span>
+                          <span className="text-xs tabular-nums">{tab.count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-h-128 overflow-y-auto overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="h-11">Employee</TableHead>
-                  <TableHead className="h-11">Crew</TableHead>
-                  <TableHead className="h-11">Role</TableHead>
-                  <TableHead className="h-11">Compensation</TableHead>
-                  <TableHead className="h-11">Workload</TableHead>
-                  <TableHead className="h-11">Status</TableHead>
-                  <TableHead className="h-11 text-right">Actions</TableHead>
+                  <TableHead className="sticky top-0 z-10 h-10 bg-background">Employee</TableHead>
+                  <TableHead className="sticky top-0 z-10 hidden h-10 bg-background lg:table-cell">Crew</TableHead>
+                  <TableHead className="sticky top-0 z-10 h-10 bg-background">Role</TableHead>
+                  <TableHead className="sticky top-0 z-10 hidden h-10 bg-background md:table-cell">Compensation</TableHead>
+                  <TableHead className="sticky top-0 z-10 hidden h-10 bg-background xl:table-cell">Workload</TableHead>
+                  <TableHead className="sticky top-0 z-10 h-10 bg-background">Status</TableHead>
+                  <TableHead className="sticky top-0 z-10 h-10 bg-background text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -455,7 +488,11 @@ export function EmployeesPageClient({
                           <div className="flex items-start gap-3">
                             <Avatar size="sm">
                               <AvatarFallback>
-                                {employee.name.charAt(0).toUpperCase()}
+                                {/* Get the Initials */}
+                                {employee.name
+                                  .split(" ")
+                                  .map((word) => word.charAt(0).toUpperCase())
+                                  .join("")}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
@@ -471,7 +508,7 @@ export function EmployeesPageClient({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {row.crewNames.length === 0 ? (
                             <span className="text-sm text-muted-foreground">Unassigned</span>
                           ) : (
@@ -495,23 +532,23 @@ export function EmployeesPageClient({
                           </div>
                           <div className="text-xs text-muted-foreground">{secondaryRoleText}</div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <div className="text-sm">{payDisplay(employee)}</div>
                           <div className="text-xs text-muted-foreground">
                             {row.directPayrollLoggedCents > 0
-                              ? `${money(row.directPayrollLoggedCents)} direct payroll logged`
-                              : "No direct payroll logged"}
+                              ? `${money(row.directPayrollLoggedCents)} logged`
+                              : "No payroll logged"}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden xl:table-cell">
                           <div className="space-y-1 text-sm">
                             <div className="font-medium tabular-nums">
-                              {row.activeJobs} active · {row.completedJobs} completed
+                              {row.activeJobs} active · {row.completedJobs} done
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {row.activeJobs > 0
-                                ? "Currently assigned to open work"
-                                : "No open assigned work"}
+                                ? "Assigned to open work"
+                                : "No open work"}
                             </div>
                           </div>
                         </TableCell>
@@ -581,168 +618,175 @@ export function EmployeesPageClient({
                 )}
               </TableBody>
             </Table>
-          </div>
-        </Card>
-
-        <Card className="overflow-hidden ring-primary/15 shadow-none">
-          <div className="border-b p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-base font-semibold">Crew Overview</div>
-                <div className="text-sm text-muted-foreground">
-                  Review crew size, lead coverage, job load, and payroll activity.
-                </div>
-              </div>
-              <Badge variant="outline">{model.summary.totalCrews} total crews</Badge>
             </div>
-          </div>
+          </Card>
 
-          <div className="space-y-4 p-5">
-            {model.crewOverview.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                No crews have been created yet.
+          {/* Crew Overview */}
+          <Card className="flex flex-col overflow-hidden shadow-none">
+            <div className="shrink-0 border-b p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Crew Overview</div>
+                  <div className="text-xs text-muted-foreground">
+                    Crew size, leads, jobs, and payroll.
+                  </div>
+                </div>
+                <Badge variant="outline">{model.summary.totalCrews} crews</Badge>
               </div>
-            ) : (
-              model.crewOverview.map((crewRow) => {
-                const crew = crewById.get(crewRow.id);
-                if (!crew) return null;
+            </div>
 
-                return (
-                  <div key={crew.id} className="rounded-xl border p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="truncate text-sm font-semibold">{crew.name}</div>
-                          {crew.specialization && (
-                            <Badge variant="outline">{crew.specialization}</Badge>
+            <div className="max-h-96 space-y-3 overflow-y-auto p-4">
+              {model.crewOverview.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  No crews have been created yet.
+                </div>
+              ) : (
+                model.crewOverview.map((crewRow) => {
+                  const crew = crewById.get(crewRow.id);
+                  if (!crew) return null;
+
+                  return (
+                    <div key={crew.id} className="rounded-lg border p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="truncate text-sm font-semibold">{crew.name}</div>
+                            {crew.specialization && (
+                              <Badge variant="outline">{crew.specialization}</Badge>
+                            )}
+                            <StatusBadge active={crew.is_active} />
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {crewRow.crewLeadName
+                              ? `Lead: ${crewRow.crewLeadName}`
+                              : "No crew lead assigned"}
+                          </div>
+                          {crew.description && (
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              {crew.description}
+                            </div>
                           )}
-                          <StatusBadge active={crew.is_active} />
                         </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {crewRow.crewLeadName
-                            ? `Lead: ${crewRow.crewLeadName}`
-                            : "No crew lead assigned"}
+
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingCrew(crew);
+                              setCrewDialogOpen(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={isPending}
+                              >
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete crew?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will remove {crew.name} and its member assignments.
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isPending}>
+                                  Cancel
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  disabled={isPending}
+                                  onClick={() => {
+                                    startTransition(async () => {
+                                      const result = await deleteCrew(crew.id);
+                                      if (!result.ok) {
+                                        toast.error(result.message ?? "Failed to delete crew.");
+                                        return;
+                                      }
+                                      toast.success("Crew deleted.");
+                                    });
+                                  }}
+                                >
+                                  Confirm Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
-                        {crew.description && (
-                          <div className="mt-2 text-xs text-muted-foreground">
-                            {crew.description}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-4 gap-2 text-sm">
+                        <div className="rounded-md bg-muted/40 px-2 py-1.5">
+                          <div className="text-[10px] text-muted-foreground">Members</div>
+                          <div className="text-sm font-semibold tabular-nums">
+                            {crewRow.members}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 px-2 py-1.5">
+                          <div className="text-[10px] text-muted-foreground">Active</div>
+                          <div className="text-sm font-semibold tabular-nums">
+                            {crewRow.activeJobs}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 px-2 py-1.5">
+                          <div className="text-[10px] text-muted-foreground">Done</div>
+                          <div className="text-sm font-semibold tabular-nums">
+                            {crewRow.completedJobs}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 px-2 py-1.5">
+                          <div className="text-[10px] text-muted-foreground">Payroll</div>
+                          <div className="text-sm font-semibold tabular-nums">
+                            {crewRow.payrollLoggedCents > 0
+                              ? money(crewRow.payrollLoggedCents)
+                              : "—"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                          Crew Members
+                        </div>
+                        {crew.member_names.length === 0 ? (
+                          <div className="mt-2 text-sm text-muted-foreground">
+                            No employees assigned to this crew.
+                          </div>
+                        ) : (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {crew.member_names.slice(0, 5).map((name) => (
+                              <Badge key={name} variant="secondary">
+                                {name}
+                              </Badge>
+                            ))}
+                            {crew.member_names.length > 5 && (
+                              <Badge variant="outline">
+                                +{crew.member_names.length - 5} more
+                              </Badge>
+                            )}
                           </div>
                         )}
                       </div>
-
-                      <div className="flex shrink-0 gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingCrew(crew);
-                            setCrewDialogOpen(true);
-                          }}
-                        >
-                          Edit
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              disabled={isPending}
-                            >
-                              Delete
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete crew?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will remove {crew.name} and its member assignments.
-                                This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel disabled={isPending}>
-                                Cancel
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                disabled={isPending}
-                                onClick={() => {
-                                  startTransition(async () => {
-                                    const result = await deleteCrew(crew.id);
-                                    if (!result.ok) {
-                                      toast.error(result.message ?? "Failed to delete crew.");
-                                      return;
-                                    }
-                                    toast.success("Crew deleted.");
-                                  });
-                                }}
-                              >
-                                Confirm Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
                     </div>
+                  );
+                })
+              )}
+            </div>
+          </Card>
+        </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-lg bg-muted/40 p-3">
-                        <div className="text-xs text-muted-foreground">Members</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums">
-                          {crewRow.members}
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-3">
-                        <div className="text-xs text-muted-foreground">Active Jobs</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums">
-                          {crewRow.activeJobs}
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-3">
-                        <div className="text-xs text-muted-foreground">Completed Jobs</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums">
-                          {crewRow.completedJobs}
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-3">
-                        <div className="text-xs text-muted-foreground">Payroll Logged</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums">
-                          {crewRow.payrollLoggedCents > 0
-                            ? money(crewRow.payrollLoggedCents)
-                            : "—"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4">
-                      <div className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                        Crew Members
-                      </div>
-                      {crew.member_names.length === 0 ? (
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          No employees assigned to this crew.
-                        </div>
-                      ) : (
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          {crew.member_names.slice(0, 5).map((name) => (
-                            <Badge key={name} variant="secondary">
-                              {name}
-                            </Badge>
-                          ))}
-                          {crew.member_names.length > 5 && (
-                            <Badge variant="outline">
-                              +{crew.member_names.length - 5} more
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </Card>
+        {/* Right column: Workforce Analytics (sticky) */}
+        <div className="xl:sticky xl:top-4">
+          <WorkforceAnalyticsPanel model={model} />
+        </div>
       </div>
 
       <EmployeeDialog
