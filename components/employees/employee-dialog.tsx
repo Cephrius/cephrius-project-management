@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createEmployee, updateEmployee } from "@/app/(app)/employees/actions";
+import { createEmployee, updateEmployee } from "@/app/(app)/employees-crews/actions";
 import { toast } from "sonner";
 import {
   EMPLOYMENT_TYPE_LABELS,

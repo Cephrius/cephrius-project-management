@@ -25,7 +25,7 @@ function getActiveHref(pathname: string) {
   }
   if (pathname.startsWith("/projects")) return "/projects";
   if (pathname.startsWith("/invoices")) return "/invoices";
-  if (pathname.startsWith("/employees")) return "/employees";
+  if (pathname.startsWith("/employees-crews")) return "/employees-crews";
   if (pathname.startsWith("/payroll")) return "/payroll";
   if (pathname.startsWith("/settings")) return "/settings";
   return "";
@@ -36,7 +36,7 @@ const navItems = [
   { href: "/projects",   label: "Projects",   icon: FolderKanban },
   { href: "/invoices",   label: "Invoices",   icon: FileText },
   { href: "/accounting", label: "Accounting", icon: DollarSign },
-  { href: "/employees",  label: "Employees",  icon: Users },
+  { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },
   { href: "/payroll",    label: "Payroll",    icon: Wallet },
   { href: "/settings",   label: "Settings",   icon: Settings },
 ];
