@@ -5,8 +5,10 @@ import {
   AlertTriangle,
   ArrowRight,
   Banknote,
+  Bell,
   Briefcase,
   DollarSign,
+  Info,
   Search,
   TrendingUp,
   UserCheck,
@@ -28,6 +30,14 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
 import {
   InputGroup,
@@ -232,6 +242,79 @@ export function EmployeesPageClient({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {/* Notification bell */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="relative">
+                <Bell className="size-4" />
+                {model.alerts.length > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                    {model.alerts.length}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel className="flex items-center justify-between py-2.5">
+                <span className="font-semibold">Reminders</span>
+                {model.alerts.length > 0 && (
+                  <Badge variant="destructive" className="text-[10px]">
+                    {model.alerts.length} active
+                  </Badge>
+                )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {model.alerts.length === 0 ? (
+                <div className="flex flex-col items-center gap-1.5 px-3 py-5 text-center">
+                  <Bell className="size-5 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">No active reminders</p>
+                  <p className="text-xs text-muted-foreground/70">Your workforce setup looks complete.</p>
+                </div>
+              ) : (
+                <div className="max-h-80 overflow-y-auto">
+                  {model.alerts.map((alert, index) => (
+                    <div key={alert.id}>
+                      {index > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuItem className="flex cursor-default items-start gap-3 px-3 py-3 focus:bg-muted/50">
+                        <div className={cn(
+                          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
+                          alert.tone === "warning"
+                            ? "bg-amber-100 dark:bg-amber-950/40"
+                            : "bg-blue-100 dark:bg-blue-950/40",
+                        )}>
+                          {alert.tone === "warning" ? (
+                            <AlertTriangle className="size-3.5 text-amber-600 dark:text-amber-400" />
+                          ) : (
+                            <Info className="size-3.5 text-blue-600 dark:text-blue-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-semibold leading-snug">
+                              {alert.subject}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 px-1.5 py-0 text-[10px]"
+                            >
+                              {alert.kind}
+                            </Badge>
+                          </div>
+                          <div className="mt-0.5 text-xs font-medium text-foreground/70">
+                            {alert.title}
+                          </div>
+                          <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                            {alert.detail}
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button
             variant="outline"
             size="sm"
@@ -354,34 +437,6 @@ export function EmployeesPageClient({
         </Card>
       </div>
 
-      {/* Workforce Alerts (only if any exist) */}
-      {model.alerts.length > 0 && (
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {model.alerts.map((alert) => (
-            <div
-              key={alert.id}
-              className={cn(
-                "flex items-start gap-2.5 rounded-lg border p-3",
-                alert.tone === "warning"
-                  ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30"
-                  : "border-primary/15 bg-primary/[0.04]",
-              )}
-            >
-              <AlertTriangle
-                className={cn(
-                  "mt-0.5 size-4 shrink-0",
-                  alert.tone === "warning" ? "text-amber-500" : "text-primary",
-                )}
-              />
-              <div className="min-w-0">
-                <div className="text-sm font-medium">{alert.title}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{alert.detail}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Quick links */}
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
@@ -398,11 +453,9 @@ export function EmployeesPageClient({
         </Button>
       </div>
 
-      {/* Two-column layout: Rosters (left) + Analytics (right) */}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        {/* Left column: Employee Roster + Crew Overview */}
-        <div className="min-w-0 space-y-4">
-          <Card className="flex flex-col overflow-hidden shadow-none">
+      {/* Three-panel grid — all visible in one view */}
+      <div className="grid h-[calc(100vh-26rem)] grid-cols-[2fr_1.5fr_1.5fr] gap-4">
+          <Card className="flex h-full flex-col overflow-hidden shadow-none">
             <div className="shrink-0 border-b p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -448,7 +501,7 @@ export function EmployeesPageClient({
               </div>
             </div>
 
-            <div className="max-h-128 overflow-y-auto overflow-x-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b bg-muted/20 hover:bg-muted/20">
@@ -622,7 +675,7 @@ export function EmployeesPageClient({
           </Card>
 
           {/* Crew Overview */}
-          <Card className="flex flex-col overflow-hidden shadow-none">
+          <Card className="flex h-full flex-col overflow-hidden shadow-none">
             <div className="shrink-0 border-b p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -635,7 +688,7 @@ export function EmployeesPageClient({
               </div>
             </div>
 
-            <div className="max-h-96 space-y-3 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
               {model.crewOverview.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                   No crews have been created yet.
@@ -781,12 +834,8 @@ export function EmployeesPageClient({
               )}
             </div>
           </Card>
-        </div>
 
-        {/* Right column: Workforce Analytics (sticky) */}
-        <div className="xl:sticky xl:top-4">
-          <WorkforceAnalyticsPanel model={model} />
-        </div>
+        <WorkforceAnalyticsPanel model={model} />
       </div>
 
       <EmployeeDialog

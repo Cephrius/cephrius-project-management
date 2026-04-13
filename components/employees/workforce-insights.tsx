@@ -115,15 +115,15 @@ export function WorkforceAnalyticsPanel({
   }));
 
   return (
-    <Card className="overflow-hidden ring-primary/15 shadow-none">
-      <CardHeader className="border-b">
+    <Card className="flex h-full flex-col overflow-hidden ring-primary/15 shadow-none">
+      <CardHeader className="shrink-0 border-b">
         <CardTitle>Workforce Analytics</CardTitle>
         <CardDescription>
           A clearer view of staffing mix, current job coverage, and crew capacity.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="grid gap-4 p-5 xl:grid-cols-[minmax(260px,0.85fr)_minmax(0,1.15fr)]">
+      <CardContent className="min-h-0 flex-1 overflow-y-auto p-5">
         <div className="grid gap-4">
           <BreakdownList
             title="Employee Status"

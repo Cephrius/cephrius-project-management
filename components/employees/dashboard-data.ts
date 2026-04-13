@@ -74,6 +74,8 @@ export type WorkforceActivityItem = {
 export type WorkforceAlertItem = {
   id: string;
   tone: "info" | "warning";
+  kind: "employee" | "crew";
+  subject: string;
   title: string;
   detail: string;
 };
@@ -453,61 +455,52 @@ export function buildWorkforceDashboardModel({
     .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
     .slice(0, 8);
 
-  const activeCrewsWithoutLead = crews.filter(
-    (crew) => crew.is_active && !crew.crew_lead_id,
-  ).length;
-  const activeUnassignedEmployees = employees.filter(
-    (employee) => employee.is_active && !assignedEmployeeIds.has(employee.id),
-  ).length;
-  const employeesMissingPayType = employees.filter(
-    (employee) => employee.is_active && !employee.pay_type,
-  ).length;
-  const inactiveCrewMembers = employees.filter(
-    (employee) => !employee.is_active && assignedEmployeeIds.has(employee.id),
-  ).length;
-
-  const alerts = [
-    activeUnassignedEmployees > 0
-      ? {
-          id: "unassigned",
-          tone: "warning" as const,
-          title: `${activeUnassignedEmployees} active employee${
-            activeUnassignedEmployees === 1 ? "" : "s"
-          } unassigned`,
-          detail: "Move available employees into crews to improve scheduling visibility.",
-        }
-      : null,
-    activeCrewsWithoutLead > 0
-      ? {
-          id: "crew-leads",
-          tone: "warning" as const,
-          title: `${activeCrewsWithoutLead} active crew${
-            activeCrewsWithoutLead === 1 ? "" : "s"
-          } without a lead`,
-          detail: "Assign a crew lead to strengthen accountability and reporting.",
-        }
-      : null,
-    employeesMissingPayType > 0
-      ? {
-          id: "missing-pay",
-          tone: "info" as const,
-          title: `${employeesMissingPayType} employee${
-            employeesMissingPayType === 1 ? "" : "s"
-          } missing pay settings`,
-          detail: "Add pay type details so payroll and analytics stay accurate.",
-        }
-      : null,
-    inactiveCrewMembers > 0
-      ? {
-          id: "inactive-assigned",
-          tone: "info" as const,
-          title: `${inactiveCrewMembers} inactive employee${
-            inactiveCrewMembers === 1 ? "" : "s"
-          } still assigned to a crew`,
-          detail: "Review crew membership to keep team capacity totals current.",
-        }
-      : null,
-  ].filter((item): item is WorkforceAlertItem => Boolean(item));
+  const alerts: WorkforceAlertItem[] = [
+    // Warnings first: unassigned active employees
+    ...employees
+      .filter((employee) => employee.is_active && !assignedEmployeeIds.has(employee.id))
+      .map((employee) => ({
+        id: `unassigned-${employee.id}`,
+        tone: "warning" as const,
+        kind: "employee" as const,
+        subject: employee.name,
+        title: "Not assigned to a crew",
+        detail: "Move into a crew to improve scheduling visibility.",
+      })),
+    // Warnings: active crews with no lead
+    ...crews
+      .filter((crew) => crew.is_active && !crew.crew_lead_id)
+      .map((crew) => ({
+        id: `no-lead-${crew.id}`,
+        tone: "warning" as const,
+        kind: "crew" as const,
+        subject: crew.name,
+        title: "No crew lead assigned",
+        detail: "Assign a lead to strengthen accountability and reporting.",
+      })),
+    // Info: active employees missing pay type
+    ...employees
+      .filter((employee) => employee.is_active && !employee.pay_type)
+      .map((employee) => ({
+        id: `missing-pay-${employee.id}`,
+        tone: "info" as const,
+        kind: "employee" as const,
+        subject: employee.name,
+        title: "Missing pay settings",
+        detail: "Add a pay type so payroll and analytics stay accurate.",
+      })),
+    // Info: inactive employees still in a crew
+    ...employees
+      .filter((employee) => !employee.is_active && assignedEmployeeIds.has(employee.id))
+      .map((employee) => ({
+        id: `inactive-assigned-${employee.id}`,
+        tone: "info" as const,
+        kind: "employee" as const,
+        subject: employee.name,
+        title: "Inactive but still assigned to a crew",
+        detail: "Review crew membership to keep capacity totals accurate.",
+      })),
+  ];
 
   return {
     summary: {
