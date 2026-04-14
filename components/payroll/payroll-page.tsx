@@ -356,40 +356,138 @@ export function PayrollPageClient({
       <div>
         <h1 className="text-2xl font-semibold text-primary">Payroll</h1>
         <p className="text-sm text-muted-foreground">
-          Track assigned job payouts, mark completion, and record payment references.
+          Record payments for completed jobs assigned to employees and crews.
         </p>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-5">
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Ready to Pay</div>
-          <div className="mt-1 text-2xl font-semibold">{readyToPayAssignments.length}</div>
+      {/* Primary layout: Ready to Pay (main) + Analytics sidebar */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+
+        {/* Main: Ready to Pay */}
+        <Card className="overflow-hidden">
+          <div className="border-b bg-muted/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-base font-semibold">Ready to Pay</div>
+                <div className="text-xs text-muted-foreground">
+                  Completed jobs assigned to an employee or crew — click <span className="font-medium text-foreground">Add Payment</span> to record a payout.
+                </div>
+              </div>
+              {readyToPayAssignments.length > 0 && (
+                <Badge className="bg-primary text-primary-foreground">
+                  {readyToPayAssignments.length} pending
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Job</TableHead>
+                  <TableHead>Assigned To</TableHead>
+                  <TableHead>Completed</TableHead>
+                  <TableHead className="text-right">Job Value</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {readyToPayAssignments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                      No completed assigned jobs are waiting for payment.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  readyToPayAssignments.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell>
+                        <div className="font-medium">{job.title}</div>
+                        <div className="text-xs text-muted-foreground">{job.project_address}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{job.completed_by_name}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{job.completed_by_type}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-green-600 text-white hover:bg-green-600">Completed</Badge>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{money(job.price_cents)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" onClick={() => setSelectedJob(job)}>
+                          <DollarSign className="mr-1 size-4" />
+                          Add Payment
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Jobs in Payment History</div>
-          <div className="mt-1 text-2xl font-semibold">{paidJobsCount}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Visible Net Paid</div>
-          <div className="mt-1 text-2xl font-semibold">{money(visibleMetrics.netPaid)}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Visible Refunded</div>
-          <div className="mt-1 text-2xl font-semibold">{money(visibleMetrics.refundedTotal)}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground">Visible Payees</div>
-          <div className="mt-1 text-2xl font-semibold">{visibleMetrics.uniquePayees}</div>
-        </Card>
+
+        {/* Sidebar: Analytics */}
+        <div className="flex flex-col gap-4">
+          {/* Key metrics */}
+          <Card className="p-4">
+            <div className="text-sm font-semibold mb-3">Overview</div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Ready to Pay</span>
+                <span className="font-semibold tabular-nums">{readyToPayAssignments.length}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Jobs Paid</span>
+                <span className="font-semibold tabular-nums">{paidJobsCount}</span>
+              </div>
+              <div className="border-t my-2" />
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Net Paid</span>
+                <span className="font-semibold tabular-nums">{money(visibleMetrics.netPaid)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Refunded</span>
+                <span className="font-semibold tabular-nums text-amber-700">{money(visibleMetrics.refundedTotal)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Unique Payees</span>
+                <span className="font-semibold tabular-nums">{visibleMetrics.uniquePayees}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Top paid payees */}
+          <Card className="p-4">
+            <div className="text-sm font-semibold">Top Paid Payees</div>
+            <div className="mt-3 space-y-3">
+              {payeeBreakdown.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No active payments match the current filters.</div>
+              ) : (
+                payeeBreakdown.map((entry) => (
+                  <div key={entry.label} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-muted-foreground truncate">{entry.label}</span>
+                    <span className="font-medium tabular-nums shrink-0">{money(entry.amount)}</span>
+                  </div>
+                ))
+              )}
+              <div className="border-t pt-3 text-xs text-muted-foreground">
+                Gross visible payouts: {money(visibleMetrics.grossPaid)}
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <Card className="p-4">
-          <div className="flex items-start justify-between gap-3">
+      {/* Secondary: Payment History with filters */}
+      <Card className="overflow-hidden">
+        <div className="border-b p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold">Payroll Report</div>
+              <div className="text-sm font-semibold">Payment History</div>
               <div className="text-xs text-muted-foreground">
-                Filter payments, review totals, and export the current view.
+                {filteredPayments.length} payment{filteredPayments.length === 1 ? "" : "s"} in current view
               </div>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
@@ -427,8 +525,7 @@ export function PayrollPageClient({
               />
             </InputGroup>
 
-
-            <Select value={payeeFilter} onValueChange={(value) => setPayeeFilter(value as "all" | "employee" | "crew")} >
+            <Select value={payeeFilter} onValueChange={(value) => setPayeeFilter(value as "all" | "employee" | "crew")}>
               <SelectTrigger className="w-[180px] text-sm">
                 <SelectValue placeholder="Select payee" />
               </SelectTrigger>
@@ -441,9 +538,7 @@ export function PayrollPageClient({
               </SelectContent>
             </Select>
 
-
-
-            <Select value={dateRange} onValueChange={(value) => setDateRange(value as "all" | "30d" | "90d" | "365d")} >
+            <Select value={dateRange} onValueChange={(value) => setDateRange(value as "all" | "30d" | "90d" | "365d")}>
               <SelectTrigger className="w-[180px] text-sm">
                 <SelectValue placeholder="Select date range" />
               </SelectTrigger>
@@ -456,98 +551,6 @@ export function PayrollPageClient({
                 </SelectGroup>
               </SelectContent>
             </Select>
-
-          </div>
-
-
-        </Card>
-
-        <Card className="p-4">
-          <div className="text-sm font-semibold">Top Paid Payees</div>
-          <div className="mt-3 space-y-3">
-            {payeeBreakdown.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No active payments match the current filters.</div>
-            ) : (
-              payeeBreakdown.map((entry) => (
-                <div key={entry.label} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">{entry.label}</span>
-                  <span className="font-medium tabular-nums">{money(entry.amount)}</span>
-                </div>
-              ))
-            )}
-
-            <div className="border-t pt-3 text-xs text-muted-foreground">
-              Gross visible payouts: {money(visibleMetrics.grossPaid)}
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <Card className="overflow-hidden">
-        <div className="border-b p-4">
-          <div className="text-sm font-semibold">Ready to Pay</div>
-          <div className="text-xs text-muted-foreground">Completed jobs assigned to an employee or crew appear here until a payment is recorded.</div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Job</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Completed</TableHead>
-                <TableHead className="text-right">Job Value</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {readyToPayAssignments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                    No completed assigned jobs are waiting for payment.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                readyToPayAssignments.map((job) => (
-                  <TableRow key={job.id}>
-                    <TableCell>
-                      <div className="font-medium">{job.title}</div>
-                      <div className="text-xs text-muted-foreground">{job.project_address}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{job.completed_by_name}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{job.completed_by_type}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-600 text-white hover:bg-green-600">Completed</Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{money(job.price_cents)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" onClick={() => setSelectedJob(job)}>
-                          <DollarSign className="mr-1 size-4" />
-                          Add Payment
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <div className="border-b p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold">Payment History</div>
-              <div className="text-xs text-muted-foreground">
-                {filteredPayments.length} payment{filteredPayments.length === 1 ? "" : "s"} in current view
-              </div>
-            </div>
-            <Badge variant="outline">{statusFilter === "all" ? "All statuses" : statusFilter}</Badge>
           </div>
         </div>
 
@@ -601,7 +604,8 @@ export function PayrollPageClient({
                       <div>{formatDateTime(payment.paid_at)}</div>
                       {payment.refunded_at && (
                         <div className="text-[11px] text-amber-700">
-                          Refunded {formatDateTime(payment.refunded_at)}</div>
+                          Refunded {formatDateTime(payment.refunded_at)}
+                        </div>
                       )}
                       {payment.refund_reason && (
                         <div className="text-[11px] text-muted-foreground">

@@ -758,16 +758,16 @@ export function AccountingOverviewClient({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="max-h-[55vh] overflow-auto xl:max-h-[calc(100vh-22rem)]">
           <Table>
             <TableHeader>
               <TableRow className="border-b bg-muted/20 hover:bg-muted/20">
-                <TableHead className="h-11">Project</TableHead>
-                <TableHead className="hidden h-11 md:table-cell">Status</TableHead>
-                <TableHead className="hidden h-11 lg:table-cell text-right">Revenue</TableHead>
-                <TableHead className="hidden h-11 lg:table-cell text-right">Expenses</TableHead>
-                <TableHead className="hidden h-11 xl:table-cell text-right">Variance</TableHead>
-                <TableHead className="h-11 text-right">Net Profit</TableHead>
+                <TableHead className="sticky top-0 z-10 h-11 bg-muted/20 backdrop-blur-sm">Project</TableHead>
+                <TableHead className="sticky top-0 z-10 hidden h-11 bg-muted/20 backdrop-blur-sm md:table-cell">Status</TableHead>
+                <TableHead className="sticky top-0 z-10 hidden h-11 bg-muted/20 backdrop-blur-sm lg:table-cell text-right">Revenue</TableHead>
+                <TableHead className="sticky top-0 z-10 hidden h-11 bg-muted/20 backdrop-blur-sm lg:table-cell text-right">Expenses</TableHead>
+                <TableHead className="sticky top-0 z-10 hidden h-11 bg-muted/20 backdrop-blur-sm xl:table-cell text-right">Variance</TableHead>
+                <TableHead className="sticky top-0 z-10 h-11 bg-muted/20 backdrop-blur-sm text-right">Net Profit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

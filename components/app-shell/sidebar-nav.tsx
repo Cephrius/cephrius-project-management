@@ -36,8 +36,8 @@ const navItems = [
   { href: "/projects",   label: "Projects",   icon: FolderKanban },
   { href: "/invoices",   label: "Invoices",   icon: FileText },
   { href: "/accounting", label: "Accounting", icon: DollarSign },
-  { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },
   { href: "/payroll",    label: "Payroll",    icon: Wallet },
+  { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },
   { href: "/settings",   label: "Settings",   icon: Settings },
 ];
 

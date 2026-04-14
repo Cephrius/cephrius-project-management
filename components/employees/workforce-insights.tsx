@@ -47,6 +47,13 @@ function formatDate(value: string) {
   });
 }
 
+function toTitleCase(str: string) {
+  return str
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (s) => s.toUpperCase())
+    .trim();
+}
+
 function BreakdownList({
   title,
   description,
@@ -115,7 +122,7 @@ export function WorkforceAnalyticsPanel({
   }));
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden ring-primary/15 shadow-none">
+    <Card className="flex max-h-[80vh] flex-col overflow-hidden ring-primary/15 shadow-none lg:h-full lg:max-h-none">
       <CardHeader className="shrink-0 border-b">
         <CardTitle>Workforce Analytics</CardTitle>
         <CardDescription>
@@ -193,10 +200,7 @@ export function WorkforceAnalyticsPanel({
                       <ChartTooltipContent
                         formatter={(value, name, item) => (
                           <div className="flex w-full items-center justify-between gap-3">
-
-
-                            <span>{typeof name === "string" ? name : item.payload.label}</span>
-
+                            <span>{typeof name === "string" ? toTitleCase(name) : item.payload.label}</span>
                             <span className="font-mono tabular-nums">{Number(value)}</span>
                           </div>
                         )}
