@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertTriangle,
   ArrowRight,
@@ -39,6 +40,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import {
   InputGroup,
   InputGroupAddon,
@@ -151,6 +160,8 @@ export function EmployeesPageClient({
   const [employeeQuery, setEmployeeQuery] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState<EmployeeFilterKey>("all");
   const [isPending, startTransition] = useTransition();
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  const isMobile = useIsMobile();
   const deferredEmployeeQuery = useDeferredValue(employeeQuery);
 
   const model = useMemo(
@@ -241,51 +252,49 @@ export function EmployeesPageClient({
             Manage your workforce — add employees and crews to assign jobs and track payroll.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {/* Notification bell */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="relative">
-                <Bell className="size-4" />
-                {model.alerts.length > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-                    {model.alerts.length}
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel className="flex items-center justify-between py-2.5">
-                <span className="font-semibold">Reminders</span>
-                {model.alerts.length > 0 && (
-                  <Badge variant="destructive" className="text-[10px]">
-                    {model.alerts.length} active
-                  </Badge>
-                )}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {model.alerts.length === 0 ? (
-                <div className="flex flex-col items-center gap-1.5 px-3 py-5 text-center">
-                  <Bell className="size-5 text-muted-foreground/50" />
-                  <p className="text-sm text-muted-foreground">No active reminders</p>
-                  <p className="text-xs text-muted-foreground/70">Your workforce setup looks complete.</p>
-                </div>
-              ) : (
-                <div className="max-h-80 overflow-y-auto">
-                  {model.alerts.map((alert, index) => (
-                    <div key={alert.id}>
-                      {index > 0 && <DropdownMenuSeparator />}
-                      <DropdownMenuItem className="flex cursor-default items-start gap-3 px-3 py-3 focus:bg-muted/50">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* Notification bell — Drawer on mobile, DropdownMenu on desktop */}
+          {isMobile ? (
+            <Drawer open={remindersOpen} onOpenChange={setRemindersOpen}>
+              <DrawerTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Bell className="size-4" />
+                  {model.alerts.length > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
+                      {model.alerts.length}
+                    </span>
+                  )}
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent>
+                <DrawerHeader className="flex items-center justify-between border-b pb-3">
+                  <DrawerTitle>Reminders</DrawerTitle>
+                  {model.alerts.length > 0 && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      {model.alerts.length} active
+                    </Badge>
+                  )}
+                </DrawerHeader>
+                {model.alerts.length === 0 ? (
+                  <div className="flex flex-col items-center gap-1.5 px-4 py-8 text-center">
+                    <Bell className="size-5 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No active reminders</p>
+                    <p className="text-xs text-muted-foreground/70">Your workforce setup looks complete.</p>
+                  </div>
+                ) : (
+                  <div className="max-h-[60vh] overflow-y-auto divide-y">
+                    {model.alerts.map((alert) => (
+                      <div key={alert.id} className="flex items-start gap-3 px-4 py-4">
                         <div className={cn(
-                          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
+                          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
                           alert.tone === "warning"
                             ? "bg-amber-100 dark:bg-amber-950/40"
                             : "bg-blue-100 dark:bg-blue-950/40",
                         )}>
                           {alert.tone === "warning" ? (
-                            <AlertTriangle className="size-3.5 text-amber-600 dark:text-amber-400" />
+                            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
                           ) : (
-                            <Info className="size-3.5 text-blue-600 dark:text-blue-400" />
+                            <Info className="size-4 text-blue-600 dark:text-blue-400" />
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -293,11 +302,8 @@ export function EmployeesPageClient({
                             <span className="truncate text-sm font-semibold leading-snug">
                               {alert.subject}
                             </span>
-                            <Badge
-                              variant="outline"
-                              className="shrink-0 px-1.5 py-0 text-[10px]"
-                            >
-                              {alert.kind}
+                            <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
+                              {alert.kind.charAt(0).toUpperCase() + alert.kind.slice(1)}
                             </Badge>
                           </div>
                           <div className="mt-0.5 text-xs font-medium text-foreground/70">
@@ -307,13 +313,87 @@ export function EmployeesPageClient({
                             {alert.detail}
                           </div>
                         </div>
-                      </DropdownMenuItem>
-                    </div>
-                  ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="border-t p-4">
+                  <DrawerClose asChild>
+                    <Button variant="outline" className="w-full">Close</Button>
+                  </DrawerClose>
                 </div>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Bell className="size-4" />
+                  {model.alerts.length > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
+                      {model.alerts.length}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel className="flex items-center justify-between py-2.5">
+                  <span className="font-semibold">Reminders</span>
+                  {model.alerts.length > 0 && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      {model.alerts.length} active
+                    </Badge>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {model.alerts.length === 0 ? (
+                  <div className="flex flex-col items-center gap-1.5 px-3 py-5 text-center">
+                    <Bell className="size-5 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No active reminders</p>
+                    <p className="text-xs text-muted-foreground/70">Your workforce setup looks complete.</p>
+                  </div>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    {model.alerts.map((alert, index) => (
+                      <div key={alert.id}>
+                        {index > 0 && <DropdownMenuSeparator />}
+                        <DropdownMenuItem className="flex cursor-default items-start gap-3 px-3 py-3 focus:bg-muted/50">
+                          <div className={cn(
+                            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
+                            alert.tone === "warning"
+                              ? "bg-amber-100 dark:bg-amber-950/40"
+                              : "bg-blue-100 dark:bg-blue-950/40",
+                          )}>
+                            {alert.tone === "warning" ? (
+                              <AlertTriangle className="size-3.5 text-amber-600 dark:text-amber-400" />
+                            ) : (
+                              <Info className="size-3.5 text-blue-600 dark:text-blue-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate text-sm font-semibold leading-snug">
+                                {alert.subject}
+                              </span>
+                              <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
+                                {alert.kind.charAt(0).toUpperCase() + alert.kind.slice(1)}
+                              </Badge>
+                            </div>
+                            <div className="mt-0.5 text-xs font-medium text-foreground/70">
+                              {alert.title}
+                            </div>
+                            <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                              {alert.detail}
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <Button
             variant="outline"
@@ -340,7 +420,7 @@ export function EmployeesPageClient({
       </div>
 
       {/* Key Metrics Strip */}
-      <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Card className="px-3 py-3 shadow-none">
           <div className="flex items-center gap-2">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -350,7 +430,7 @@ export function EmployeesPageClient({
               <div className="text-lg font-bold tabular-nums leading-tight">
                 {model.summary.totalEmployees}
               </div>
-              <div className="text-[11px] text-muted-foreground">Total</div>
+              <div className="text-[11px] text-muted-foreground">Total Employees</div>
             </div>
           </div>
         </Card>
@@ -367,7 +447,7 @@ export function EmployeesPageClient({
                   / {model.summary.totalEmployees}
                 </span>
               </div>
-              <div className="text-[11px] text-muted-foreground">Active</div>
+              <div className="text-[11px] text-muted-foreground">Active Employees</div>
             </div>
           </div>
         </Card>
@@ -381,41 +461,13 @@ export function EmployeesPageClient({
               <div className="text-lg font-bold tabular-nums leading-tight">
                 {utilizationPct}%
               </div>
-              <div className="text-[11px] text-muted-foreground">Utilization</div>
+              <div className="text-[11px] text-muted-foreground">Employee Utilization</div>
             </div>
           </div>
         </Card>
 
-        <Card className="px-3 py-3 shadow-none">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <Banknote className="size-3.5" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-lg font-bold tabular-nums leading-tight">
-                {money(model.summary.payrollLoggedCents)}
-              </div>
-              <div className="text-[11px] text-muted-foreground">Payroll</div>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="px-3 py-3 shadow-none">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <DollarSign className="size-3.5" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-lg font-bold tabular-nums leading-tight">
-                {model.summary.avgHourlyRate != null
-                  ? `$${model.summary.avgHourlyRate.toFixed(0)}`
-                  : "—"}
-                <span className="text-xs font-medium text-muted-foreground">/hr</span>
-              </div>
-              <div className="text-[11px] text-muted-foreground">Avg Hourly</div>
-            </div>
-          </div>
-        </Card>
+        
+       
 
         <Card className="px-3 py-3 shadow-none">
           <div className="flex items-center gap-2">
@@ -430,7 +482,7 @@ export function EmployeesPageClient({
                 </span>
               </div>
               <div className="text-[11px] text-muted-foreground">
-                {model.summary.assignedEmployees} assigned
+                {model.summary.assignedEmployees} assigned to jobs
               </div>
             </div>
           </div>
@@ -454,8 +506,8 @@ export function EmployeesPageClient({
       </div>
 
       {/* Three-panel grid — all visible in one view */}
-      <div className="grid h-[calc(100vh-26rem)] grid-cols-[2fr_1.5fr_1.5fr] gap-4">
-          <Card className="flex h-full flex-col overflow-hidden shadow-none">
+      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-26rem)] lg:grid-cols-[2fr_1.5fr_1.5fr]">
+          <Card className="flex max-h-[70vh] flex-col overflow-hidden shadow-none lg:h-full lg:max-h-none">
             <div className="shrink-0 border-b p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -504,14 +556,14 @@ export function EmployeesPageClient({
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-b bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="sticky top-0 z-10 h-10 bg-background">Employee</TableHead>
-                  <TableHead className="sticky top-0 z-10 hidden h-10 bg-background lg:table-cell">Crew</TableHead>
-                  <TableHead className="sticky top-0 z-10 h-10 bg-background">Role</TableHead>
-                  <TableHead className="sticky top-0 z-10 hidden h-10 bg-background md:table-cell">Compensation</TableHead>
-                  <TableHead className="sticky top-0 z-10 hidden h-10 bg-background xl:table-cell">Workload</TableHead>
-                  <TableHead className="sticky top-0 z-10 h-10 bg-background">Status</TableHead>
-                  <TableHead className="sticky top-0 z-10 h-10 bg-background text-right">Actions</TableHead>
+                <TableRow className="border-b hover:bg-muted/20">
+                  <TableHead className="sticky top-0 z-10 h-10 ">Employee</TableHead>
+                  <TableHead className="sticky top-0 z-10 hidden h-10 lg:table-cell">Crew</TableHead>
+                  <TableHead className="sticky top-0 z-10 h-10">Role</TableHead>
+                  <TableHead className="sticky top-0 z-10 hidden h-10 md:table-cell">Compensation</TableHead>
+                  <TableHead className="sticky top-0 z-10 hidden h-10 xl:table-cell">Workload</TableHead>
+                  <TableHead className="sticky top-0 z-10 h-10">Status</TableHead>
+                  <TableHead className="sticky top-0 z-10 h-10 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -634,7 +686,7 @@ export function EmployeesPageClient({
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete employee?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    This will remove {employee.name} from your active workforce list.
+                                    This will remove <span className="underline font-bold">{employee.name}</span> from your active workforce list.
                                     This action cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
@@ -675,7 +727,7 @@ export function EmployeesPageClient({
           </Card>
 
           {/* Crew Overview */}
-          <Card className="flex h-full flex-col overflow-hidden shadow-none">
+          <Card className="flex max-h-[70vh] flex-col overflow-hidden shadow-none lg:h-full lg:max-h-none">
             <div className="shrink-0 border-b p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -705,7 +757,7 @@ export function EmployeesPageClient({
                           <div className="flex flex-wrap items-center gap-2">
                             <div className="truncate text-sm font-semibold">{crew.name}</div>
                             {crew.specialization && (
-                              <Badge variant="outline">{crew.specialization}</Badge>
+                              <Badge variant="outline" className="bg-primary text-white">{crew.specialization}</Badge>
                             )}
                             <StatusBadge active={crew.is_active} />
                           </div>
@@ -746,7 +798,7 @@ export function EmployeesPageClient({
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete crew?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will remove {crew.name} and its member assignments.
+                                  This will remove <span className="underline font-bold">{crew.name}</span> and its member assignments.
                                   This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
