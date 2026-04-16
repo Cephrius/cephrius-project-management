@@ -35,9 +35,9 @@ const navItems = [
   { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
   { href: "/projects",   label: "Projects",   icon: FolderKanban },
   { href: "/invoices",   label: "Invoices",   icon: FileText },
+  { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },
   { href: "/accounting", label: "Accounting", icon: DollarSign },
   { href: "/payroll",    label: "Payroll",    icon: Wallet },
-  { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },
   { href: "/settings",   label: "Settings",   icon: Settings },
 ];
 

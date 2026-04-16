@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   UserPlus,
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,14 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import type {
   WorkforceActivityItem,
   WorkforceAlertItem,
@@ -45,13 +38,6 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function toTitleCase(str: string) {
-  return str
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (s) => s.toUpperCase())
-    .trim();
 }
 
 function BreakdownList({
@@ -173,45 +159,31 @@ export function WorkforceAnalyticsPanel({
                 No assigned jobs are available yet.
               </div>
             ) : (
-              <ChartContainer
-                config={{
-                  activeJobs: { label: "Active Jobs", color: "hsl(217 91% 60%)" },
-                  completedJobs: { label: "Completed Jobs", color: "hsl(142 71% 45%)" },
-                }}
-                className="h-72 w-full aspect-auto"
-              >
-                <BarChart
-                  data={assignmentData}
-                  layout="vertical"
-                  margin={{ top: 4, right: 8, left: 8, bottom: 0 }}
-                >
-                  <CartesianGrid horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="shortLabel"
-                    tickLine={false}
-                    axisLine={false}
-                    width={110}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value, name, item) => (
-                          <div className="flex w-full items-center justify-between gap-3">
-                            <span>{typeof name === "string" ? toTitleCase(name) : item.payload.label}</span>
-                            <span className="font-mono tabular-nums">{Number(value)}</span>
-                          </div>
-                        )}
-                      />
-                    }
-                  />
-                  <ChartLegend content={<ChartLegendContent />} />
-                  <Bar dataKey="activeJobs" fill="var(--color-activeJobs)" radius={6} />
-                  <Bar dataKey="completedJobs" fill="var(--color-completedJobs)" radius={6} />
-                </BarChart>
-              </ChartContainer>
+              <div className="space-y-2">
+                {[...assignmentData]
+                  .sort((a, b) => b.activeJobs - a.activeJobs)
+                  .map((item, i) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center gap-3 rounded-lg border px-3 py-2.5"
+                    >
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground tabular-nums">
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{item.label}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                          {item.activeJobs} active
+                        </span>
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-300">
+                          {item.completedJobs} done
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             )}
           </div>
 
@@ -231,38 +203,42 @@ export function WorkforceAnalyticsPanel({
                 Create a crew to start tracking capacity.
               </div>
             ) : (
-              <ChartContainer
-                config={{
-                  members: { label: "Members", color: "hsl(215 20% 45%)" },
-                  activeJobs: { label: "Active Jobs", color: "hsl(35 92% 55%)" },
-                }}
-                className="h-72 w-full aspect-auto"
-              >
-                <BarChart
-                  data={crewCapacityData}
-                  margin={{ top: 4, right: 8, left: 8, bottom: 0 }}
-                >
-                  <CartesianGrid vertical={false} />
-                  <XAxis dataKey="shortLabel" tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={34} />
-                  <ChartTooltip
-                    cursor={false}
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value, name) => (
-                          <div className="flex w-full items-center justify-between gap-3">
-                            <span>{typeof name === "string" ? name : "Value"}</span>
-                            <span className="font-mono tabular-nums">{Number(value)}</span>
-                          </div>
-                        )}
-                      />
-                    }
-                  />
-                  <ChartLegend content={<ChartLegendContent />} />
-                  <Bar dataKey="members" fill="var(--color-members)" radius={6} />
-                  <Bar dataKey="activeJobs" fill="var(--color-activeJobs)" radius={6} />
-                </BarChart>
-              </ChartContainer>
+              <div className="space-y-4">
+                {crewCapacityData.map((item) => {
+                  const ratio = item.members > 0
+                    ? Math.round((item.activeJobs / item.members) * 100)
+                    : 0;
+                  const cappedRatio = Math.min(ratio, 100);
+                  const isOverloaded = ratio > 100;
+                  return (
+                    <div key={item.label} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium">{item.label}</span>
+                        <span className={cn(
+                          "shrink-0 text-xs font-semibold tabular-nums",
+                          isOverloaded ? "text-destructive" : "text-muted-foreground",
+                        )}>
+                          {ratio}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-1.5 rounded-full transition-all",
+                            isOverloaded ? "bg-destructive" : "bg-primary",
+                          )}
+                          style={{ width: `${cappedRatio}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{item.members} member{item.members !== 1 ? "s" : ""}</span>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span>{item.activeJobs} active job{item.activeJobs !== 1 ? "s" : ""}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
