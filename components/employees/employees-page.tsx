@@ -159,10 +159,12 @@ export function EmployeesPageClient({
   const [editingCrew, setEditingCrew] = useState<CrewProfile | null>(null);
   const [employeeQuery, setEmployeeQuery] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState<EmployeeFilterKey>("all");
+  const [crewQuery, setCrewQuery] = useState("");
   const [isPending, startTransition] = useTransition();
   const [remindersOpen, setRemindersOpen] = useState(false);
   const isMobile = useIsMobile();
   const deferredEmployeeQuery = useDeferredValue(employeeQuery);
+  const deferredCrewQuery = useDeferredValue(crewQuery);
 
   const model = useMemo(
     () =>
@@ -234,6 +236,25 @@ export function EmployeesPageClient({
       return haystack.includes(query);
     });
   }, [deferredEmployeeQuery, employeeFilter, model.employeeRoster]);
+
+  const filteredCrews = useMemo(() => {
+    const q = deferredCrewQuery.trim().toLowerCase();
+    if (!q) return model.crewOverview;
+    return model.crewOverview.filter((crewRow) => {
+      const crew = crewById.get(crewRow.id);
+      if (!crew) return false;
+      const haystack = [
+        crew.name,
+        crew.specialization ?? "",
+        crew.description ?? "",
+        crewRow.crewLeadName ?? "",
+        ...(crew.member_names ?? []),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [deferredCrewQuery, model.crewOverview, crewById]);
 
   const utilizationPct =
     model.summary.activeEmployees > 0
@@ -505,9 +526,11 @@ export function EmployeesPageClient({
         </Button>
       </div>
 
-      {/* Three-panel grid — all visible in one view */}
-      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-26rem)] lg:grid-cols-[2fr_1.5fr_1.5fr]">
-          <Card className="flex max-h-[70vh] flex-col overflow-hidden shadow-none lg:h-full lg:max-h-none">
+      {/* Two-column grid — left column stacks roster + crews, right column is analytics */}
+      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-26rem)] lg:grid-cols-[3fr_2fr]">
+        {/* Left column: Employee Roster on top, Crew Overview below */}
+        <div className="flex min-h-0 flex-col gap-4">
+          <Card className="flex shrink-0 flex-col overflow-hidden shadow-none max-h-[55vh]">
             <div className="shrink-0 border-b p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -727,16 +750,28 @@ export function EmployeesPageClient({
           </Card>
 
           {/* Crew Overview */}
-          <Card className="flex max-h-[70vh] flex-col overflow-hidden shadow-none lg:h-full lg:max-h-none">
+          <Card className="flex flex-1 min-h-0 flex-col overflow-hidden shadow-none max-h-[70vh] lg:max-h-none">
             <div className="shrink-0 border-b p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold">Crew Overview</div>
-                  <div className="text-xs text-muted-foreground">
-                    Crew size, leads, jobs, and payroll.
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold">Crew Overview</div>
+                    <div className="text-xs text-muted-foreground">
+                      Crew size, leads, jobs, and payroll.
+                    </div>
                   </div>
+                  <Badge variant="outline">{model.summary.totalCrews} crews</Badge>
                 </div>
-                <Badge variant="outline">{model.summary.totalCrews} crews</Badge>
+                <InputGroup>
+                  <InputGroupAddon>
+                    <Search className="size-4" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    value={crewQuery}
+                    onChange={(e) => setCrewQuery(e.target.value)}
+                    placeholder="Search crews, leads, members..."
+                  />
+                </InputGroup>
               </div>
             </div>
 
@@ -745,8 +780,12 @@ export function EmployeesPageClient({
                 <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                   No crews have been created yet.
                 </div>
+              ) : filteredCrews.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  No crews match your search.
+                </div>
               ) : (
-                model.crewOverview.map((crewRow) => {
+                filteredCrews.map((crewRow) => {
                   const crew = crewById.get(crewRow.id);
                   if (!crew) return null;
 
@@ -886,6 +925,7 @@ export function EmployeesPageClient({
               )}
             </div>
           </Card>
+        </div>{/* end left column */}
 
         <WorkforceAnalyticsPanel model={model} />
       </div>
