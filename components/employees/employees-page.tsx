@@ -67,6 +67,7 @@ import { toast } from "sonner";
 import { buildWorkforceDashboardModel } from "./dashboard-data";
 import { EmployeeDialog } from "./employee-dialog";
 import { CrewDialog } from "./crew-dialog";
+import { FilterChip } from "./filter-chip";
 import { WorkforceAnalyticsPanel } from "./workforce-insights";
 import {
   PAY_TYPE_LABELS,
@@ -555,20 +556,13 @@ export function EmployeesPageClient({
                     {employeeFilterTabs.map((tab) => {
                       const active = employeeFilter === tab.key;
                       return (
-                        <button
+                        <FilterChip
                           key={tab.key}
-                          type="button"
+                          active={active}
+                          label={tab.label}
+                          count={tab.count}
                           onClick={() => setEmployeeFilter(tab.key)}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                            active
-                              ? "border-primary bg-primary/10 text-foreground"
-                              : "border-border text-muted-foreground hover:text-foreground",
-                          )}
-                        >
-                          <span>{tab.label}</span>
-                          <span className="text-xs tabular-nums">{tab.count}</span>
-                        </button>
+                        />
                       );
                     })}
                   </div>
