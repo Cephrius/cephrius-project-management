@@ -20,9 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 import { PAY_TYPE_LABELS, type EmployeeProfile } from "./types";
 import { EmployeeDialog } from "./employee-dialog";
+import { FilterChip } from "./filter-chip";
 
 type FilterKey = "all" | "active" | "inactive";
 
@@ -112,20 +112,13 @@ export function EmployeeRosterPageClient({
               {filterTabs.map((tab) => {
                 const active = filter === tab.key;
                 return (
-                  <button
+                  <FilterChip
                     key={tab.key}
-                    type="button"
+                    active={active}
+                    label={tab.label}
+                    count={tab.count}
                     onClick={() => setFilter(tab.key)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                      active
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <span>{tab.label}</span>
-                    <span className="text-xs tabular-nums">{tab.count}</span>
-                  </button>
+                  />
                 );
               })}
             </div>

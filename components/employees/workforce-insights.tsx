@@ -52,7 +52,7 @@ function BreakdownList({
   valueSuffix?: (key: string) => string | null;
 }) {
   return (
-    <div className="rounded-xl border bg-background p-4">
+    <div className="rounded-xl border bg-background/20 p-4">
       <div className="mb-4">
         <div className="text-sm font-semibold">{title}</div>
         <div className="text-xs text-muted-foreground">{description}</div>
@@ -142,8 +142,8 @@ export function WorkforceAnalyticsPanel({
           />
         </div>
 
-        <div className="grid gap-4">
-          <div className="rounded-xl border bg-background p-4">
+        <div className="grid gap-4 mt-2">
+          <div className="rounded-xl border bg-background/20 p-4">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Assignment Load</div>
@@ -187,7 +187,7 @@ export function WorkforceAnalyticsPanel({
             )}
           </div>
 
-          <div className="rounded-xl border bg-background p-4">
+          <div className="rounded-xl border bg-background/20 p-4">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Crew Capacity</div>
