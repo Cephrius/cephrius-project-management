@@ -48,3 +48,7 @@ create-sanitize-issue.sh
 
 # local scripts
 /scripts
+
+# Claude Code project skills (kept local, not committed)
+.claude/skills/
+

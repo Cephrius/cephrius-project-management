@@ -192,7 +192,7 @@ export default async function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <BreadcrumbSetter crumbs={[{ label: "Employees", href: "/employees" }]} />
+      <BreadcrumbSetter crumbs={[{ label: "Employees & Crews", href: "/employees-crews" }]} />
       <EmployeesPageClient
         employees={employees}
         crews={crews}

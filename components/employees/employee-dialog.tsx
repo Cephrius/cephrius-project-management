@@ -89,6 +89,7 @@ export function EmployeeDialog({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: hydrate form fields when dialog opens with a new entity
     setName(initial?.name ?? "");
     setJobTitle(initial?.job_title ?? "");
     setRole(initial?.role ?? "");

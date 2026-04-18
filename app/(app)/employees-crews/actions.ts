@@ -70,7 +70,7 @@ export async function createEmployee(formData: FormData) {
 
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/employees");
+  revalidatePath("/employees-crews");
   revalidatePath("/payroll");
   return { ok: true };
 }
@@ -126,7 +126,7 @@ export async function updateEmployee(formData: FormData) {
 
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/employees");
+  revalidatePath("/employees-crews");
   revalidatePath("/payroll");
   return { ok: true };
 }
@@ -147,7 +147,7 @@ export async function deleteEmployee(employeeId: string) {
 
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/employees");
+  revalidatePath("/employees-crews");
   revalidatePath("/payroll");
   return { ok: true };
 }
@@ -200,7 +200,7 @@ export async function createCrew(formData: FormData) {
     if (memberErr) return { ok: false, message: memberErr.message };
   }
 
-  revalidatePath("/employees");
+  revalidatePath("/employees-crews");
   revalidatePath("/payroll");
   return { ok: true };
 }
@@ -263,7 +263,7 @@ export async function updateCrew(formData: FormData) {
     if (memberErr) return { ok: false, message: memberErr.message };
   }
 
-  revalidatePath("/employees");
+  revalidatePath("/employees-crews");
   revalidatePath("/payroll");
   return { ok: true };
 }
@@ -284,7 +284,7 @@ export async function deleteCrew(crewId: string) {
 
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/employees");
+  revalidatePath("/employees-crews");
   revalidatePath("/payroll");
   return { ok: true };
 }

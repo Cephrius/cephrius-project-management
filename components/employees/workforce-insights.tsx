@@ -97,15 +97,8 @@ export function WorkforceAnalyticsPanel({
 }: {
   model: WorkforceDashboardModel;
 }) {
-  const assignmentData = model.assignmentLoad.map((item) => ({
-    ...item,
-    shortLabel: item.label.length > 18 ? `${item.label.slice(0, 18)}...` : item.label,
-  }));
-
-  const crewCapacityData = model.crewOverview.slice(0, 6).map((item) => ({
-    ...item,
-    shortLabel: item.label.length > 18 ? `${item.label.slice(0, 18)}...` : item.label,
-  }));
+  const assignmentData = model.assignmentLoad;
+  const crewCapacityData = model.crewOverview.slice(0, 6);
 
   return (
     <Card className="flex max-h-[80vh] flex-col overflow-hidden ring-primary/15 shadow-none lg:h-full lg:max-h-none">
