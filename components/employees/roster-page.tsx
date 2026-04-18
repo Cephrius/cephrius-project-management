@@ -1,12 +1,38 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
-import { ArrowLeft, Pencil, Plus, Search } from "lucide-react";
+import { useDeferredValue, useMemo, useState, useTransition } from "react";
+import {
+  ArrowLeft,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Receipt,
+  Search,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   InputGroup,
   InputGroupAddon,
@@ -23,6 +49,13 @@ import {
 import { PAY_TYPE_LABELS, type EmployeeProfile } from "./types";
 import { EmployeeDialog } from "./employee-dialog";
 import { FilterChip } from "./filter-chip";
+import {
+  EmployeePaymentsDialog,
+  type EmployeePaymentRecord,
+} from "./employee-payments-dialog";
+import { deleteEmployee } from "@/app/(app)/employees-crews/actions";
+
+export type { EmployeePaymentRecord };
 
 type FilterKey = "all" | "active" | "inactive";
 
@@ -35,16 +68,9 @@ function formatDate(value: string | null) {
   });
 }
 
-function payDisplay(employee: EmployeeProfile) {
+function payTypeDisplay(employee: EmployeeProfile) {
   if (!employee.pay_type) return "Not set";
-  if (employee.pay_type === "per_job") return PAY_TYPE_LABELS[employee.pay_type];
-  if (employee.hourly_rate == null) return PAY_TYPE_LABELS[employee.pay_type];
-  const suffix = employee.pay_type === "salary" ? "/yr" : "/hr";
-  const value =
-    employee.pay_type === "salary"
-      ? employee.hourly_rate.toLocaleString(undefined, { maximumFractionDigits: 0 })
-      : employee.hourly_rate.toFixed(2);
-  return `${PAY_TYPE_LABELS[employee.pay_type]} · $${value}${suffix}`;
+  return PAY_TYPE_LABELS[employee.pay_type];
 }
 
 function contactDisplay(employee: EmployeeProfile) {
@@ -53,14 +79,30 @@ function contactDisplay(employee: EmployeeProfile) {
 
 export function EmployeeRosterPageClient({
   employees,
+  payments,
 }: {
   employees: EmployeeProfile[];
+  payments: EmployeePaymentRecord[];
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
   const deferredQuery = useDeferredValue(query);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeProfile | null>(null);
+  const [paymentsEmployee, setPaymentsEmployee] = useState<EmployeeProfile | null>(null);
+  const [deletingEmployee, setDeletingEmployee] = useState<EmployeeProfile | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const paymentsByEmployeeId = useMemo(() => {
+    const map = new Map<string, EmployeePaymentRecord[]>();
+    for (const payment of payments) {
+      if (!payment.employee_id) continue;
+      const list = map.get(payment.employee_id) ?? [];
+      list.push(payment);
+      map.set(payment.employee_id, list);
+    }
+    return map;
+  }, [payments]);
 
   const filterTabs = useMemo(
     () => [
@@ -84,17 +126,29 @@ export function EmployeeRosterPageClient({
     });
   }, [deferredQuery, employees, filter]);
 
+  const handleDelete = (employee: EmployeeProfile) => {
+    startTransition(async () => {
+      const result = await deleteEmployee(employee.id);
+      if (!result.ok) {
+        toast.error(result.message ?? "Failed to delete employee.");
+        return;
+      }
+      toast.success("Employee deleted.");
+      setDeletingEmployee(null);
+    });
+  };
+
   return (
     <div className="space-y-6 pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground" asChild>
+          <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground hover:text-primary" asChild>
             <Link href="/employees-crews">
               <ArrowLeft className="mr-1.5 size-4" />
               Back to Employees &amp; Crews
             </Link>
           </Button>
-          <h1 className="text-2xl font-semibold text-primary">Full Employee Roster</h1>
+          <h1 className="text-2xl font-semibold text-primary">Employees</h1>
           <p className="text-sm text-muted-foreground">
             {employees.length} employee{employees.length === 1 ? "" : "s"} total
           </p>
@@ -183,7 +237,7 @@ export function EmployeeRosterPageClient({
                         <div className="text-xs text-muted-foreground">{employee.role}</div>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">{payDisplay(employee)}</TableCell>
+                    <TableCell className="text-sm">{payTypeDisplay(employee)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(employee.hire_date ?? employee.created_at)}
                     </TableCell>
@@ -198,14 +252,44 @@ export function EmployeeRosterPageClient({
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                     <Button
-                    
-                    onClick={() => { setEditingEmployee(employee); setDialogOpen(true); }}
-                  >
-                    <Pencil className="size-3.5" />
-                    Edit
-                  </Button>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            aria-label={`More actions for ${employee.name}`}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onSelect={() => setPaymentsEmployee(employee)}
+                          >
+                            <Receipt className="mr-2 size-4" />
+                            View Payments
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setEditingEmployee(employee);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="mr-2 size-4" />
+                            Edit Employee
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setDeletingEmployee(employee)}
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -220,6 +304,52 @@ export function EmployeeRosterPageClient({
         onOpenChange={setDialogOpen}
         initial={editingEmployee}
       />
+
+      <EmployeePaymentsDialog
+        employee={paymentsEmployee}
+        payments={
+          paymentsEmployee
+            ? paymentsByEmployeeId.get(paymentsEmployee.id) ?? []
+            : []
+        }
+        onOpenChange={(open) => {
+          if (!open) setPaymentsEmployee(null);
+        }}
+      />
+
+      <AlertDialog
+        open={Boolean(deletingEmployee)}
+        onOpenChange={(open) => {
+          if (!open && !isPending) setDeletingEmployee(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete employee?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove{" "}
+              <span className="font-semibold underline">
+                {deletingEmployee?.name}
+              </span>{" "}
+              from your active workforce list. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (deletingEmployee) handleDelete(deletingEmployee);
+              }}
+            >
+              Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+

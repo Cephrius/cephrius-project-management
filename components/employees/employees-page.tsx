@@ -8,7 +8,11 @@ import {
   Bell,
   Briefcase,
   Info,
+  MoreHorizontal,
+  Pencil,
+  Receipt,
   Search,
+  Trash2,
   TrendingUp,
   UserCheck,
   UserPlus,
@@ -65,6 +69,10 @@ import { toast } from "sonner";
 import { buildWorkforceDashboardModel } from "./dashboard-data";
 import { EmployeeDialog } from "./employee-dialog";
 import { CrewDialog } from "./crew-dialog";
+import {
+  EmployeePaymentsDialog,
+  type EmployeePaymentRecord,
+} from "./employee-payments-dialog";
 import { FilterChip } from "./filter-chip";
 import { WorkforceAnalyticsPanel } from "./workforce-insights";
 import {
@@ -144,11 +152,13 @@ export function EmployeesPageClient({
   crews,
   jobs,
   payments,
+  employeePayments,
 }: {
   employees: EmployeeProfile[];
   crews: CrewProfile[];
   jobs: WorkforceJob[];
   payments: WorkforcePayment[];
+  employeePayments: EmployeePaymentRecord[];
 }) {
   const [nowIso] = useState(() => new Date().toISOString());
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
@@ -156,6 +166,12 @@ export function EmployeesPageClient({
   const [editingEmployee, setEditingEmployee] =
     useState<EmployeeProfile | null>(null);
   const [editingCrew, setEditingCrew] = useState<CrewProfile | null>(null);
+  const [paymentsEmployee, setPaymentsEmployee] = useState<EmployeeProfile | null>(
+    null,
+  );
+  const [deletingEmployee, setDeletingEmployee] = useState<EmployeeProfile | null>(
+    null,
+  );
   const [employeeQuery, setEmployeeQuery] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState<EmployeeFilterKey>("all");
   const [crewQuery, setCrewQuery] = useState("");
@@ -181,6 +197,17 @@ export function EmployeesPageClient({
     () => new Map(crews.map((crew) => [crew.id, crew])),
     [crews],
   );
+
+  const paymentsByEmployeeId = useMemo(() => {
+    const map = new Map<string, EmployeePaymentRecord[]>();
+    for (const payment of employeePayments) {
+      if (!payment.employee_id) continue;
+      const list = map.get(payment.employee_id) ?? [];
+      list.push(payment);
+      map.set(payment.employee_id, list);
+    }
+    return map;
+  }, [employeePayments]);
 
   const employeeFilterTabs = useMemo(
     () => [
@@ -511,15 +538,15 @@ export function EmployeesPageClient({
 
       {/* Quick links */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" asChild>
           <Link href="/employees-crews/roster">
-            View Full Roster
+            All Employees
             <ArrowRight className="ml-1.5 size-4" />
           </Link>
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" asChild>
           <Link href="/employees-crews/crews">
-            View All Crews
+            All Crews
             <ArrowRight className="ml-1.5 size-4" />
           </Link>
         </Button>
@@ -539,8 +566,8 @@ export function EmployeesPageClient({
                   </div>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 sm:w-auto">
-                  <InputGroup className="w-full sm:w-80">
+                <div className="flex w-full flex-col gap-3 lg:ml-auto lg:items-end">
+                  <InputGroup className="w-full sm:ml-auto sm:w-80">
                     <InputGroupAddon>
                       <Search className="size-4" />
                     </InputGroupAddon>
@@ -654,11 +681,6 @@ export function EmployeesPageClient({
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div className="text-sm">{payDisplay(employee)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {row.directPayrollLoggedCents > 0
-                              ? `${money(row.directPayrollLoggedCents)} logged`
-                              : "No payroll logged"}
-                          </div>
                         </TableCell>
                         <TableCell className="hidden xl:table-cell">
                           <div className="space-y-1 text-sm">
@@ -676,61 +698,43 @@ export function EmployeesPageClient({
                           <StatusBadge active={employee.is_active} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditingEmployee(employee);
-                                setEmployeeDialogOpen(true);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  disabled={isPending}
-                                >
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete employee?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will remove <span className="underline font-bold">{employee.name}</span> from your active workforce list.
-                                    This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel disabled={isPending}>
-                                    Cancel
-                                  </AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    disabled={isPending}
-                                    onClick={() => {
-                                      startTransition(async () => {
-                                        const result = await deleteEmployee(employee.id);
-                                        if (!result.ok) {
-                                          toast.error(
-                                            result.message ?? "Failed to delete employee.",
-                                          );
-                                          return;
-                                        }
-                                        toast.success("Employee deleted.");
-                                      });
-                                    }}
-                                  >
-                                    Confirm Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                aria-label={`More actions for ${employee.name}`}
+                              >
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onSelect={() => setPaymentsEmployee(employee)}
+                              >
+                                <Receipt className="mr-2 size-4" />
+                                View Payments
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setEditingEmployee(employee);
+                                  setEmployeeDialogOpen(true);
+                                }}
+                              >
+                                <Pencil className="mr-2 size-4" />
+                                Edit Employee
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={() => setDeletingEmployee(employee)}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -744,7 +748,7 @@ export function EmployeesPageClient({
           {/* Crew Overview */}
           <Card className="flex flex-1 min-h-0 flex-col overflow-hidden shadow-none max-h-[70vh] lg:max-h-none">
             <div className="shrink-0 border-b p-4">
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold">Crew Overview</div>
@@ -754,7 +758,7 @@ export function EmployeesPageClient({
                   </div>
                   <Badge variant="outline">{model.summary.totalCrews} crews</Badge>
                 </div>
-                <InputGroup>
+                <InputGroup className="w-full sm:ml-auto sm:w-80">
                   <InputGroupAddon>
                     <Search className="size-4" />
                   </InputGroupAddon>
@@ -936,6 +940,63 @@ export function EmployeesPageClient({
         initial={editingCrew}
         employees={employees}
       />
+
+      <EmployeePaymentsDialog
+        employee={paymentsEmployee}
+        payments={
+          paymentsEmployee
+            ? paymentsByEmployeeId.get(paymentsEmployee.id) ?? []
+            : []
+        }
+        onOpenChange={(open) => {
+          if (!open) setPaymentsEmployee(null);
+        }}
+      />
+
+      <AlertDialog
+        open={Boolean(deletingEmployee)}
+        onOpenChange={(open) => {
+          if (!open && !isPending) setDeletingEmployee(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete employee?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove{" "}
+              <span className="font-semibold underline">
+                {deletingEmployee?.name}
+              </span>{" "}
+              from your active workforce list. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!deletingEmployee) return;
+                const target = deletingEmployee;
+                startTransition(async () => {
+                  const result = await deleteEmployee(target.id);
+                  if (!result.ok) {
+                    toast.error(
+                      result.message ?? "Failed to delete employee.",
+                    );
+                    return;
+                  }
+                  toast.success("Employee deleted.");
+                  setDeletingEmployee(null);
+                });
+              }}
+            >
+              Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
