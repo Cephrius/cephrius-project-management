@@ -67,13 +67,13 @@ export function CrewsPageClient({
     <div className="space-y-6 pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground" asChild>
+          <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground hover:text-primary" asChild>
             <Link href="/employees-crews">
               <ArrowLeft className="mr-1.5 size-4" />
               Back to Employees &amp; Crews
             </Link>
           </Button>
-          <h1 className="text-2xl font-semibold text-primary">All Crews</h1>
+          <h1 className="text-2xl font-semibold text-primary">Crews</h1>
           <p className="text-sm text-muted-foreground">
             {crews.length} crew{crews.length === 1 ? "" : "s"} total
           </p>
