@@ -152,7 +152,7 @@ export function EmployeeRosterPageClient({
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                     No employees match your search or filter.
                   </TableCell>
                 </TableRow>

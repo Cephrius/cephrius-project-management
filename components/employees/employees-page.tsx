@@ -5,10 +5,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertTriangle,
   ArrowRight,
-  Banknote,
   Bell,
   Briefcase,
-  DollarSign,
   Info,
   Search,
   TrendingUp,
