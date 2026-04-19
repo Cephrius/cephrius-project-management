@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toggleJobComplete } from "@/app/(app)/projects/[id]/actions";
 import { AddJobDialog } from "@/components/jobs/add-job-dialog";
+import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import { DeleteJobDialog } from "@/components/jobs/delete-job-dialog";
 import { EditJobDialog } from "@/components/jobs/edit-job-dialog";
 
@@ -135,6 +136,7 @@ export function JobsTable({
 
   return (
     <div className="space-y-3">
+      <HighlightScroller />
       <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-1 sm:gap-2">
           {filterTabs.map((tab) => {
@@ -324,7 +326,7 @@ export function JobsTable({
               </TableRow>
             ) : (
               filtered.map((job) => (
-                <TableRow key={job.id} className="h-14">
+                <TableRow key={job.id} data-highlight-id={job.id} className="h-14">
                   <TableCell className="font-medium">{job.title}</TableCell>
                   <TableCell className="tabular-nums">{formatMoney(job.price_cents)}</TableCell>
                   {showScheduled && (

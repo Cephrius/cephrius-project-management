@@ -6,6 +6,7 @@ import { DollarSign, Download, Search, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -353,6 +354,7 @@ export function PayrollPageClient({
 
   return (
     <div className="space-y-6">
+      <HighlightScroller />
       <div>
         <h1 className="text-2xl font-semibold text-primary">Payroll</h1>
         <p className="text-sm text-muted-foreground">
@@ -577,7 +579,7 @@ export function PayrollPageClient({
                 </TableRow>
               ) : (
                 filteredPayments.map((payment) => (
-                  <TableRow key={payment.id}>
+                  <TableRow key={payment.id} data-highlight-id={payment.id}>
                     <TableCell>
                       <div className="font-medium">{payment.paid_to_name}</div>
                       <div className="text-xs text-muted-foreground capitalize">{payment.paid_to_type}</div>

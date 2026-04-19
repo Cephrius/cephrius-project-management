@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -140,6 +141,7 @@ export function EmployeeRosterPageClient({
 
   return (
     <div className="space-y-6 pb-6">
+      <HighlightScroller />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground hover:text-primary" asChild>
@@ -212,7 +214,7 @@ export function EmployeeRosterPageClient({
                 </TableRow>
               ) : (
                 filtered.map((employee) => (
-                  <TableRow key={employee.id}>
+                  <TableRow key={employee.id} data-highlight-id={employee.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar size="sm">

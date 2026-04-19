@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import {
   ChartContainer,
   ChartLegend,
@@ -480,6 +481,7 @@ export function AccountingOverviewClient({
 
   return (
     <div className="space-y-6">
+      <HighlightScroller />
       <Card className="overflow-hidden">
         <div className="border-b p-5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
@@ -784,6 +786,7 @@ export function AccountingOverviewClient({
                   return (
                     <TableRow
                       key={row.project_id}
+                      data-highlight-id={row.project_id}
                       className="group h-14 cursor-pointer"
                       onClick={() => router.push(`/accounting/${row.project_id}`)}
                     >

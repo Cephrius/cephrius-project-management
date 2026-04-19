@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import {
   InputGroup,
   InputGroupAddon,
@@ -65,6 +66,7 @@ export function CrewsPageClient({
 
   return (
     <div className="space-y-6 pb-6">
+      <HighlightScroller />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-muted-foreground hover:text-primary" asChild>
@@ -121,7 +123,7 @@ export function CrewsPageClient({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((crew) => (
-            <Card key={crew.id} className="p-5 shadow-none">
+            <Card key={crew.id} data-highlight-id={crew.id} className="p-5 shadow-none">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
