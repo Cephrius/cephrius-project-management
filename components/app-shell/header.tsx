@@ -14,7 +14,6 @@ import {
   Receipt,
   Users,
   UserRound,
-  User
 } from "lucide-react";
 import {
   type FormEvent,
@@ -59,6 +58,7 @@ function suggestionTypeLabel(type: SuggestionType) {
   if (type === "crew") return "Crew";
   if (type === "payment") return "Payment";
   if (type === "expense") return "Expense";
+  else return "No suggestions found...";
 }
 
 function normalizeQuery(value: string) {

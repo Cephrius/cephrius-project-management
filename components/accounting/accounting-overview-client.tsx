@@ -786,7 +786,6 @@ export function AccountingOverviewClient({
                   return (
                     <TableRow
                       key={row.project_id}
-                      data-highlight-id={row.project_id}
                       className="group h-14 cursor-pointer"
                       onClick={() => router.push(`/accounting/${row.project_id}`)}
                     >
