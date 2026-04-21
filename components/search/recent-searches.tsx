@@ -44,7 +44,7 @@ export function RecentSearches({ recents }: { recents: string[] }) {
       </div>
       {recents.length === 0 ? (
         <div className="px-4 py-6 text-sm text-muted-foreground">
-          No recent searches yet. Try searching for a project, job, employee, or invoice from the header.
+          No recent searches yet. Try searching for the search bar.
         </div>
       ) : (
         <ul className="divide-y">

@@ -214,9 +214,9 @@ export function EmployeeRosterPageClient({
                 </TableRow>
               ) : (
                 filtered.map((employee) => (
-                  <TableRow key={employee.id} data-highlight-id={employee.id}>
+                  <TableRow key={employee.id}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
+                      <div data-highlight-id={employee.name} className="flex items-center gap-3 rounded-md px-2 py-1">
                         <Avatar size="sm">
                           <AvatarFallback>
                             {employee.name

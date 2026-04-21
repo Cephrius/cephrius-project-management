@@ -579,10 +579,12 @@ export function PayrollPageClient({
                 </TableRow>
               ) : (
                 filteredPayments.map((payment) => (
-                  <TableRow key={payment.id} data-highlight-id={payment.id}>
+                  <TableRow key={payment.id}>
                     <TableCell>
-                      <div className="font-medium">{payment.paid_to_name}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{payment.paid_to_type}</div>
+                      <div data-highlight={payment.paid_to_name}>
+                        <div className="font-medium">{payment.paid_to_name}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{payment.paid_to_type}</div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{payment.job_title}</div>
