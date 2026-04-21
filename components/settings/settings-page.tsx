@@ -25,6 +25,7 @@ import { SettingsBusinessProfileCard } from "@/components/settings/settings-busi
 import { SettingsPreferencesCard } from "@/components/settings/settings-preferences-card";
 import { SettingsSecurityCard } from "@/components/settings/settings-security-card";
 import { SettingsDataSessionCard } from "@/components/settings/settings-data-session-card";
+import { SettingsReleaseNotesCard } from "@/components/settings/settings-release-notes-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";         
@@ -203,9 +204,13 @@ export function SettingsPageClient({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SettingsAccountDetailsCard account={account} />   
+        <SettingsAccountDetailsCard account={account} />
 
         <SettingsAppearanceCard />
+      </div>
+
+      <div className="lg:hidden">
+        <SettingsReleaseNotesCard />
       </div>
 
       <SettingsBusinessProfileCard

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -13,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import type { ProjectListItem } from "@/components/projects/types";
 
 export function ProjectsTable({ projects }: { projects: ProjectListItem[] }) {
+  const router = useRouter();
+
   if (projects.length === 0) {
     return (
       <Card className="p-8">
@@ -24,7 +27,7 @@ export function ProjectsTable({ projects }: { projects: ProjectListItem[] }) {
   }
 
   return (
-    <Card className="p-4 sm:p-5">
+    <Card className="p-3 sm:p-5">
       <Table>
         <TableHeader>
           <TableRow>
@@ -35,11 +38,16 @@ export function ProjectsTable({ projects }: { projects: ProjectListItem[] }) {
         </TableHeader>
         <TableBody>
           {projects.map((project) => (
-            <TableRow key={project.id}>
+            <TableRow
+              key={project.id}
+              className="cursor-pointer"
+              onClick={() => router.push(`/projects/${project.id}`)}
+            >
               <TableCell className="px-2 py-3">
                 <Link
                   href={`/projects/${project.id}`}
                   className="font-medium hover:underline"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {project.project_address}
                 </Link>

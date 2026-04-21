@@ -8,6 +8,48 @@ export type ReleaseNote = {
 // New releases every tuesday (Or whenever I finish a batch of features and fixes that feel worth sharing)
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.2.1",
+    releasedOn: "Apr 20, 2026",
+    majorAdditions: [
+      "Launched the Employees & Crews section with a full roster page, crew management, workforce analytics, and mobile-responsive layout.",
+      "Added accounting expense management — create, edit, and delete project expenses with cost-type categorization and totals rolled into project profitability.",
+      "Redesigned payroll with detailed per-job payment tracking, ready-to-pay prioritization, and an analytics sidebar.",
+      "Extended global search to cover employees, crews, payments, and expenses in addition to projects, jobs, and invoices.",
+      "Added a Recent Searches list on the /search page, persisted per user and company in Supabase so history survives across devices and sessions.",
+    ],
+    changes: [
+      "Refactored the version changelog dialog into a concise bullet-point format with Features and Bug Fixes categories and a progressive-disclosure See more toggle for developer-level detail.",
+      "Refactored the search results page into a clean list layout with filter pills, per-category sections, and consistent result rows.",
+      "Added a 15-second pulse highlight animation on destination pages (jobs, employees, crews, invoices, payments, expenses) when navigated to from a search result, cancelable on any user interaction.",
+      "Added a CompletedByCombobox for assigning completed jobs to an employee or crew.",
+      "Added an Employee dialog for creating and editing employee profiles, plus an Employee Payments management dialog.",
+      "Renamed the /employees route to /employees-crews with new sub-routes for roster and crews.",
+      "Workforce alerts refactored from aggregate counts to per-entity dropdown notifications.",
+      "Replaced Assignment Load and Crew Capacity Recharts bar charts with lighter-weight ranked lists and utilization progress bars.",
+      "Added reusable FilterChip component and applied it to the crews, employees, and roster pages.",
+      "Added search and filter controls to the crew overview and employee roster sections.",
+      "Updated SEO metadata across the app and implemented sitemap generation.",
+      "Simplified company membership mapping to reduce duplicated logic.",
+      "Replaced the mobile bottom navbar with a left-side drawer sidebar that auto-collapses on navigation and is triggered from a hamburger button in the mobile header.",
+      "Removed the company switcher and theme switcher from the mobile header — the company switcher now lives inside the mobile drawer, and theme controls are handled in Settings.",
+      "Added a mobile-only Release Notes card to the Settings page so changelog access is reachable without the sidebar version badge.",
+      "Shrunk the global search bar font on mobile for better fit on narrow viewports.",
+    ],
+    bugFixes: [
+      "Fixed invoice pages printing a blank page by hardening the PrintButton with a styled print flow and loading state.",
+      "Fixed dark-mode color mismatch between the Workforce Analytics panel and the Employee Roster by aligning panel backgrounds to bg-card.",
+      "Fixed a missing closing div in the employees page two-column layout that caused rendering artifacts.",
+      "Fixed tooltip text capitalization on the Assignment Load bar chart before chart removal.",
+      "Fixed the Employee Roster table growing taller than its content by constraining the card to fit its contents with a max-height cap.",
+      "Resolved PR #90 review issues flagged during the Employees & Crews feature review.",
+      "Removed dead toTitleCase helper left over from the chart refactor.",
+      "Fixed the changelog dialog rendering too skinny and clipping outside the iOS viewport by pinning explicit width and max-width at each breakpoint.",
+      "Fixed the changelog dialog background being too dark in dark mode by switching to bg-card and softer muted header/card tints.",
+      "Fixed the mobile drawer sidebar appearing transparent in light mode by using an opaque bg-background surface.",
+      "Fixed the changelog dialog close button overlapping the header title on mobile by reserving right padding in the header.",
+    ],
+  },
+  {
     version: "v0.1.9a",
     releasedOn: "Mar 27, 2026",
     majorAdditions: [

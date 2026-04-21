@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bug, History, Sparkles } from "lucide-react";
+import { Bug, ChevronDown, History, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -20,38 +20,89 @@ import {
 } from "@/lib/release-notes";
 
 const LAST_SEEN_RELEASE_KEY = "jobsyte:last-seen-release-version";
+const SUMMARY_COUNT = 2;
 
-function ReleaseSection({
-  title,
+type Category = "features" | "fixes";
+
+function CategorySection({
+  category,
   items,
-  icon,
 }: {
-  title: string;
+  category: Category;
   items: string[];
-  icon: "changes" | "fixes" | "major";
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (items.length === 0) return null;
 
+  const isFeatures = category === "features";
+  const title = isFeatures ? "Features" : "Bug Fixes";
+  const Icon = isFeatures ? Sparkles : Bug;
+  const headerAccent = isFeatures
+    ? "text-primary"
+    : "text-amber-700 dark:text-amber-400";
+  const bulletAccent = isFeatures
+    ? "bg-primary"
+    : "bg-amber-500 dark:bg-amber-400";
+  const countAccent = isFeatures
+    ? "bg-primary/10 text-primary"
+    : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
+
+  const summary = items.slice(0, SUMMARY_COUNT);
+  const rest = items.slice(SUMMARY_COUNT);
+  const shown = expanded ? items : summary;
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-        {icon === "changes" || icon === "major" ? (
-          <Sparkles className="size-4" />
-        ) : (
-          <Bug className="size-4" />
+    <div className="space-y-1.5 sm:space-y-2">
+      <div
+        className={cn(
+          "flex items-center gap-1.5 text-[12px] sm:text-[13px] font-semibold tracking-tight",
+          headerAccent,
         )}
-        {title}
+      >
+        <Icon className="size-3.5 shrink-0" />
+        <span>{title}</span>
+        <span
+          className={cn(
+            "rounded-full px-1.5 py-[1px] text-[10px] font-semibold tabular-nums",
+            countAccent,
+          )}
+        >
+          {items.length}
+        </span>
       </div>
-      <ul className="space-y-1.5 text-sm text-muted-foreground">
-        {items.map((item) => (
+      <ul className="space-y-1 pl-0.5">
+        {shown.map((item) => (
           <li
             key={item}
-            className="rounded-md border border-primary/10 bg-primary/[0.03] px-3 py-2"
+            className="flex gap-2 text-[12px] sm:text-[13px] leading-snug text-foreground/80"
           >
-            {item}
+            <span
+              className={cn(
+                "mt-[6px] sm:mt-[7px] size-1.5 shrink-0 rounded-full",
+                bulletAccent,
+              )}
+            />
+            <span className="break-words">{item}</span>
           </li>
         ))}
       </ul>
+      {rest.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="ml-3.5 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground transition hover:text-primary"
+        >
+          <ChevronDown
+            className={cn(
+              "size-3 transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+          {expanded
+            ? "Hide developer details"
+            : `See more (${rest.length} developer detail${rest.length === 1 ? "" : "s"})`}
+        </button>
+      )}
     </div>
   );
 }
@@ -63,43 +114,42 @@ function ReleaseCard({
   release: ReleaseNote;
   latest?: boolean;
 }) {
+  const features = [...(release.majorAdditions ?? []), ...release.changes];
+  const fixes = release.bugFixes;
+
   return (
     <section
       className={cn(
-        "rounded-xl border p-4",
+        "rounded-lg border p-3 sm:p-3.5",
         latest
-          ? "border-primary/30 bg-primary/[0.04]"
-          : "border-primary/15 bg-background",
+          ? "border-primary/30 bg-primary/5 dark:bg-primary/10"
+          : "border-border bg-muted/30 dark:bg-muted/10",
       )}
     >
-      <div className="mb-4 flex flex-wrap items-center gap-2 ">
-        <div className="text-base font-semibold text-primary">
-          {release.version}
+      <div className="mb-2.5 sm:mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[13px] sm:text-sm font-semibold text-primary">
+            {release.version}
+          </span>
+          {latest && (
+            <Badge className="h-4 bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+              Latest
+            </Badge>
+          )}
         </div>
-        {latest && (
-          <Badge className="bg-primary text-primary-foreground">Latest</Badge>
-        )}
-        <div className="text-xs text-muted-foreground">
+        <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
           {release.releasedOn}
-        </div>
+        </span>
       </div>
 
-      <div className="space-y-4">
-        <ReleaseSection
-          title="Major Additions"
-          items={release.majorAdditions ?? []}
-          icon="major"
-        />
-        <ReleaseSection
-          title="Changes"
-          items={release.changes}
-          icon="changes"
-        />
-        <ReleaseSection
-          title="Bug Fixes"
-          items={release.bugFixes}
-          icon="fixes"
-        />
+      <div className="space-y-2.5 sm:space-y-3">
+        <CategorySection category="features" items={features} />
+        <CategorySection category="fixes" items={fixes} />
+        {features.length === 0 && fixes.length === 0 && (
+          <div className="text-xs italic text-muted-foreground">
+            No notable changes in this release.
+          </div>
+        )}
       </div>
     </section>
   );
@@ -116,7 +166,6 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
       );
       if (lastSeenVersion === LATEST_RELEASE.version) return;
 
-      // Auto-open once for newly published versions and mark as seen.
       window.localStorage.setItem(
         LAST_SEEN_RELEASE_KEY,
         LATEST_RELEASE.version,
@@ -157,28 +206,28 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[85dvh] max-w-none sm:max-w-none w-[min(85vw,650px)] gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b border-primary/15 bg-primary/[0.04] px-5 py-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-primary">
-            <History className="size-3.5" />
+      <DialogContent className="max-h-[92dvh] sm:max-h-[85dvh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:w-[560px] sm:max-w-[560px] gap-0 overflow-hidden p-0 bg-card grid-rows-[auto_minmax(0,1fr)]">
+        <DialogHeader className="border-b border-border bg-muted/40 dark:bg-muted/20 px-3 py-2.5 pr-10 sm:px-4 sm:py-3 sm:pr-12 text-left">
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <History className="size-3" />
             Release Notes
           </div>
-          <DialogTitle className="text-xl">
+          <DialogTitle className="text-[15px] sm:text-base font-semibold tracking-tight">
             What&apos;s New in JobSyte
           </DialogTitle>
-          <DialogDescription>
-            Latest updates plus previous versions, including shipped changes and
-            bug fixes.
+          <DialogDescription className="text-[11px] sm:text-xs leading-snug">
+            A quick look at what&apos;s new. Tap &ldquo;See more&rdquo; for the
+            full developer-level breakdown.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(85dvh-7rem)]">
-          <div className="space-y-4 p-5">
+        <ScrollArea className="min-h-0 h-full">
+          <div className="space-y-2.5 sm:space-y-3 p-3 pb-5 sm:p-4 sm:pb-6">
             <ReleaseCard release={LATEST_RELEASE} latest />
 
             {previousReleases.length > 0 && (
-              <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="space-y-2 pt-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Previous Versions
                 </div>
                 {previousReleases.map((release) => (

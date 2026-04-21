@@ -68,7 +68,7 @@
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-1: oklch(16% 0.02423 256);
   --chart-2: oklch(0.623 0.214 259.815);
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
@@ -105,7 +105,7 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-1: oklch(38% 0.01 255);
   --chart-2: oklch(0.623 0.214 259.815);
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
@@ -128,6 +128,33 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Mobile font + density scaling.
+   Shrinking the root font-size scales every rem-based Tailwind utility
+   (text, padding, gap, width) proportionally so the entire app fits more
+   content on small screens without per-component rewrites. */
+@media (max-width: 639px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* Prevent iOS auto-zoom on input focus while keeping visual size small */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Avoid horizontal scroll on narrow viewports */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Leave room above the fixed mobile bottom nav (sidebar.tsx) */
+  main[data-app-shell-main] {
+    padding-bottom: 5rem !important;
   }
 }
 

@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Home, FolderKanban, FileText, Settings, LayoutDashboard } from "lucide-react";
+import {
+  DollarSign,
+  FileText,
+  FolderKanban,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -10,11 +18,27 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+function getActiveHref(pathname: string) {
+  if (pathname === "/dashboard") return "/dashboard";
+  if (pathname === "/accounting" || pathname.includes("/accounting")) {
+    return "/accounting";
+  }
+  if (pathname.startsWith("/projects")) return "/projects";
+  if (pathname.startsWith("/invoices")) return "/invoices";
+  if (pathname.startsWith("/employees-crews")) return "/employees-crews";
+  if (pathname.startsWith("/payroll")) return "/payroll";
+  if (pathname.startsWith("/settings")) return "/settings";
+  return "";
+}
+
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/invoices", label: "Invoices", icon: FileText },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/projects",   label: "Projects",   icon: FolderKanban },
+  { href: "/invoices",   label: "Invoices",   icon: FileText },
+  { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },
+  { href: "/accounting", label: "Accounting", icon: DollarSign },
+  { href: "/payroll",    label: "Payroll",    icon: Wallet },
+  { href: "/settings",   label: "Settings",   icon: Settings },
 ];
 
 export function SidebarNav({
@@ -25,15 +49,13 @@ export function SidebarNav({
   collapsed?: boolean;
 }) {
   const pathname = usePathname();
+  const activeHref = getActiveHref(pathname);
 
   if (mobile) {
     return (
-      <nav className="grid grid-cols-4 gap-1 ">
+      <nav className="grid grid-cols-7 gap-1 ">
         {navItems.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+          const isActive = activeHref === item.href;
           const Icon = item.icon;
 
           return (
@@ -59,8 +81,7 @@ export function SidebarNav({
   return (
     <nav className={cn("p-3 text-sm space-y-1", collapsed && "px-2")}>
       {navItems.map((item) => {
-        const isActive =
-          item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
+        const isActive = activeHref === item.href;
         const Icon = item.icon;
         const linkClass = cn(
           "flex items-center rounded-md border border-transparent transition",
