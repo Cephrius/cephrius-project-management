@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ArrowRight,
   Building2,
@@ -296,6 +298,8 @@ export function ProjectsPageClient({
   const [selectedProjectJobs, setSelectedProjectJobs] = useState<QuickJobItem[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [quickCompleteDrawerOpen, setQuickCompleteDrawerOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1001,14 +1005,17 @@ export function ProjectsPageClient({
                                                 <Card
                                                   key={project.id}
                                                   className={cn(
-                                                    "border-primary/10 p-3 transition-colors",
+                                                    "border-primary/10 p-3 transition-colors cursor-pointer",
                                                     isSelected
                                                       ? "bg-primary/[0.03] ring-2 ring-primary/20"
                                                       : "hover:bg-primary/5",
                                                   )}
-                                                  onClick={() =>
-                                                    setSelectedProjectId(project.id)
-                                                  }
+                                                  onClick={() => {
+                                                    setSelectedProjectId(project.id);
+                                                    if (isMobile) {
+                                                      router.push(`/projects/${project.id}`);
+                                                    }
+                                                  }}
                                                 >
                                                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                     <div className="min-w-0 space-y-1">
@@ -1098,12 +1105,17 @@ export function ProjectsPageClient({
                 <Card
                   key={project.id}
                   className={cn(
-                    "border-primary/10 p-4 transition-colors sm:p-5",
+                    "border-primary/10 p-3 transition-colors sm:p-5 cursor-pointer",
                     isSelected
                       ? "bg-primary/[0.03] ring-2 ring-primary/20"
                       : "hover:bg-primary/5",
                   )}
-                  onClick={() => setSelectedProjectId(project.id)}
+                  onClick={() => {
+                    setSelectedProjectId(project.id);
+                    if (isMobile) {
+                      router.push(`/projects/${project.id}`);
+                    }
+                  }}
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">

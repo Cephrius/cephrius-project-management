@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ArrowRight,
   CalendarDays,
@@ -103,6 +105,8 @@ export function InvoicesPageClient({
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
     invoices[0]?.id ?? null,
   );
+  const isMobile = useIsMobile();
+  const router = useRouter();
 
   const billToOptions = useMemo(() => {
     const set = new Set<string>();
@@ -283,12 +287,17 @@ export function InvoicesPageClient({
                 <Card
                   key={invoice.id}
                   className={cn(
-                    "border-primary/10 p-4 transition-colors sm:p-5",
+                    "border-primary/10 p-3 transition-colors sm:p-5 cursor-pointer",
                     isSelected
                       ? "bg-primary/[0.03] ring-2 ring-primary/20"
                       : "hover:bg-primary/5",
                   )}
-                  onClick={() => setSelectedInvoiceId(invoice.id)}
+                  onClick={() => {
+                    setSelectedInvoiceId(invoice.id);
+                    if (isMobile) {
+                      router.push(`/invoices/${invoice.id}`);
+                    }
+                  }}
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">

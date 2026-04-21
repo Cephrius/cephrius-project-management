@@ -192,8 +192,15 @@ export function JobsTable({
           </div>
         ) : (
           filtered.map((job) => (
-            <div key={job.id} className="rounded-md border p-3 space-y-2">
-              <div className="flex items-start justify-between gap-3">
+            <div
+              key={job.id}
+              className="rounded-md border p-3 space-y-2 cursor-pointer active:bg-muted/30"
+              onClick={() => setEditingJob(job)}
+            >
+              <div
+                className="flex items-start justify-between gap-3"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div>
                   <div className="font-medium leading-tight">{job.title}</div>
                   <div className="text-sm text-muted-foreground">

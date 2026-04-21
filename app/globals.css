@@ -131,6 +131,33 @@
   }
 }
 
+/* Mobile font + density scaling.
+   Shrinking the root font-size scales every rem-based Tailwind utility
+   (text, padding, gap, width) proportionally so the entire app fits more
+   content on small screens without per-component rewrites. */
+@media (max-width: 639px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* Prevent iOS auto-zoom on input focus while keeping visual size small */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Avoid horizontal scroll on narrow viewports */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Leave room above the fixed mobile bottom nav (sidebar.tsx) */
+  main[data-app-shell-main] {
+    padding-bottom: 5rem !important;
+  }
+}
+
 @media print {
   @page {
     margin: 0.4in;
