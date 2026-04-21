@@ -30,6 +30,10 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       "Added search and filter controls to the crew overview and employee roster sections.",
       "Updated SEO metadata across the app and implemented sitemap generation.",
       "Simplified company membership mapping to reduce duplicated logic.",
+      "Replaced the mobile bottom navbar with a left-side drawer sidebar that auto-collapses on navigation and is triggered from a hamburger button in the mobile header.",
+      "Removed the company switcher and theme switcher from the mobile header — the company switcher now lives inside the mobile drawer, and theme controls are handled in Settings.",
+      "Added a mobile-only Release Notes card to the Settings page so changelog access is reachable without the sidebar version badge.",
+      "Shrunk the global search bar font on mobile for better fit on narrow viewports.",
     ],
     bugFixes: [
       "Fixed invoice pages printing a blank page by hardening the PrintButton with a styled print flow and loading state.",
@@ -39,6 +43,10 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       "Fixed the Employee Roster table growing taller than its content by constraining the card to fit its contents with a max-height cap.",
       "Resolved PR #90 review issues flagged during the Employees & Crews feature review.",
       "Removed dead toTitleCase helper left over from the chart refactor.",
+      "Fixed the changelog dialog rendering too skinny and clipping outside the iOS viewport by pinning explicit width and max-width at each breakpoint.",
+      "Fixed the changelog dialog background being too dark in dark mode by switching to bg-card and softer muted header/card tints.",
+      "Fixed the mobile drawer sidebar appearing transparent in light mode by using an opaque bg-background surface.",
+      "Fixed the changelog dialog close button overlapping the header title on mobile by reserving right padding in the header.",
     ],
   },
   {

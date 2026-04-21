@@ -206,8 +206,8 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90dvh] sm:max-h-[85dvh] max-w-none sm:max-w-none w-[min(95vw,560px)] gap-0 overflow-hidden p-0 bg-card">
-        <DialogHeader className="border-b border-border bg-muted/40 dark:bg-muted/20 px-3 py-3 sm:px-4">
+      <DialogContent className="max-h-[92dvh] sm:max-h-[85dvh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:w-[560px] sm:max-w-[560px] gap-0 overflow-hidden p-0 bg-card grid-rows-[auto_minmax(0,1fr)]">
+        <DialogHeader className="border-b border-border bg-muted/40 dark:bg-muted/20 px-3 py-2.5 pr-10 sm:px-4 sm:py-3 sm:pr-12 text-left">
           <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-primary">
             <History className="size-3" />
             Release Notes
@@ -221,8 +221,8 @@ export function VersionChangelogDialog({ collapsed }: { collapsed?: boolean }) {
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90dvh-5.5rem)] sm:max-h-[calc(85dvh-5.5rem)]">
-          <div className="space-y-2.5 sm:space-y-3 p-3 sm:p-4">
+        <ScrollArea className="min-h-0 h-full">
+          <div className="space-y-2.5 sm:space-y-3 p-3 pb-5 sm:p-4 sm:pb-6">
             <ReleaseCard release={LATEST_RELEASE} latest />
 
             {previousReleases.length > 0 && (

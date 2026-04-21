@@ -32,7 +32,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { cn } from "@/lib/utils";
 import { useSidebarState } from "./sidebar-state";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
-import { MobileCompanySwitcher } from "./mobile-company-switcher";
+import { MobileSidebar } from "./mobile-sidebar";
 
 type SuggestionType = "project" | "job" | "invoice" | "employee" | "crew" | "payment" | "expense";
 
@@ -350,7 +350,7 @@ export function Header() {
 
         <div className="col-start-1 row-start-1 flex w-full min-w-0 items-center gap-2 md:col-start-2 md:justify-self-center md:max-w-[30rem] lg:max-w-[34rem] xl:max-w-[40rem]">
           <div className="md:hidden shrink-0">
-            <MobileCompanySwitcher />
+            <MobileSidebar />
           </div>
           <form
             onSubmit={handleGlobalSearch}
@@ -372,7 +372,7 @@ export function Header() {
               onFocus={() => setIsSearchFocused(true)}
               onKeyDown={handleInputKeyDown}
               placeholder="Search projects, jobs, invoices, employees and more..."
-              className="h-9 border-primary/20 focus-visible:ring-primary/30"
+              className="h-9 text-xs placeholder:text-xs sm:text-sm sm:placeholder:text-sm border-primary/20 focus-visible:ring-primary/30"
               aria-label="Global search"
               autoComplete="off"
             />
@@ -490,9 +490,6 @@ export function Header() {
         <div className="col-start-2 row-start-1 ml-auto flex min-w-0 items-center justify-end gap-2 md:col-start-3">
           <div className="hidden min-w-0 max-w-[16rem] overflow-hidden lg:block">
             {rightSlot}
-          </div>
-          <div className="lg:hidden">
-            <ThemeSwitcher hideLabel />
           </div>
           <div className="hidden lg:block">
             <ThemeSwitcher />
