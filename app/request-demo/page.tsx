@@ -2,8 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { type CSSProperties, type FormEvent, useState } from "react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { type FormEvent, useState } from "react";
+import {
+  ArrowRight,
+  CalendarClock,
+  CheckCircle2,
+  HardHat,
+  Loader2,
+  Receipt,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -40,37 +49,21 @@ const INITIAL_FORM_STATE: DemoFormState = {
 const REQUEST_DEMO_HREF = "/request-demo";
 const SITE_URL = "https://jobsyte.co";
 const SALES_EMAIL = "sales@jobsyte.com";
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+const HEADER_ENTER_DURATION = 1.15;
 const HOVER_SPRING = {
   type: "spring",
-  stiffness: 170,
+  stiffness: 135,
   damping: 18,
-  mass: 0.75,
+  mass: 0.9,
 } as const;
-const REQUEST_DEMO_LIGHT_THEME_STYLE: CSSProperties & Record<string, string> = {
-  colorScheme: "light",
-  "--background": "#ffffff",
-  "--foreground": "#000000",
-  "--card": "#ffffff",
-  "--card-foreground": "#000000",
-  "--primary": "#2563eb",
-  "--primary-foreground": "#ffffff",
-  "--secondary": "#f7f8fb",
-  "--secondary-foreground": "#000000",
-  "--muted": "#f7f8fb",
-  "--muted-foreground": "#000000",
-  "--accent": "#ebf2ff",
-  "--accent-foreground": "#000000",
-  "--border": "#d9dee8",
-  "--input": "#d9dee8",
-  "--ring": "#60a5fa",
-};
+
 const STAGGER_CONTAINER = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.05,
+      staggerChildren: 0.09,
+      delayChildren: 0.06,
     },
   },
 };
@@ -79,9 +72,28 @@ const FADE_UP = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.48, ease: EASE_OUT },
+    transition: { duration: 0.55, ease: EASE_OUT },
   },
 };
+
+const DEMO_HIGHLIGHTS = [
+  {
+    icon: CalendarClock,
+    title: "12-month schedule walkthrough",
+    body: "We'll load your projects into the calendar and show you how superintendents and crews stay aligned.",
+  },
+  {
+    icon: HardHat,
+    title: "Field & office, side by side",
+    body: "See the same dashboard your crew leads will open on a phone in the truck.",
+  },
+  {
+    icon: Receipt,
+    title: "Billing tied to the work",
+    body: "Convert completed jobs into invoices and watch the monthly snapshot update in real time.",
+  },
+];
+
 const REQUEST_DEMO_STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@type": "ContactPage",
@@ -103,7 +115,8 @@ const REQUEST_DEMO_STRUCTURED_DATA = {
   about: {
     "@type": "SoftwareApplication",
     name: "JobSyte",
-    applicationCategory: "ProjectManagementApplication",
+    applicationCategory: "BusinessApplication",
+    applicationSubCategory: "ProjectManagementApplication",
     operatingSystem: "Web",
     url: SITE_URL,
   },
@@ -169,10 +182,7 @@ export default function RequestDemoPage() {
   }
 
   return (
-    <main
-      className="relative min-h-screen overflow-x-hidden bg-background"
-      style={REQUEST_DEMO_LIGHT_THEME_STYLE}
-    >
+    <main className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
       {/* Keep demo intent visible to crawlers without waiting for hydration. */}
       <script
         type="application/ld+json"
@@ -181,112 +191,138 @@ export default function RequestDemoPage() {
         }}
       />
 
+      {/* Background — mirrors the landing page so the demo flow feels continuous */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <motion.div
-          className="absolute -top-40 left-1/2 h-[42rem] w-[42rem] -translate-x-1/2 rounded-full blur-3xl"
+        <div
+          className="absolute inset-0 opacity-[0.35] dark:opacity-[0.18]"
           style={{
-            background:
-              "radial-gradient(circle at center, hsl(var(--primary) / 0.28) 0%, transparent 68%)",
+            backgroundImage:
+              "linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            maskImage:
+              "radial-gradient(ellipse 75% 55% at 50% 0%, black 40%, transparent 100%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 75% 55% at 50% 0%, black 40%, transparent 100%)",
           }}
-          animate={{
-            x: [-80, 80, -80],
-            y: [0, 40, 0],
-            scale: [1, 1.08, 1],
-            opacity: [0.45, 0.75, 0.45],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute -top-56 right-[-8rem] h-[36rem] w-[36rem] rounded-full blur-3xl"
+          className="absolute -top-40 left-[-10rem] h-[34rem] w-[34rem] rounded-full blur-3xl"
           style={{
             background:
-              "radial-gradient(circle at center, hsl(var(--accent) / 0.2) 0%, transparent 70%)",
+              "radial-gradient(circle at center, color-mix(in oklch, var(--primary) 35%, transparent) 0%, transparent 70%)",
+            willChange: "transform, opacity",
           }}
-          animate={{
-            x: [0, -70, 0],
-            y: [20, -20, 20],
-            scale: [1, 1.06, 1],
-            opacity: [0.35, 0.55, 0.35],
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : {
+                  x: [0, 96, 0],
+                  scale: [1, 1.06, 1],
+                  opacity: [0.7, 0.95, 0.7],
+                }
+          }
+          transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute -bottom-56 right-[-12rem] h-[38rem] w-[38rem] rounded-full blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle at center, color-mix(in oklch, var(--primary) 22%, transparent) 0%, transparent 72%)",
+            willChange: "transform, opacity",
           }}
-          transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : {
+                  x: [0, -78, 0],
+                  scale: [1, 1.05, 1],
+                  opacity: [0.6, 0.9, 0.6],
+                }
+          }
+          transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
-      <motion.header
-        className="relative z-20 border-b border-border/60 bg-background/80 backdrop-blur"
-        initial={
-          shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -16 }
-        }
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: EASE_OUT }}
-      >
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 md:px-8">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl supports-backdrop-filter:bg-background/60">
+        <motion.div
+          className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-6 px-4 md:px-8"
+          initial={
+            shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }
+          }
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: HEADER_ENTER_DURATION, ease: EASE_OUT }}
+        >
           <Link
             href="/"
-            className="flex items-center"
+            className="flex items-center gap-2"
             aria-label="JobSyte home"
           >
             <Image
-              src="/banner_light_trans.png"
+              src="/banner_dark_trans.png"
               alt="JobSyte"
               width={400}
               height={100}
-              className="size-10 w-auto"
+              className="h-8 sm:h-9 md:h-10 w-auto"
               priority
             />
           </Link>
 
           <div className="flex items-center gap-2">
             <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full px-4"
+              asChild
+            >
+              <Link href="/">Back to home</Link>
+            </Button>
+            <Button
               variant="outline"
               size="sm"
-              className="rounded-full px-4 bg-gray-200 text-black"
+              className="rounded-full border-primary/25 px-4"
               asChild
             >
               <Link href="/login">Sign in</Link>
             </Button>
           </div>
-        </div>
-      </motion.header>
+        </motion.div>
+      </header>
 
-      <div className="relative z-10 px-4 py-10">
-        <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-24 pt-12 sm:pt-16 md:px-8 md:pt-20">
+        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+          {/* LEFT — pitch + highlights */}
           <motion.section
-            className="space-y-6 lg:pt-8"
+            className="space-y-8"
             variants={STAGGER_CONTAINER}
             initial={shouldReduceMotion ? "visible" : "hidden"}
             animate="visible"
           >
-            <motion.div className="space-y-4" variants={FADE_UP}>
-              <motion.div
-                className="h-1 w-28 rounded-full bg-gradient-to-r from-primary/60 to-primary/10"
-                animate={
-                  shouldReduceMotion
-                    ? undefined
-                    : { scaleX: [0.92, 1.08, 0.92], opacity: [0.65, 1, 0.65] }
-                }
-                transition={{
-                  duration: 2.8,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-              <h1 className="max-w-xl text-4xl font-semibold tracking-tight md:text-5xl text-black">
-                Request a demo of JobSyte
+            <motion.div className="space-y-5" variants={FADE_UP}>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm text-foreground/80 shadow-sm">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
+                  <Sparkles className="size-3" />
+                  Demo
+                </span>
+                <span>Walkthrough on a live JobSyte instance</span>
+              </div>
+              <h1 className="text-balance text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
+                See JobSyte run your{" "}
+                <span className="bg-gradient-to-br from-primary to-primary/60 bg-clip-text text-transparent">
+                  actual workflow
+                </span>
               </h1>
               <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-                See how JobSyte helps contractors manage projects, schedules,
-                invoices, and team handoffs from one place.
+                A 30-minute call with sample data shaped around your projects,
+                crews, and billing cadence — not a generic product tour.
               </p>
-              <p className="max-w-xl text-base italic text-muted-foreground md:text-lg">
-                Tell us about your workflow and we&apos;ll show you how JobSyte
-                fits it. For questions, reach us at{" "}
+              <p className="max-w-xl text-sm text-muted-foreground">
+                Prefer email? Reach us at{" "}
                 <a
                   href={`mailto:${SALES_EMAIL}`}
-                  className="underline decoration-foreground/50 underline-offset-4 hover:decoration-foreground"
+                  className="font-medium text-foreground underline decoration-foreground/40 underline-offset-4 transition-colors hover:decoration-foreground"
                 >
                   {SALES_EMAIL}
                 </a>
@@ -294,50 +330,95 @@ export default function RequestDemoPage() {
               </p>
             </motion.div>
 
+            <motion.ul className="space-y-3" variants={STAGGER_CONTAINER}>
+              {DEMO_HIGHLIGHTS.map(({ icon: Icon, title, body }) => (
+                <motion.li
+                  key={title}
+                  variants={FADE_UP}
+                  whileHover={
+                    shouldReduceMotion
+                      ? undefined
+                      : {
+                          y: -2,
+                          boxShadow:
+                            "0 18px 40px -28px hsl(var(--primary) / 0.28)",
+                        }
+                  }
+                  transition={HOVER_SPRING}
+                  className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                    <Icon className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold tracking-tight">
+                      {title}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+                  </div>
+                </motion.li>
+              ))}
+            </motion.ul>
+
             <motion.div
               variants={FADE_UP}
-              className="max-w-xl space-y-4 rounded-2xl border border-border/70 bg-card/80 p-5"
-              whileHover={
-                shouldReduceMotion ? undefined : { y: -4, scale: 1.01 }
-              }
-              transition={HOVER_SPRING}
+              className="rounded-2xl border border-border/70 bg-card/80 p-5 backdrop-blur"
             >
-              <p className="text-2xl font-semibold leading-tight tracking-tight text-black">
-                &quot;JobSyte is the best product we&apos;ve used for keeping
-                crews and billing aligned.&quot;
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Users className="size-3.5" />
+                What happens after you submit
               </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">
-                  Clement Ouizille
-                </span>
-                , Co-founder, Convelio
-              </p>
+              <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
+                {[
+                  "We reply within one business day with scheduling options.",
+                  "We import a sample of your project addresses ahead of the call.",
+                  "Your account is provisioned the moment the demo wraps.",
+                ].map((line) => (
+                  <li key={line} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
             </motion.div>
           </motion.section>
 
+          {/* RIGHT — form */}
           <motion.section
             variants={STAGGER_CONTAINER}
             initial={shouldReduceMotion ? "visible" : "hidden"}
             animate="visible"
             transition={{ delay: 0.06 }}
           >
-            <motion.div
-              variants={FADE_UP}
-              whileHover={shouldReduceMotion ? undefined : { y: -4 }}
-              transition={HOVER_SPRING}
-            >
-              <Card className="relative overflow-hidden rounded-3xl border border-border/70 bg-card/95 p-6 shadow-xl md:p-8">
-                <div className="pointer-events-none absolute -bottom-24 -right-16 size-52 rounded-full bg-primary/10 blur-3xl" />
+            <motion.div variants={FADE_UP} transition={HOVER_SPRING}>
+              <Card className="relative overflow-hidden rounded-3xl border border-primary/20 bg-card/95 p-6 shadow-2xl shadow-primary/10 backdrop-blur md:p-8">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-24 -right-16 size-52 rounded-full bg-primary/10 blur-3xl"
+                />
+
+                <div className="relative z-10 mb-5 space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                    Request access
+                  </p>
+                  <h2 className="text-2xl font-semibold tracking-tight">
+                    Tell us about your team
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Takes about a minute. No credit card required.
+                  </p>
+                </div>
 
                 <form
                   className="relative z-10 space-y-4"
                   onSubmit={handleSubmit}
                 >
                   <motion.div className="space-y-2" variants={FADE_UP}>
-                    <Label htmlFor="workEmail">Work Email</Label>
+                    <Label htmlFor="workEmail">Work email</Label>
                     <Input
                       id="workEmail"
                       type="email"
+                      autoComplete="email"
                       value={form.workEmail}
                       onChange={(event) =>
                         setForm((current) => ({
@@ -355,9 +436,10 @@ export default function RequestDemoPage() {
                     variants={FADE_UP}
                   >
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName">First name</Label>
                       <Input
                         id="firstName"
+                        autoComplete="given-name"
                         value={form.firstName}
                         onChange={(event) =>
                           setForm((current) => ({
@@ -370,9 +452,10 @@ export default function RequestDemoPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName">Last name</Label>
                       <Input
                         id="lastName"
+                        autoComplete="family-name"
                         value={form.lastName}
                         onChange={(event) =>
                           setForm((current) => ({
@@ -394,6 +477,7 @@ export default function RequestDemoPage() {
                       <Label htmlFor="companyName">Company</Label>
                       <Input
                         id="companyName"
+                        autoComplete="organization"
                         value={form.companyName}
                         onChange={(event) =>
                           setForm((current) => ({
@@ -401,14 +485,15 @@ export default function RequestDemoPage() {
                             companyName: event.target.value,
                           }))
                         }
-                        placeholder="Your company"
+                        placeholder="Acme Construction"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="jobTitle">Job Title</Label>
+                      <Label htmlFor="jobTitle">Job title</Label>
                       <Input
                         id="jobTitle"
+                        autoComplete="organization-title"
                         value={form.jobTitle}
                         onChange={(event) =>
                           setForm((current) => ({
@@ -422,7 +507,7 @@ export default function RequestDemoPage() {
                   </motion.div>
 
                   <motion.div className="space-y-2" variants={FADE_UP}>
-                    <Label htmlFor="companySize">Company Size</Label>
+                    <Label htmlFor="companySize">Company size</Label>
                     <NativeSelect
                       id="companySize"
                       className="w-full"
@@ -437,19 +522,19 @@ export default function RequestDemoPage() {
                       <NativeSelectOption value="">
                         Select one
                       </NativeSelectOption>
-                      <NativeSelectOption value="1-10">1-10</NativeSelectOption>
+                      <NativeSelectOption value="1-10">1–10</NativeSelectOption>
                       <NativeSelectOption value="11-50">
-                        11-50
+                        11–50
                       </NativeSelectOption>
                       <NativeSelectOption value="51-200">
-                        51-200
+                        51–200
                       </NativeSelectOption>
                       <NativeSelectOption value="201+">201+</NativeSelectOption>
                     </NativeSelect>
                   </motion.div>
 
                   <motion.div className="space-y-2" variants={FADE_UP}>
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phone">Phone number</Label>
                     <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-3">
                       <NativeSelect
                         id="phoneCountry"
@@ -477,6 +562,8 @@ export default function RequestDemoPage() {
                       </NativeSelect>
                       <Input
                         id="phone"
+                        type="tel"
+                        autoComplete="tel-national"
                         value={form.phone}
                         onChange={(event) =>
                           setForm((current) => ({
@@ -495,7 +582,14 @@ export default function RequestDemoPage() {
                   >
                     <motion.div
                       whileHover={
-                        shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }
+                        shouldReduceMotion
+                          ? undefined
+                          : {
+                              y: -3,
+                              scale: 1.02,
+                              boxShadow:
+                                "0 22px 48px -24px hsl(var(--primary) / 0.55)",
+                            }
                       }
                       whileTap={
                         shouldReduceMotion ? undefined : { scale: 0.98 }
@@ -505,25 +599,37 @@ export default function RequestDemoPage() {
                       <Button
                         type="submit"
                         disabled={submitting}
-                        className="rounded-full px-7"
+                        size="lg"
+                        className="rounded-full px-7 shadow-md"
                       >
                         {submitting ? (
                           <>
                             <Loader2 className="size-4 animate-spin" />
-                            Submitting...
+                            Submitting…
                           </>
                         ) : (
                           <>
-                            Submit
+                            Request demo
                             <ArrowRight className="size-4" />
                           </>
                         )}
                       </Button>
                     </motion.div>
-                    <Button variant="outline" type="button" asChild>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      type="button"
+                      className="rounded-full border-primary/25 px-7"
+                      asChild
+                    >
                       <Link href="/login">I already have an account</Link>
                     </Button>
                   </motion.div>
+
+                  <p className="pt-2 text-xs text-muted-foreground">
+                    By submitting, you agree to be contacted by the JobSyte
+                    team about your demo request. We never sell your data.
+                  </p>
                 </form>
 
                 <AnimatePresence>
@@ -532,11 +638,14 @@ export default function RequestDemoPage() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.35, ease: EASE_OUT }}
-                      className="relative z-10 mt-5 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-foreground"
+                      transition={{ duration: 0.4, ease: EASE_OUT }}
+                      className="relative z-10 mt-5 flex items-start gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-foreground"
                     >
-                      Request received. We will reach out with scheduling
-                      options and next signup steps.
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <span>
+                        Request received. We&apos;ll reach out within one
+                        business day with scheduling options.
+                      </span>
                     </motion.p>
                   )}
                 </AnimatePresence>
@@ -547,10 +656,17 @@ export default function RequestDemoPage() {
       </div>
 
       <footer className="relative z-10 border-t border-border/60 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-center md:flex-row md:px-8 md:text-left">
-          <p className="text-sm text-muted-foreground">
-            New accounts are enabled after a demo. Existing customers can sign
-            in immediately.
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 px-4 py-8 text-center text-xs text-muted-foreground md:flex-row md:px-8 md:text-left">
+          <p>© 2026 JobSyte. All rights reserved.</p>
+          <p>
+            New accounts are enabled after a demo. Existing customers can{" "}
+            <Link
+              href="/login"
+              className="font-medium text-foreground underline decoration-foreground/40 underline-offset-4 hover:decoration-foreground"
+            >
+              sign in
+            </Link>{" "}
+            immediately.
           </p>
         </div>
       </footer>

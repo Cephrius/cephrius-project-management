@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,10 +25,16 @@ export const metadata: Metadata = {
     template: "%s | JobSyte",
   },
   applicationName: "JobSyte",
+  authors: [{ name: "JobSyte", url: siteUrl.toString() }],
+  creator: "JobSyte",
+  publisher: "Cephrius Technologies",
+  category: "Construction Project Management Software",
   keywords: [
     "construction project management",
     "construction project management software",
     "contractor project management software",
+    "subcontractor software",
+    "subcontractor project management",
     "builder job tracking",
     "construction scheduling software",
     "contractor invoice management",
@@ -38,21 +44,44 @@ export const metadata: Metadata = {
     "home builder software",
     "builder change order tracking",
     "residential construction software",
+    "field crew management software",
   ],
   description: defaultDescription,
   alternates: {
     canonical: "/",
   },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  manifest: "/manifest.webmanifest",
+  robots: {
+    index: true,
+    follow: true,
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
+    locale: "en_US",
     url: "/",
     siteName: "JobSyte",
     title: defaultTitle,
     description: defaultDescription,
     images: [
       {
-        url: "/banner_light_trans.png",
-        alt: "JobSyte construction project management software",
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "JobSyte — Construction project management software for contractors",
+        type: "image/png",
       },
     ],
   },
@@ -60,25 +89,28 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
-    images: ["/banner_light_trans.png"],
+    images: ["/opengraph-image"],
+    creator: "@jobsyte",
   },
   icons: {
     icon: [
-      {
-        url: "/image.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/image.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
+      { url: "/image.png", sizes: "any" },
     ],
-    apple: "/jobsyte-_safari.png",
+    apple: "/jobsyte_safari.png",
+    shortcut: "/jobstye_copy.ico",
   },
+  // verification: { google: "<add-search-console-token>" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
