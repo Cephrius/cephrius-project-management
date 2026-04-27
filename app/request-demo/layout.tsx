@@ -11,6 +11,16 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/request-demo",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     type: "website",
     url: "/request-demo",
@@ -19,8 +29,11 @@ export const metadata: Metadata = {
     description: requestDemoDescription,
     images: [
       {
-        url: "/banner_light_trans.png",
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
         alt: "Request a JobSyte demo",
+        type: "image/png",
       },
     ],
   },
@@ -28,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: requestDemoTitle,
     description: requestDemoDescription,
-    images: ["/banner_light_trans.png"],
+    images: ["/opengraph-image"],
   },
 };
 
