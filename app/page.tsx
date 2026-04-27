@@ -1383,7 +1383,7 @@ export default function LandingPage() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: SECTION_ENTER_DURATION, ease: EASE_OUT }}
         >
-          <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card/60 to-card/40 p-8 backdrop-blur md:p-10">
+          <div className="rounded-3xl border border-primary/20 bg-linear-to-br from-primary/10 via-card/60 to-card/40 p-8 backdrop-blur md:p-10">
             <div className="grid gap-6 md:grid-cols-4">
               {[
                 { value: "1", label: "Login that opens every workflow" },

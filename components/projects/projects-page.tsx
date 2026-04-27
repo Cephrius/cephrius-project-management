@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { DeleteProjectButton } from "./delete-project-button";
+import { DeleteProjectsButton } from "./delete-projects-button";
 import { EditProjectDialog } from "./edit-project-dialog";
 
 const PROJECTS_VIEW_STORAGE_KEY = "projects:view";
@@ -762,7 +763,7 @@ export function ProjectsPageClient({
               <div className="ml-auto sm:ml-0 inline-flex overflow-hidden rounded-md border bg-background">
                 <Button
                   type="button"
-                  variant={view === "list" ? "secondary" : "ghost"}
+                  variant={view === "list" ? "default" : "ghost"}
                   size="sm"
                   className="rounded-none border-0 cursor-pointer"
                   onClick={() => setView("list")}
@@ -772,9 +773,9 @@ export function ProjectsPageClient({
                 </Button>
                 <Button
                   type="button"
-                  variant={view === "grouped" ? "secondary" : "ghost"}
+                  variant={view === "grouped" ? "default" : "ghost"}
                   size="sm"
-                  className="rounded-none border-0 border- cursor-pointer"
+                  className="rounded-none border-0 cursor-pointer"
                   onClick={() => setView("grouped")}
                   aria-label="Grouped view"
                 >
@@ -921,6 +922,17 @@ export function ProjectsPageClient({
                         buttonLabel="Add Project"
                         buttonClassName="w-full sm:w-auto"
                       />
+                      <DeleteProjectsButton
+                        groupKind="subdivision"
+                        groupLabel={subdivisionGroup.label}
+                        projectIds={subdivisionGroup.builders.flatMap(
+                          (builderGroup) =>
+                            builderGroup.streets.flatMap((streetGroup) =>
+                              streetGroup.projects.map((project) => project.id),
+                            ),
+                        )}
+                        className="w-full sm:w-auto"
+                      />
                     </div>
 
                     {isSubdivisionExpanded && (
@@ -968,31 +980,41 @@ export function ProjectsPageClient({
 
                                     return (
                                       <div key={streetGroup.key} className="space-y-2">
-                                        <button
-                                          type="button"
-                                          className="flex w-full flex-col items-start gap-2 rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/35 cursor-pointer sm:flex-row sm:items-center sm:justify-between"
-                                          onClick={() => toggleStreet(streetGroup.key)}
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <ChevronDown
-                                              className={cn(
-                                                "size-4 shrink-0 transition-transform cursor-pointer",
-                                                isStreetExpanded && "rotate-180",
-                                              )}
-                                            />
-                                            <div className="font-medium">
-                                              {streetGroup.label}
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                                          <button
+                                            type="button"
+                                            className="flex flex-1 flex-col items-start gap-2 rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/35 cursor-pointer sm:flex-row sm:items-center sm:justify-between"
+                                            onClick={() => toggleStreet(streetGroup.key)}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <ChevronDown
+                                                className={cn(
+                                                  "size-4 shrink-0 transition-transform cursor-pointer",
+                                                  isStreetExpanded && "rotate-180",
+                                                )}
+                                              />
+                                              <div className="font-medium">
+                                                {streetGroup.label}
+                                              </div>
                                             </div>
-                                          </div>
-                                          <div className="text-xs text-muted-foreground sm:text-right">
-                                            {streetGroup.projects.length}{" "}
-                                            {streetGroup.projects.length === 1
-                                              ? "project"
-                                              : "projects"}{" "}
-                                            • {streetGroup.totalJobCount} jobs •{" "}
-                                            {streetGroup.openJobCount} open
-                                          </div>
-                                        </button>
+                                            <div className="text-xs text-muted-foreground sm:text-right">
+                                              {streetGroup.projects.length}{" "}
+                                              {streetGroup.projects.length === 1
+                                                ? "project"
+                                                : "projects"}{" "}
+                                              • {streetGroup.totalJobCount} jobs •{" "}
+                                              {streetGroup.openJobCount} open
+                                            </div>
+                                          </button>
+                                          <DeleteProjectsButton
+                                            groupKind="street"
+                                            groupLabel={streetGroup.label}
+                                            projectIds={streetGroup.projects.map(
+                                              (project) => project.id,
+                                            )}
+                                            className="w-full sm:w-auto"
+                                          />
+                                        </div>
 
                                         {isStreetExpanded && (
                                           <div className="space-y-2 pl-2 sm:pl-4">
