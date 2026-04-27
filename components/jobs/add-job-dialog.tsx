@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +27,12 @@ import {
   type ComboboxItem,
 } from "@/components/projects/createable-combobox";
 import { CompletedByCombobox } from "@/components/jobs/completed-by-combobox";
+import { useCompany } from "@/lib/company-context";
+import {
+  addDismissedId,
+  getDismissedIds,
+  removeDismissedId,
+} from "@/lib/dismissed-suggestions";
 
 function normalizeWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -122,6 +128,8 @@ export function AddJobDialog({
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { activeCompany } = useCompany();
+  const activeCompanyId = activeCompany?.id ?? null;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showUnassignedConfirm, setShowUnassignedConfirm] = useState(false);
@@ -154,6 +162,7 @@ export function AddJobDialog({
 
   useEffect(() => {
     if (!open) return;
+    if (!activeCompanyId) return;
 
     let isActive = true;
 
@@ -162,7 +171,7 @@ export function AddJobDialog({
         supabase
           .from("jobs")
           .select("title, superintendent, price_cents")
-          .eq("project_id", projectId)
+          .eq("company_id", activeCompanyId)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(500),
@@ -182,10 +191,18 @@ export function AddJobDialog({
       if (!jobsRes.data) return;
 
       const rows = jobsRes.data as JobSeedRow[];
-      const nextTitleOptions = toOptions(rows.map((job) => job.title));
+      const dismissedTitleIds = getDismissedIds(activeCompanyId, "job-title");
+      const dismissedPriceIds = getDismissedIds(activeCompanyId, "job-price");
+      const dismissedSuperintendentIds = getDismissedIds(
+        activeCompanyId,
+        "job-superintendent",
+      );
+      const nextTitleOptions = toOptions(rows.map((job) => job.title)).filter(
+        (option) => !dismissedTitleIds.has(option.id),
+      );
       const nextSuperintendentOptions = toOptions(
         rows.map((job) => job.superintendent),
-      );
+      ).filter((option) => !dismissedSuperintendentIds.has(option.id));
 
       const priceOptionMap = new Map<string, ComboboxItem>();
       const priceDefaultsByTitle: Record<string, ComboboxItem> = {};
@@ -193,12 +210,14 @@ export function AddJobDialog({
       for (const row of rows) {
         if (typeof row.price_cents !== "number") continue;
         const option = toPriceOption(row.price_cents);
+        if (dismissedPriceIds.has(option.id)) continue;
         if (!priceOptionMap.has(option.id)) {
           priceOptionMap.set(option.id, option);
         }
 
         const titleOption = toComboboxItem(row.title ?? "");
         if (!titleOption.name) continue;
+        if (dismissedTitleIds.has(titleOption.id)) continue;
         if (!priceDefaultsByTitle[titleOption.id]) {
           priceDefaultsByTitle[titleOption.id] = option;
         }
@@ -219,16 +238,18 @@ export function AddJobDialog({
     return () => {
       isActive = false;
     };
-  }, [open, supabase, projectId]);
+  }, [open, supabase, activeCompanyId]);
 
   async function createTitle(name: string) {
     const option = toComboboxItem(name);
+    removeDismissedId(activeCompanyId, "job-title", option.id);
     setTitleOptions((prev) => upsertOptions(prev, option));
     return option;
   }
 
   async function createSuperintendent(name: string) {
     const option = toComboboxItem(name);
+    removeDismissedId(activeCompanyId, "job-superintendent", option.id);
     setSuperintendentOptions((prev) => upsertOptions(prev, option));
     return option;
   }
@@ -238,6 +259,7 @@ export function AddJobDialog({
     if (cents === null) throw new Error("Enter a valid price.");
 
     const option = toPriceOption(cents);
+    removeDismissedId(activeCompanyId, "job-price", option.id);
     setPriceOptions((prev) => upsertOptions(prev, option));
     setPrice(option.name);
     setSelectedPrice(option);
@@ -327,6 +349,7 @@ export function AddJobDialog({
             onChange={handleTitleChange}
             onCreate={createTitle}
             onDelete={(item) => {
+              addDismissedId(activeCompanyId, "job-title", item.id);
               setTitleOptions((prev) =>
                 prev.filter((entry) => entry.id !== item.id),
               );
@@ -347,22 +370,23 @@ export function AddJobDialog({
               onChange={handlePriceChange}
               onCreate={createPrice}
               onDelete={(item) => {
+                addDismissedId(activeCompanyId, "job-price", item.id);
                 setPriceOptions((prev) =>
                   prev.filter((entry) => entry.id !== item.id),
                 );
               }}
             />
             <p className="text-xs text-muted-foreground">
-              Prices are suggested from this project only.
+              Prices are suggested from all projects in this company.
             </p>
           </div>
 
           <div className="space-y-2">
             <div className="text-sm font-medium">Scheduled Completion (Optional)</div>
-            <Input
-              type="date"
+            <DatePicker
               value={scheduled}
-              onChange={(e) => setScheduled(e.target.value)}
+              onChange={setScheduled}
+              placeholder="Pick a completion date"
             />
           </div>
 
@@ -385,6 +409,7 @@ export function AddJobDialog({
               onChange={setSuperintendent}
               onCreate={createSuperintendent}
               onDelete={(item) => {
+                addDismissedId(activeCompanyId, "job-superintendent", item.id);
                 setSuperintendentOptions((prev) =>
                   prev.filter((entry) => entry.id !== item.id),
                 );

@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,12 @@ import {
 import { CompletedByCombobox } from "@/components/jobs/completed-by-combobox";
 import type { JobRow } from "@/components/jobs/jobs-table";
 import { toast } from "sonner";
+import { useCompany } from "@/lib/company-context";
+import {
+  addDismissedId,
+  getDismissedIds,
+  removeDismissedId,
+} from "@/lib/dismissed-suggestions";
 
 function normalizeWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -124,6 +130,8 @@ export function EditJobDialog({
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { activeCompany } = useCompany();
+  const activeCompanyId = activeCompany?.id ?? null;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showUnassignedConfirm, setShowUnassignedConfirm] = useState(false);
@@ -159,6 +167,7 @@ export function EditJobDialog({
 
   useEffect(() => {
     if (!open) return;
+    if (!activeCompanyId) return;
 
     let isActive = true;
 
@@ -167,7 +176,7 @@ export function EditJobDialog({
         supabase
           .from("jobs")
           .select("title, superintendent, price_cents")
-          .eq("project_id", projectId)
+          .eq("company_id", activeCompanyId)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(500),
@@ -186,9 +195,27 @@ export function EditJobDialog({
       if (!isActive || !jobsRes.data) return;
 
       const rows = jobsRes.data as JobSeedRow[];
-      const nextTitleOptions = toOptions(rows.map((row) => row.title));
+      const dismissedTitleIds = getDismissedIds(activeCompanyId, "job-title");
+      const dismissedPriceIds = getDismissedIds(activeCompanyId, "job-price");
+      const dismissedSuperintendentIds = getDismissedIds(
+        activeCompanyId,
+        "job-superintendent",
+      );
+      const currentTitleId = toComboboxItem(job.title).id;
+      const currentPriceId = String(job.price_cents);
+      const currentSuperintendentId = job.superintendent
+        ? toComboboxItem(job.superintendent).id
+        : null;
+      const nextTitleOptions = toOptions(rows.map((row) => row.title)).filter(
+        (option) =>
+          option.id === currentTitleId || !dismissedTitleIds.has(option.id),
+      );
       const nextSuperintendentOptions = toOptions(
         rows.map((row) => row.superintendent),
+      ).filter(
+        (option) =>
+          option.id === currentSuperintendentId ||
+          !dismissedSuperintendentIds.has(option.id),
       );
 
       const priceOptionMap = new Map<string, ComboboxItem>();
@@ -197,12 +224,24 @@ export function EditJobDialog({
       for (const row of rows) {
         if (typeof row.price_cents !== "number") continue;
         const option = toPriceOption(row.price_cents);
+        if (
+          option.id !== currentPriceId &&
+          dismissedPriceIds.has(option.id)
+        ) {
+          continue;
+        }
         if (!priceOptionMap.has(option.id)) {
           priceOptionMap.set(option.id, option);
         }
 
         const titleOption = toComboboxItem(row.title ?? "");
         if (!titleOption.name) continue;
+        if (
+          titleOption.id !== currentTitleId &&
+          dismissedTitleIds.has(titleOption.id)
+        ) {
+          continue;
+        }
         if (!priceDefaultsByTitle[titleOption.id]) {
           priceDefaultsByTitle[titleOption.id] = option;
         }
@@ -223,16 +262,18 @@ export function EditJobDialog({
     return () => {
       isActive = false;
     };
-  }, [open, supabase, projectId]);
+  }, [open, supabase, activeCompanyId]);
 
   async function createTitle(name: string) {
     const option = toComboboxItem(name);
+    removeDismissedId(activeCompanyId, "job-title", option.id);
     setTitleOptions((prev) => upsertOptions(prev, option));
     return option;
   }
 
   async function createSuperintendent(name: string) {
     const option = toComboboxItem(name);
+    removeDismissedId(activeCompanyId, "job-superintendent", option.id);
     setSuperintendentOptions((prev) => upsertOptions(prev, option));
     return option;
   }
@@ -242,6 +283,7 @@ export function EditJobDialog({
     if (cents === null) throw new Error("Enter a valid price.");
 
     const option = toPriceOption(cents);
+    removeDismissedId(activeCompanyId, "job-price", option.id);
     setPriceOptions((prev) => upsertOptions(prev, option));
     setPrice(option.name);
     setSelectedPrice(option);
@@ -329,6 +371,7 @@ export function EditJobDialog({
             onChange={handleTitleChange}
             onCreate={createTitle}
             onDelete={(item) => {
+              addDismissedId(activeCompanyId, "job-title", item.id);
               setTitleOptions((prev) =>
                 prev.filter((entry) => entry.id !== item.id),
               );
@@ -349,13 +392,14 @@ export function EditJobDialog({
               onChange={handlePriceChange}
               onCreate={createPrice}
               onDelete={(item) => {
+                addDismissedId(activeCompanyId, "job-price", item.id);
                 setPriceOptions((prev) =>
                   prev.filter((entry) => entry.id !== item.id),
                 );
               }}
             />
             <p className="text-xs text-muted-foreground">
-              Prices are suggested from this project only.
+              Prices are suggested from all projects in this company.
             </p>
           </div>
 
@@ -363,10 +407,10 @@ export function EditJobDialog({
             <div className="text-sm font-medium">
               Scheduled Completion (Optional)
             </div>
-            <Input
-              type="date"
+            <DatePicker
               value={scheduled}
-              onChange={(e) => setScheduled(e.target.value)}
+              onChange={setScheduled}
+              placeholder="Pick a completion date"
             />
           </div>
 
@@ -389,6 +433,7 @@ export function EditJobDialog({
               onChange={setSuperintendent}
               onCreate={createSuperintendent}
               onDelete={(item) => {
+                addDismissedId(activeCompanyId, "job-superintendent", item.id);
                 setSuperintendentOptions((prev) =>
                   prev.filter((entry) => entry.id !== item.id),
                 );
