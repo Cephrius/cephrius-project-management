@@ -21,6 +21,12 @@ const PRIVATE_ROUTE_PATTERNS = [
 /** Per-route SEO weighting for the public marketing surface. */
 const PUBLIC_ROUTE_OVERRIDES = {
     "/": { changefreq: "weekly", priority: 1.0 },
+    "/features": { changefreq: "monthly", priority: 0.8 },
+    "/how-it-works": { changefreq: "monthly", priority: 0.8 },
+    "/modules": { changefreq: "monthly", priority: 0.8 },
+    "/preview": { changefreq: "monthly", priority: 0.8 },
+    "/why-jobsyte": { changefreq: "monthly", priority: 0.8 },
+    "/faq": { changefreq: "monthly", priority: 0.8 },
     "/request-demo": { changefreq: "monthly", priority: 0.9 },
 };
 
