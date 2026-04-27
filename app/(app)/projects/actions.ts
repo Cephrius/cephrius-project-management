@@ -43,11 +43,6 @@ function combineProjectAddress(houseNumber: string, streetAddress: string) {
   return normalizeProjectAddress(`${houseNumber} ${streetAddress}`);
 }
 
-function isMissingDeletedAtColumnError(message: string | undefined) {
-  const normalized = (message ?? "").toLowerCase();
-  return normalized.includes("column") && normalized.includes("deleted_at");
-}
-
 function normalizeHeader(value: string) {
   return normalizeWhitespace(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -161,16 +156,158 @@ function buildRowObject(headers: string[], row: string[]) {
   return obj;
 }
 
-function getRowValue(
-  row: Record<string, string>,
-  aliases: readonly string[],
-): string {
-  for (const alias of aliases) {
-    const key = normalizeHeader(alias);
-    const value = row[key];
-    if (value) return value;
+type ImportFieldName = keyof typeof IMPORT_HEADER_ALIASES;
+
+// Heuristic detectors for column content sniffing (used when CSV headers are
+// missing or don't match any known aliases). Returns true when a cell looks
+// like the given field type.
+function looksLikePrice(value: string) {
+  const v = normalizeWhitespace(value);
+  if (!v) return false;
+  if (!/^\$?\s*[\d,]+(\.\d{1,2})?$/.test(v)) return false;
+  return parsePriceToCents(v) !== null;
+}
+
+function looksLikeDate(value: string) {
+  return parseScheduledDate(value) !== null;
+}
+
+function looksLikeAddress(value: string) {
+  const v = normalizeWhitespace(value);
+  if (!v) return false;
+  // Starts with one or more digits followed by a space and at least one letter.
+  return /^\d+\s+[A-Za-z]/.test(v);
+}
+
+function looksLikeNumeric(value: string) {
+  const v = normalizeWhitespace(value);
+  if (!v) return false;
+  return /^\d+$/.test(v);
+}
+
+function detectFieldFromColumn(values: string[]): ImportFieldName | null {
+  const nonEmpty = values
+    .map((v) => normalizeWhitespace(v))
+    .filter((v) => v.length > 0);
+  if (nonEmpty.length === 0) return null;
+  const total = nonEmpty.length;
+
+  let priceMatches = 0;
+  let dateMatches = 0;
+  let addressMatches = 0;
+  let houseNumberMatches = 0;
+
+  for (const v of nonEmpty) {
+    if (looksLikePrice(v)) priceMatches += 1;
+    if (looksLikeDate(v)) dateMatches += 1;
+    if (looksLikeAddress(v)) addressMatches += 1;
+    if (looksLikeNumeric(v)) houseNumberMatches += 1;
   }
-  return "";
+
+  // Order matters — price/date/address are the most distinguishable.
+  if (priceMatches / total >= 0.7) return "price";
+  if (dateMatches / total >= 0.7) return "scheduledCompletion";
+  if (addressMatches / total >= 0.7) return "projectAddress";
+  if (houseNumberMatches / total >= 0.7) return "houseNumber";
+  return null;
+}
+
+// Build a map from field name -> column index by:
+//  1. Matching header aliases first.
+//  2. Sniffing data columns for any required/known fields still unmapped.
+//  3. Falling back: the first remaining textual column becomes the job title.
+function buildFieldColumnMap(
+  headers: string[],
+  dataRows: string[][],
+): Map<ImportFieldName, number> {
+  const fieldToColumn = new Map<ImportFieldName, number>();
+  const usedColumns = new Set<number>();
+
+  // Pass 1: header alias match.
+  for (const fieldName of Object.keys(IMPORT_HEADER_ALIASES) as ImportFieldName[]) {
+    const aliases = IMPORT_HEADER_ALIASES[fieldName].map((a) =>
+      normalizeHeader(a),
+    );
+    for (let i = 0; i < headers.length; i += 1) {
+      if (usedColumns.has(i)) continue;
+      if (aliases.includes(headers[i])) {
+        fieldToColumn.set(fieldName, i);
+        usedColumns.add(i);
+        break;
+      }
+    }
+  }
+
+  // Pass 2: content sniffing for remaining columns.
+  for (let i = 0; i < headers.length; i += 1) {
+    if (usedColumns.has(i)) continue;
+    const columnValues = dataRows.map((row) => row[i] ?? "");
+    const detected = detectFieldFromColumn(columnValues);
+    if (detected && !fieldToColumn.has(detected)) {
+      fieldToColumn.set(detected, i);
+      usedColumns.add(i);
+    }
+  }
+
+  // Pass 3: job title fallback — first remaining mostly-text column.
+  if (!fieldToColumn.has("jobTitle")) {
+    for (let i = 0; i < headers.length; i += 1) {
+      if (usedColumns.has(i)) continue;
+      const columnValues = dataRows
+        .map((row) => normalizeWhitespace(row[i] ?? ""))
+        .filter((v) => v.length > 0);
+      if (columnValues.length === 0) continue;
+      const numericCount = columnValues.filter(
+        (v) => looksLikePrice(v) || looksLikeDate(v) || looksLikeNumeric(v),
+      ).length;
+      if (numericCount / columnValues.length < 0.5) {
+        fieldToColumn.set("jobTitle", i);
+        usedColumns.add(i);
+        break;
+      }
+    }
+  }
+
+  return fieldToColumn;
+}
+
+function getFieldValue(
+  rawRow: string[],
+  fieldToColumn: Map<ImportFieldName, number>,
+  field: ImportFieldName,
+): string {
+  const idx = fieldToColumn.get(field);
+  if (idx === undefined) return "";
+  return normalizeWhitespace(rawRow[idx] ?? "");
+}
+
+// Translate raw error text (often from Supabase/Postgres) into a short message
+// the end user can act on. Anything we don't recognize falls back to a generic
+// line so we never leak DB internals into the UI.
+function friendlyImportError(raw: string): string {
+  const msg = raw.toLowerCase();
+  if (msg.includes("builder is missing")) {
+    return "Missing builder. Add a builder column or set a default builder.";
+  }
+  if (msg.includes("subdivision is missing")) {
+    return "Missing subdivision. Add a subdivision column or set a default subdivision.";
+  }
+  if (msg.includes("project address is required")) {
+    return "Missing project address.";
+  }
+  if (msg.includes("invalid input syntax")) {
+    return "One of the values in this row is in an unexpected format.";
+  }
+  if (msg.includes("duplicate key") || msg.includes("already exists")) {
+    return "This row already exists and was skipped.";
+  }
+  if (msg.includes("permission") || msg.includes("not allowed") || msg.includes("rls")) {
+    return "You don't have permission to add this record.";
+  }
+  if (msg.includes("network") || msg.includes("fetch")) {
+    return "Network problem while saving. Try again.";
+  }
+  return "This row couldn't be imported. Check the values and try again.";
 }
 
 function normalizeJobKey(parts: {
@@ -188,7 +325,24 @@ function normalizeJobKey(parts: {
 }
 
 const IMPORT_HEADER_ALIASES = {
-  projectAddress: ["project_address", "projectaddress", "address", "project"],
+  projectAddress: [
+    "project_address",
+    "projectaddress",
+    "address",
+    "project",
+    "site_address",
+    "siteaddress",
+    "job_address",
+    "jobaddress",
+    "job_site",
+    "jobsite",
+    "lot_address",
+    "lotaddress",
+    "property_address",
+    "propertyaddress",
+    "property",
+    "location",
+  ],
   houseNumber: [
     "house_number",
     "housenumber",
@@ -196,6 +350,11 @@ const IMPORT_HEADER_ALIASES = {
     "streetnumber",
     "street no",
     "street_no",
+    "lot",
+    "lot_number",
+    "lotnumber",
+    "lot_no",
+    "lot#",
   ],
   streetAddress: [
     "street_address",
@@ -205,20 +364,178 @@ const IMPORT_HEADER_ALIASES = {
     "streetname",
     "address_line",
     "addressline",
+    "address_line_1",
+    "addressline1",
   ],
-  jobTitle: ["job_title", "jobtitle", "job", "title"],
-  price: ["price", "amount", "job_price", "jobprice", "job_cost", "jobcost", "cost"],
-  builderName: ["builder_name", "buildername", "builder"],
-  subdivisionName: ["subdivision_name", "subdivisionname", "subdivision"],
-  superintendent: ["superintendent", "gc", "crew", "contractor"],
+  jobTitle: [
+    "job_title",
+    "jobtitle",
+    "job",
+    "title",
+    "description",
+    "job_description",
+    "jobdescription",
+    "cost_code_description",
+    "costcodedescription",
+    "cost_code_desc",
+    "costcodedesc",
+    "item_description",
+    "itemdescription",
+    "line_description",
+    "linedescription",
+    "line_item",
+    "lineitem",
+    "task",
+    "task_name",
+    "taskname",
+    "scope",
+    "scope_of_work",
+    "scopeofwork",
+    "work_description",
+    "workdescription",
+    "service",
+    "service_description",
+    "servicedescription",
+  ],
+  price: [
+    "price",
+    "amount",
+    "job_price",
+    "jobprice",
+    "job_cost",
+    "jobcost",
+    "cost",
+    "total",
+    "total_price",
+    "totalprice",
+    "total_amount",
+    "totalamount",
+    "subtotal",
+    "extended_price",
+    "extendedprice",
+    "extended_amount",
+    "extendedamount",
+    "ext_price",
+    "extprice",
+    "unit_price",
+    "unitprice",
+    "contract_amount",
+    "contractamount",
+    "contract_price",
+    "contractprice",
+    "billed_amount",
+    "billedamount",
+    "line_total",
+    "linetotal",
+  ],
+  builderName: [
+    "builder_name",
+    "buildername",
+    "builder",
+    "customer",
+    "customer_name",
+    "customername",
+    "client",
+    "client_name",
+    "clientname",
+    "bill_to",
+    "billto",
+    "account",
+    "account_name",
+    "accountname",
+    "company",
+    "company_name",
+    "companyname",
+    "gc_name",
+    "gcname",
+    "general_contractor",
+    "generalcontractor",
+  ],
+  subdivisionName: [
+    "subdivision_name",
+    "subdivisionname",
+    "subdivision",
+    "community",
+    "community_name",
+    "communityname",
+    "neighborhood",
+    "development",
+    "development_name",
+    "developmentname",
+    "project_name",
+    "projectname",
+    "tract",
+    "tract_name",
+    "tractname",
+    "phase",
+  ],
+  superintendent: [
+    "superintendent",
+    "super",
+    "site_super",
+    "sitesuper",
+    "site_superintendent",
+    "sitesuperintendent",
+    "gc",
+    "crew",
+    "crew_name",
+    "crewname",
+    "contractor",
+    "foreman",
+    "lead",
+    "crew_lead",
+    "crewlead",
+    "project_manager",
+    "projectmanager",
+    "pm",
+    "assigned_to",
+    "assignedto",
+  ],
   scheduledCompletion: [
     "scheduled_completion",
     "scheduledcompletion",
     "scheduled",
     "scheduled_for",
+    "scheduledfor",
+    "scheduled_date",
+    "scheduleddate",
     "date",
+    "due",
+    "due_date",
+    "duedate",
+    "completion",
+    "completion_date",
+    "completiondate",
+    "target",
+    "target_date",
+    "targetdate",
+    "expected",
+    "expected_date",
+    "expecteddate",
+    "expected_completion",
+    "expectedcompletion",
+    "deadline",
+    "finish",
+    "finish_date",
+    "finishdate",
+    "end_date",
+    "enddate",
   ],
 } as const;
+
+type ImportPreviewProject = {
+  projectAddress: string;
+  builderName: string;
+  subdivisionName: string;
+  isNew: boolean;
+  jobs: {
+    title: string;
+    priceCents: number;
+    scheduledCompletion: string | null;
+    superintendent: string | null;
+    isDuplicate: boolean;
+  }[];
+};
 
 type ImportSummary = {
   dryRun: boolean;
@@ -230,6 +547,7 @@ type ImportSummary = {
   jobsSkippedDuplicate: number;
   rowsSkippedInvalid: number;
   rowErrors: string[];
+  preview: ImportPreviewProject[];
 };
 
 type ImportResult =
@@ -474,39 +792,177 @@ export async function deleteProject(projectId: string) {
     .select("id, user_id")
     .eq("id", id)
     .maybeSingle();
-  
+
   if (projectError) return { ok: false, message: "Failed to find project." };
   if (!project) return { ok: false, message: "Project not found." };
 
-  const deletedAt = new Date().toISOString();
-
-  // Soft delete project
-  const { error: jobsError } = await supabase
+  // Hard-delete the project and its jobs, but preserve invoice history. Every
+  // invoice_items row already stores frozen snapshots of address / builder /
+  // subdivision / job title / price, so the invoice will continue to render
+  // correctly after the underlying jobs row is gone — we just need to drop the
+  // job_id link first so a FK doesn't block the delete (or cascade-delete the
+  // invoice line). Same idea for payroll: payments.job_id is ON DELETE
+  // CASCADE, so we null it before removing the jobs to keep payroll history.
+  const { data: projectJobs, error: projectJobsError } = await supabase
     .from("jobs")
-    .update({ deleted_at: deletedAt })
-    .eq("project_id", id)
-    .is("deleted_at", null); // only delete non-deleted jobs
+    .select("id")
+    .eq("project_id", id);
+  if (projectJobsError) {
+    return { ok: false, message: "Failed to load project jobs." };
+  }
 
-  if (jobsError)
-    return { ok: false, message: "Failed to delete project jobs." };
+  const projectJobIds = (projectJobs ?? []).map((row) => row.id as string);
+
+  if (projectJobIds.length > 0) {
+    // Detach invoice items from the jobs (keep the snapshot data intact).
+    const { error: detachInvoiceItemsError } = await supabase
+      .from("invoice_items")
+      .update({ job_id: null })
+      .in("job_id", projectJobIds);
+    if (detachInvoiceItemsError) {
+      return {
+        ok: false,
+        message: "Failed to detach invoice history from project jobs.",
+      };
+    }
+
+    // Detach payments so the ON DELETE CASCADE doesn't wipe payroll history.
+    const { error: detachPaymentsError } = await supabase
+      .from("payments")
+      .update({ job_id: null })
+      .in("job_id", projectJobIds);
+    if (detachPaymentsError) {
+      return {
+        ok: false,
+        message: "Failed to detach payroll history from project jobs.",
+      };
+    }
+
+    // Now hard-delete every job for this project.
+    const { error: jobsDeleteError } = await supabase
+      .from("jobs")
+      .delete()
+      .in("id", projectJobIds);
+    if (jobsDeleteError) {
+      return { ok: false, message: "Failed to delete project jobs." };
+    }
+  }
 
   const { error: projectDeleteError } = await supabase
     .from("projects")
-    .update({ deleted_at: deletedAt })
+    .delete()
     .eq("id", id)
     .eq("user_id", user.id);
-
   if (projectDeleteError) {
-    if (isMissingDeletedAtColumnError(projectDeleteError.message)) {
-      return {
-        ok: false,
-        message:
-          "Projects table is missing deleted_at. Add that column before enabling project deletion.",
-      };
-    }
     return { ok: false, message: "Failed to delete project." };
   }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+  revalidatePath("/invoices");
+  revalidatePath("/accounting");
   return { ok: true };
+}
+
+/**
+ * Hard-delete a batch of projects (and their jobs) at once. Used by the
+ * subdivision/street group "delete all" buttons in the projects page.
+ *
+ * Same semantics as deleteProject: invoice_items.job_id and payments.job_id
+ * are nulled out first so invoice snapshots and payroll history survive,
+ * then jobs and projects are removed.
+ */
+export async function deleteProjects(projectIds: string[]) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { ok: false, message: "Session expired. Please log in again." };
+  }
+
+  const ids = Array.from(
+    new Set(
+      (projectIds ?? [])
+        .map((id) => (typeof id === "string" ? id.trim() : ""))
+        .filter((id) => id.length > 0),
+    ),
+  );
+  if (ids.length === 0) {
+    return { ok: false, message: "No projects selected." };
+  }
+
+  // Restrict to projects the current user actually owns.
+  const { data: ownedProjects, error: ownedError } = await supabase
+    .from("projects")
+    .select("id")
+    .in("id", ids)
+    .eq("user_id", user.id);
+  if (ownedError) return { ok: false, message: "Failed to load projects." };
+
+  const ownedIds = (ownedProjects ?? []).map((p) => p.id as string);
+  if (ownedIds.length === 0) {
+    return { ok: false, message: "No matching projects found." };
+  }
+
+  const { data: projectJobs, error: projectJobsError } = await supabase
+    .from("jobs")
+    .select("id")
+    .in("project_id", ownedIds);
+  if (projectJobsError) {
+    return { ok: false, message: "Failed to load project jobs." };
+  }
+
+  const projectJobIds = (projectJobs ?? []).map((row) => row.id as string);
+
+  if (projectJobIds.length > 0) {
+    const { error: detachInvoiceItemsError } = await supabase
+      .from("invoice_items")
+      .update({ job_id: null })
+      .in("job_id", projectJobIds);
+    if (detachInvoiceItemsError) {
+      return {
+        ok: false,
+        message: "Failed to detach invoice history from project jobs.",
+      };
+    }
+
+    const { error: detachPaymentsError } = await supabase
+      .from("payments")
+      .update({ job_id: null })
+      .in("job_id", projectJobIds);
+    if (detachPaymentsError) {
+      return {
+        ok: false,
+        message: "Failed to detach payroll history from project jobs.",
+      };
+    }
+
+    const { error: jobsDeleteError } = await supabase
+      .from("jobs")
+      .delete()
+      .in("id", projectJobIds);
+    if (jobsDeleteError) {
+      return { ok: false, message: "Failed to delete project jobs." };
+    }
+  }
+
+  const { error: projectsDeleteError } = await supabase
+    .from("projects")
+    .delete()
+    .in("id", ownedIds)
+    .eq("user_id", user.id);
+  if (projectsDeleteError) {
+    return { ok: false, message: "Failed to delete projects." };
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+  revalidatePath("/invoices");
+  revalidatePath("/accounting");
+  return { ok: true, deletedCount: ownedIds.length };
 }
 
 export async function editProject(formData: FormData) {
@@ -684,6 +1140,11 @@ export async function importProjectsJobsCsv(
     return { ok: false, message: "CSV has no data rows to import." };
   }
 
+  // Resolve which column carries which field. Prefer header aliases, then fall
+  // back to data sniffing so the import works even when the CSV uses arbitrary
+  // column names or no recognizable header at all.
+  const fieldToColumn = buildFieldColumnMap(headers, dataRows);
+
   const builderCache = new Map<string, string>();
   const subdivisionCache = new Map<string, string>();
   const projectCache = new Map<string, string>();
@@ -699,7 +1160,12 @@ export async function importProjectsJobsCsv(
     jobsSkippedDuplicate: 0,
     rowsSkippedInvalid: 0,
     rowErrors: [],
+    preview: [],
   };
+
+  // Maps a project key to its index in summary.preview so multiple jobs for the
+  // same project are grouped together in the UI.
+  const previewIndexByProject = new Map<string, number>();
 
   async function resolveBuilderId(rawName: string): Promise<string> {
     const name = toTitleCase(rawName || defaultBuilder);
@@ -815,22 +1281,32 @@ export async function importProjectsJobsCsv(
     const cached = projectCache.get(cacheKey);
     if (cached) return cached;
 
-    const { data: existing, error: selectError } = await supabase
-      .from("projects")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("builder_id", input.builderId)
-      .eq("subdivision_id", input.subdivisionId)
-      .ilike("project_address", projectAddress)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (selectError) throw new Error(selectError.message);
+    // In dry-run mode, builderId/subdivisionId can be synthetic placeholders
+    // (e.g. "dry-builder-foo") for entities that don't exist yet. Skip the
+    // existing-project lookup in that case — Supabase would reject the
+    // non-UUID value with "invalid input syntax for type uuid".
+    const builderIsDry = input.builderId.startsWith("dry-builder-");
+    const subdivisionIsDry = input.subdivisionId.startsWith("dry-subdivision-");
+    const skipLookup = dryRun && (builderIsDry || subdivisionIsDry);
 
-    if (existing?.id) {
-      projectCache.set(cacheKey, existing.id);
-      return existing.id;
+    if (!skipLookup) {
+      const { data: existing, error: selectError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("builder_id", input.builderId)
+        .eq("subdivision_id", input.subdivisionId)
+        .ilike("project_address", projectAddress)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (selectError) throw new Error(selectError.message);
+
+      if (existing?.id) {
+        projectCache.set(cacheKey, existing.id);
+        return existing.id;
+      }
     }
 
     if (dryRun) {
@@ -895,16 +1371,17 @@ export async function importProjectsJobsCsv(
 
   for (let i = 0; i < dataRows.length; i += 1) {
     const lineNumber = i + 2;
-    const row = buildRowObject(headers, dataRows[i] ?? []);
+    const rawRow = dataRows[i] ?? [];
+    const row = buildRowObject(headers, rawRow);
 
     const compositeSource = Object.values(row).find((value) =>
       normalizeWhitespace(value).includes("---->"),
     );
     const composite = compositeSource ? parseCompositeCell(compositeSource) : null;
 
-    const projectAddressRaw = getRowValue(row, IMPORT_HEADER_ALIASES.projectAddress);
-    const houseNumberRaw = getRowValue(row, IMPORT_HEADER_ALIASES.houseNumber);
-    const streetAddressRaw = getRowValue(row, IMPORT_HEADER_ALIASES.streetAddress);
+    const projectAddressRaw = getFieldValue(rawRow, fieldToColumn, "projectAddress");
+    const houseNumberRaw = getFieldValue(rawRow, fieldToColumn, "houseNumber");
+    const streetAddressRaw = getFieldValue(rawRow, fieldToColumn, "streetAddress");
     const splitAddress = normalizeWhitespace(
       [houseNumberRaw, streetAddressRaw].filter(Boolean).join(" "),
     );
@@ -913,21 +1390,27 @@ export async function importProjectsJobsCsv(
       splitAddress ||
       normalizeWhitespace(composite?.projectAddress ?? "");
     const jobTitleRaw =
-      getRowValue(row, IMPORT_HEADER_ALIASES.jobTitle) ||
+      getFieldValue(rawRow, fieldToColumn, "jobTitle") ||
       normalizeWhitespace(composite?.jobTitle ?? "");
     const priceRaw =
-      getRowValue(row, IMPORT_HEADER_ALIASES.price) ||
+      getFieldValue(rawRow, fieldToColumn, "price") ||
       normalizeWhitespace(composite?.priceRaw ?? "");
-    const builderNameRaw = getRowValue(row, IMPORT_HEADER_ALIASES.builderName);
-    const subdivisionNameRaw = getRowValue(
-      row,
-      IMPORT_HEADER_ALIASES.subdivisionName,
+    const builderNameRaw = getFieldValue(rawRow, fieldToColumn, "builderName");
+    const subdivisionNameRaw = getFieldValue(
+      rawRow,
+      fieldToColumn,
+      "subdivisionName",
     );
-    const superintendentRaw = getRowValue(
-      row,
-      IMPORT_HEADER_ALIASES.superintendent,
+    const superintendentRaw = getFieldValue(
+      rawRow,
+      fieldToColumn,
+      "superintendent",
     );
-    const scheduledRaw = getRowValue(row, IMPORT_HEADER_ALIASES.scheduledCompletion);
+    const scheduledRaw = getFieldValue(
+      rawRow,
+      fieldToColumn,
+      "scheduledCompletion",
+    );
 
     const title = toTitleCase(jobTitleRaw);
     const priceCents = parsePriceToCents(priceRaw);
@@ -935,9 +1418,13 @@ export async function importProjectsJobsCsv(
     const scheduledCompletion = parseScheduledDate(scheduledRaw);
 
     if (!projectAddress || !title || priceCents === null) {
+      const missing: string[] = [];
+      if (!projectAddress) missing.push("project address");
+      if (!title) missing.push("job title");
+      if (priceCents === null) missing.push("price");
       summary.rowsSkippedInvalid += 1;
       summary.rowErrors.push(
-        `Line ${lineNumber}: missing/invalid required values (project_address, job_title, price).`,
+        `Row ${lineNumber}: missing or invalid ${missing.join(", ")}.`,
       );
       continue;
     }
@@ -947,6 +1434,7 @@ export async function importProjectsJobsCsv(
       const subdivisionName = toTitleCase(subdivisionNameRaw || defaultSubdivision);
       const builderId = await resolveBuilderId(builderNameRaw);
       const subdivisionId = await resolveSubdivisionId(subdivisionNameRaw);
+      const projectsBefore = summary.projectsCreated;
       const projectId = await resolveProjectId({
         projectAddress,
         builderId,
@@ -954,6 +1442,7 @@ export async function importProjectsJobsCsv(
         builderName,
         subdivisionName,
       });
+      const projectIsNew = summary.projectsCreated > projectsBefore;
 
       const jobCache = await getProjectJobCache(projectId);
       const nextJobKey = normalizeJobKey({
@@ -963,7 +1452,30 @@ export async function importProjectsJobsCsv(
         superintendent,
       });
 
-      if (jobCache.has(nextJobKey)) {
+      const isDuplicate = jobCache.has(nextJobKey);
+
+      // Group jobs under their project for the user-facing preview.
+      let previewIdx = previewIndexByProject.get(projectId);
+      if (previewIdx === undefined) {
+        previewIdx =
+          summary.preview.push({
+            projectAddress: normalizeProjectAddress(projectAddress),
+            builderName,
+            subdivisionName,
+            isNew: projectIsNew,
+            jobs: [],
+          }) - 1;
+        previewIndexByProject.set(projectId, previewIdx);
+      }
+      summary.preview[previewIdx].jobs.push({
+        title,
+        priceCents,
+        scheduledCompletion,
+        superintendent,
+        isDuplicate,
+      });
+
+      if (isDuplicate) {
         summary.jobsSkippedDuplicate += 1;
         continue;
       }
@@ -984,9 +1496,8 @@ export async function importProjectsJobsCsv(
       summary.jobsCreated += 1;
     } catch (error) {
       summary.rowsSkippedInvalid += 1;
-      summary.rowErrors.push(
-        `Line ${lineNumber}: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      const rawMessage = error instanceof Error ? error.message : "Unknown error";
+      summary.rowErrors.push(`Row ${lineNumber}: ${friendlyImportError(rawMessage)}`);
     }
   }
 

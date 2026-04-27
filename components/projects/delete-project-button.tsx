@@ -53,8 +53,11 @@ export function DeleteProjectButton({ projectId }: { projectId: string }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Delete This Project?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will delete the project and all jobs under it. Invoice history
-            remains unchanged.
+            This permanently deletes the project and all of its jobs. Any
+            existing invoices will keep showing this project&apos;s details
+            from the invoice snapshot, but the project itself will no longer
+            appear anywhere else (dashboard, accounting, payroll, search).
+            This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
