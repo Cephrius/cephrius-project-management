@@ -17,6 +17,8 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     bugFixes: [
       "Fixed Add/Edit Job suggestions not appearing on newly created projects because the seed query was scoped to the current project_id; the query is now scoped by company_id.",
       "Fixed deleted preset Job Title / Price / Superintendent entries reappearing in new Add/Edit Job dialogs — dismissals are now persisted per company so removed presets stay hidden across all projects.",
+      "Fixed dark-mode outline buttons (including the Builder and other combobox dropdowns in the Add/Edit Project dialogs) appearing nearly black against dialog backgrounds and going darker on hover; they now use the card surface with a clearer accent hover.",
+      "Fixed the Builder section accordion rows on the Projects page reading darker than the surrounding subdivision card in dark mode — they now sit on a slightly elevated surface with a clearer hover state.",
     ],
   },
   {
