@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Building2, Phone, User, Wallet } from "lucide-react";
+import { AlertTriangle, Building2, Copy, KeyRound, Phone, User, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createEmployee, updateEmployee } from "@/app/(app)/employees-crews/actions";
+import {
+  createEmployee,
+  resetEmployeePassword,
+  updateEmployee,
+} from "@/app/(app)/employees-crews/actions";
 import { toast } from "sonner";
 import {
   EMPLOYMENT_TYPE_LABELS,
@@ -32,6 +36,8 @@ import {
   type PayType,
   type PaymentMethod,
 } from "./types";
+
+const LOGIN_HANDLE_RE = /^[a-z0-9_-]{3,32}$/;
 
 export function EmployeeDialog({
   open,
@@ -47,6 +53,9 @@ export function EmployeeDialog({
 
   // Profile
   const [name, setName] = useState(initial?.name ?? "");
+  const [loginHandle, setLoginHandle] = useState(initial?.login_handle ?? "");
+  const [revealedPassword, setRevealedPassword] = useState<string | null>(null);
+  const [revealedHandle, setRevealedHandle] = useState<string | null>(null);
   const [jobTitle, setJobTitle] = useState(initial?.job_title ?? "");
   const [role, setRole] = useState(initial?.role ?? "");
   const [employmentType, setEmploymentType] = useState<EmploymentType | "">(
@@ -91,6 +100,7 @@ export function EmployeeDialog({
     if (!open) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: hydrate form fields when dialog opens with a new entity
     setName(initial?.name ?? "");
+    setLoginHandle(initial?.login_handle ?? "");
     setJobTitle(initial?.job_title ?? "");
     setRole(initial?.role ?? "");
     setEmploymentType(initial?.employment_type ?? "");
@@ -115,6 +125,7 @@ export function EmployeeDialog({
 
     const fd = new FormData();
     if (initial?.id) fd.set("employee_id", initial.id);
+    if (!isEditing) fd.set("login_handle", loginHandle);
     fd.set("name", name);
     fd.set("job_title", jobTitle);
     fd.set("role", role);
@@ -146,6 +157,22 @@ export function EmployeeDialog({
       if (!result.ok) {
         toast.error(result.message ?? "Failed to save employee.");
         return;
+      }
+
+      if (
+        !isEditing &&
+        "password" in result &&
+        typeof result.password === "string" &&
+        result.password
+      ) {
+        setRevealedPassword(result.password);
+        setRevealedHandle(
+          "loginHandle" in result && typeof result.loginHandle === "string"
+            ? result.loginHandle
+            : loginHandle,
+        );
+        toast.success("Employee created.");
+        return; // keep dialog open until owner confirms password copy
       }
 
       toast.success(isEditing ? "Employee updated." : "Employee created.");
@@ -198,6 +225,64 @@ export function EmployeeDialog({
             <div className="min-h-0 flex-1 overflow-y-auto">
               {/* ── Profile ── */}
               <TabsContent value="profile" className="m-0 space-y-4 p-6">
+                <div className="space-y-1.5">
+                  <Label htmlFor="emp-login-handle">
+                    Login Handle{!isEditing && " *"}
+                  </Label>
+                  <Input
+                    id="emp-login-handle"
+                    value={loginHandle}
+                    onChange={(e) =>
+                      setLoginHandle(e.target.value.toLowerCase().trim())
+                    }
+                    placeholder="e.g. john_smith"
+                    disabled={isEditing}
+                    autoComplete="off"
+                  />
+                  {isEditing ? (
+                    <p className="text-xs text-muted-foreground">
+                      Login handle cannot be changed.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Used to sign in at employee.jobsyte.co. Lowercase letters,
+                      numbers, underscores, hyphens. 3\u201332 chars. Must be unique.
+                    </p>
+                  )}
+                  {!isEditing &&
+                    loginHandle.length > 0 &&
+                    !LOGIN_HANDLE_RE.test(loginHandle) && (
+                      <p className="text-xs text-destructive">
+                        Login handle must be 3\u201332 chars: lowercase letters,
+                        numbers, underscores, hyphens.
+                      </p>
+                    )}
+                  {isEditing && initial?.id && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      disabled={isPending}
+                      onClick={() => {
+                        startTransition(async () => {
+                          const result = await resetEmployeePassword(initial.id);
+                          if (!result.ok) {
+                            toast.error(result.message);
+                            return;
+                          }
+                          setRevealedPassword(result.password);
+                          setRevealedHandle(initial.login_handle ?? "");
+                          toast.success("Password reset.");
+                        });
+                      }}
+                    >
+                      <KeyRound className="size-3.5" />
+                      Reset Password
+                    </Button>
+                  )}
+                </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="emp-name">Full Name *</Label>
                   <Input
@@ -484,9 +569,16 @@ export function EmployeeDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button
+                type="submit"
+                disabled={
+                  isPending ||
+                  (!isEditing &&
+                    (!loginHandle || !LOGIN_HANDLE_RE.test(loginHandle)))
+                }
+              >
                 {isPending
-                  ? "Saving…"
+                  ? "Saving\u2026"
                   : isEditing
                     ? "Save Changes"
                     : "Create Employee"}
@@ -495,6 +587,69 @@ export function EmployeeDialog({
           </div>
         </form>
       </DialogContent>
+
+      <Dialog
+        open={revealedPassword !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRevealedPassword(null);
+            setRevealedHandle(null);
+            if (!isEditing) onOpenChange(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-600" />
+              Employee password ready
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-destructive">
+              This password is shown once. Copy it now \u2014 it cannot be
+              retrieved later.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={revealedPassword ?? ""}
+                className="font-mono text-sm"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  if (!revealedPassword) return;
+                  await navigator.clipboard.writeText(revealedPassword);
+                  toast.success("Copied.");
+                }}
+                aria-label="Copy password"
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            </div>
+            {revealedHandle && (
+              <p className="text-xs text-muted-foreground">
+                Login handle:{" "}
+                <span className="font-mono">{revealedHandle}</span>
+              </p>
+            )}
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                setRevealedPassword(null);
+                setRevealedHandle(null);
+                if (!isEditing) onOpenChange(false);
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

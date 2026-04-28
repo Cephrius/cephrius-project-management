@@ -8,6 +8,20 @@ export type ReleaseNote = {
 // New releases every tuesday (Or whenever I finish a batch of features and fixes that feel worth sharing)
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.2.3",
+    releasedOn: "Apr 29, 2026",
+    majorAdditions: [
+      "Launched the JobSyte Employee Web App at employee.jobsyte.co — a separate mobile-first app where field employees can sign in to see jobs assigned to them, browse all open jobs in their company, and mark jobs complete.",
+    ],
+    changes: [
+      "Added a Login Handle field to the New Employee dialog. When you create an employee, JobSyte auto-generates a one-time password and shows it in a copy-once modal so you can hand it to the worker.",
+      "Added a Reset Password button to the Edit Employee dialog so you can re-issue a password if an employee loses theirs.",
+      "Employees are forced to set a personal password the first time they sign in to the employee app.",
+      "Updated Add/Edit Job assignment so employees are grouped by company in the assignee picker, making it easier to choose the right worker when multiple companies have employees with similar names.",
+    ],
+    bugFixes: [],
+  },
+  {
     version: "v0.2.2",
     releasedOn: "Apr 28, 2026",
     changes: [

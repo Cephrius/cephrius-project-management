@@ -2,11 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import bcrypt from "bcryptjs";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
 
 function normalize(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+const LOGIN_HANDLE_RE = /^[a-z0-9_-]{3,32}$/;
+
+function generateEmployeePassword(): string {
+  // 12 chars, no ambiguous (0/O/1/l/I), low symbol density
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$";
+  const bytes = crypto.getRandomValues(new Uint32Array(12));
+  let out = "";
+  for (let i = 0; i < 12; i++) out += alphabet[bytes[i] % alphabet.length];
+  return out;
 }
 
 async function requireAuthAndCompany() {
@@ -49,10 +61,25 @@ export async function createEmployee(formData: FormData) {
   const paymentMethod = normalize(String(formData.get("payment_method") ?? ""));
   const paymentDetails = buildPaymentDetails(paymentMethod, formData);
 
+  const handle = String(formData.get("login_handle") ?? "").toLowerCase().trim();
+  if (!LOGIN_HANDLE_RE.test(handle)) {
+    return {
+      ok: false as const,
+      message:
+        "Login handle must be 3–32 chars: lowercase letters, numbers, underscores, hyphens.",
+    };
+  }
+
+  const plaintextPassword = generateEmployeePassword();
+  const passwordHash = await bcrypt.hash(plaintextPassword, 10);
+
   const { error } = await supabase.from("employees").insert({
     company_id: companyId,
     created_by: user.id,
     name,
+    login_handle: handle,
+    password_hash: passwordHash,
+    password_must_change: true,
     role: role || null,
     job_title: jobTitle || null,
     employment_type: employmentType || null,
@@ -68,11 +95,15 @@ export async function createEmployee(formData: FormData) {
     is_active: true,
   });
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    if ((error as { code?: string }).code === "23505")
+      return { ok: false as const, message: "That login handle is already taken." };
+    return { ok: false as const, message: error.message };
+  }
 
   revalidatePath("/employees-crews");
   revalidatePath("/payroll");
-  return { ok: true };
+  return { ok: true as const, password: plaintextPassword, loginHandle: handle };
 }
 
 export async function updateEmployee(formData: FormData) {
@@ -290,6 +321,27 @@ export async function deleteCrew(crewId: string) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+export async function resetEmployeePassword(employeeId: string) {
+  const { supabase, companyId } = await requireAuthAndCompany();
+  if (!employeeId)
+    return { ok: false as const, message: "Employee ID is required." };
+
+  const plaintext = generateEmployeePassword();
+  const hash = await bcrypt.hash(plaintext, 10);
+
+  const { error } = await supabase
+    .from("employees")
+    .update({ password_hash: hash, password_must_change: true })
+    .eq("id", employeeId)
+    .eq("company_id", companyId)
+    .is("deleted_at", null);
+
+  if (error) return { ok: false as const, message: error.message };
+
+  revalidatePath("/employees-crews");
+  return { ok: true as const, password: plaintext };
+}
 
 function buildPaymentDetails(
   method: string,
