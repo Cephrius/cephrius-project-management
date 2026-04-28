@@ -26,7 +26,10 @@ import {
   CreatableCombobox,
   type ComboboxItem,
 } from "@/components/projects/createable-combobox";
-import { CompletedByCombobox } from "@/components/jobs/completed-by-combobox";
+import {
+  CompletedByCombobox,
+  type CompletedByOption,
+} from "@/components/jobs/completed-by-combobox";
 import type { JobRow } from "@/components/jobs/jobs-table";
 import { toast } from "sonner";
 import { useCompany } from "@/lib/company-context";
@@ -110,6 +113,7 @@ type JobSeedRow = {
 type EmployeeSeedRow = {
   id: string;
   name: string;
+  company_id: string | null;
 };
 
 type CrewSeedRow = {
@@ -130,8 +134,12 @@ export function EditJobDialog({
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const { activeCompany } = useCompany();
+  const { activeCompany, companies } = useCompany();
   const activeCompanyId = activeCompany?.id ?? null;
+  const companyNameById = useMemo(
+    () => new Map(companies.map((company) => [company.id, company.name])),
+    [companies],
+  );
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showUnassignedConfirm, setShowUnassignedConfirm] = useState(false);
@@ -156,7 +164,7 @@ export function EditJobDialog({
   const [superintendent, setSuperintendent] = useState<ComboboxItem | null>(
     job.superintendent ? toComboboxItem(job.superintendent) : null,
   );
-  const [employees, setEmployees] = useState<EmployeeSeedRow[]>([]);
+  const [employees, setEmployees] = useState<CompletedByOption[]>([]);
   const [crews, setCrews] = useState<CrewSeedRow[]>([]);
   const [completedByValue, setCompletedByValue] = useState(() =>
     job.completed_by_type && job.completed_by_id
@@ -182,8 +190,9 @@ export function EditJobDialog({
           .limit(500),
         supabase
           .from("employees")
-          .select("id, name")
+          .select("id, name, company_id")
           .is("deleted_at", null)
+          .order("company_id", { ascending: true })
           .order("name", { ascending: true }),
         supabase
           .from("crews")
@@ -255,14 +264,23 @@ export function EditJobDialog({
       setPriceOptions(nextPriceOptions);
       setDefaultPriceByTitleId(priceDefaultsByTitle);
       setSuperintendentOptions(nextSuperintendentOptions);
-      setEmployees((employeesRes.data ?? []) as EmployeeSeedRow[]);
+      setEmployees(
+        ((employeesRes.data ?? []) as EmployeeSeedRow[]).map((employee) => ({
+          id: employee.id,
+          name: employee.name,
+          companyId: employee.company_id,
+          companyName: employee.company_id
+            ? companyNameById.get(employee.company_id) ?? null
+            : null,
+        })),
+      );
       setCrews((crewsRes.data ?? []) as CrewSeedRow[]);
     })();
 
     return () => {
       isActive = false;
     };
-  }, [open, supabase, activeCompanyId]);
+  }, [open, supabase, activeCompanyId, companyNameById]);
 
   async function createTitle(name: string) {
     const option = toComboboxItem(name);

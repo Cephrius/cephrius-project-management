@@ -16,10 +16,45 @@ import { cn } from "@/lib/utils";
 export type CompletedByOption = {
   id: string;
   name: string;
+  companyId?: string | null;
+  companyName?: string | null;
 };
 
 function optionValue(type: "employee" | "crew", id: string) {
   return `${type}:${id}`;
+}
+
+function companyHeading(companyName: string | null | undefined) {
+  return companyName?.trim() || "Other company";
+}
+
+function optionLabel(option: CompletedByOption, typeLabel: string) {
+  const company = option.companyName?.trim();
+  return company
+    ? `${option.name} (${company} ${typeLabel})`
+    : `${option.name} (${typeLabel})`;
+}
+
+function groupByCompany(options: CompletedByOption[]) {
+  const groups = new Map<
+    string,
+    { key: string; heading: string; options: CompletedByOption[] }
+  >();
+
+  for (const option of options) {
+    const key = option.companyId ?? option.companyName ?? "__unknown__";
+    const group = groups.get(key) ?? {
+      key,
+      heading: companyHeading(option.companyName),
+      options: [],
+    };
+    group.options.push(option);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values()).sort((a, b) =>
+    a.heading.localeCompare(b.heading),
+  );
 }
 
 export function CompletedByCombobox({
@@ -43,13 +78,15 @@ export function CompletedByCombobox({
     if (!value) return "Unassigned";
 
     const employee = employees.find((item) => optionValue("employee", item.id) === value);
-    if (employee) return `${employee.name} (Employee)`;
+    if (employee) return optionLabel(employee, "Employee");
 
     const crew = crews.find((item) => optionValue("crew", item.id) === value);
-    if (crew) return `${crew.name} (Crew)`;
+    if (crew) return optionLabel(crew, "Crew");
 
     return "Unassigned";
   }, [crews, employees, value]);
+
+  const employeeGroups = useMemo(() => groupByCompany(employees), [employees]);
 
   return (
     <div className="space-y-2">
@@ -83,14 +120,17 @@ export function CompletedByCombobox({
                 Unassigned
               </CommandItem>
             </CommandGroup>
-            {employees.length > 0 && (
-              <CommandGroup heading="Employees">
-                {employees.map((employee) => {
+            {employeeGroups.map((group) => (
+              <CommandGroup
+                key={group.key}
+                heading={`Employees - ${group.heading}`}
+              >
+                {group.options.map((employee) => {
                   const nextValue = optionValue("employee", employee.id);
                   return (
                     <CommandItem
                       key={employee.id}
-                      value={`${employee.name} employee`}
+                      value={`${employee.name} ${employee.companyName ?? ""} employee`}
                       onSelect={() => {
                         onChange(nextValue);
                         setOpen(false);
@@ -102,7 +142,7 @@ export function CompletedByCombobox({
                   );
                 })}
               </CommandGroup>
-            )}
+            ))}
             {crews.length > 0 && (
               <CommandGroup heading="Crews">
                 {crews.map((crew) => {

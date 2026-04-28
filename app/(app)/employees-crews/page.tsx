@@ -43,6 +43,7 @@ export default async function EmployeesPage() {
          is_active, email, phone, address,
          hourly_rate, pay_type, hire_date,
          payment_method, payment_details,
+         login_handle,
          notes, created_at`,
       )
       .eq("company_id", companyId)

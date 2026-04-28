@@ -60,6 +60,10 @@ export type EmployeeProfile = {
   payment_details: Record<string, string> | null;
   // Notes
   notes: string | null;
+  // Employee web app login
+  login_handle: string | null;
+  password_must_change: boolean;
+  last_login_at: string | null;
   created_at: string;
 };
 
