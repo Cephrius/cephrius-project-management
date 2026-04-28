@@ -8,6 +8,18 @@ export type ReleaseNote = {
 // New releases every tuesday (Or whenever I finish a batch of features and fixes that feel worth sharing)
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.2.2",
+    releasedOn: "Apr 28, 2026",
+    changes: [
+      "Job Title, Job Price, and Superintendent suggestions in the Add/Edit Job dialogs are now sourced from every project in the active company instead of just the current project, so previously entered values carry over to new projects.",
+      "Replaced the native browser date input on the Scheduled Completion field in Add/Edit Job dialogs with a modern popover calendar (month/year dropdowns, formatted display, one-click clear).",
+    ],
+    bugFixes: [
+      "Fixed Add/Edit Job suggestions not appearing on newly created projects because the seed query was scoped to the current project_id; the query is now scoped by company_id.",
+      "Fixed deleted preset Job Title / Price / Superintendent entries reappearing in new Add/Edit Job dialogs — dismissals are now persisted per company so removed presets stay hidden across all projects.",
+    ],
+  },
+  {
     version: "v0.2.1",
     releasedOn: "Apr 20, 2026",
     majorAdditions: [
