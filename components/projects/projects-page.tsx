@@ -946,7 +946,7 @@ export function ProjectsPageClient({
                             <div key={builderGroup.key} className="space-y-2">
                               <button
                                 type="button"
-                                className="flex w-full flex-col items-start gap-2 rounded-md border bg-background p-3 text-left transition-colors hover:bg-muted/20 cursor-pointer sm:flex-row sm:items-center sm:justify-between"
+                                className="flex w-full flex-col items-start gap-2 rounded-md border bg-muted/30 p-3 text-left transition-colors hover:bg-muted/50 dark:bg-card/60 dark:hover:bg-card/90 cursor-pointer sm:flex-row sm:items-center sm:justify-between"
                                 onClick={() => toggleBuilder(builderGroup.key)}
                               >
                                 <div className="flex items-center gap-2">
