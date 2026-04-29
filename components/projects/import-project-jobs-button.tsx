@@ -1,10 +1,13 @@
 "use client";
 
+// Onboarding: bulk project/job import UI. Parsing and writes happen in
+// `app/(jobsyte-app)/(app)/projects/actions.ts`; this component only handles
+// file selection, preview state, and user confirmation.
 import { useRef, useState, useTransition } from "react";
 import { FileSpreadsheet, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { importProjectsJobsCsv } from "@/app/(app)/projects/actions";
+import { importProjectsJobsCsv } from "@/app/(jobsyte-app)/(app)/projects/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {

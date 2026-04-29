@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock, X } from "lucide-react";
-import { deleteRecentSearch, clearRecentSearches } from "@/app/(app)/search/actions";
+import { deleteRecentSearch, clearRecentSearches } from "@/app/(jobsyte-app)/(app)/search/actions";
 
 export function RecentSearches({ recents }: { recents: string[] }) {
   const router = useRouter();

@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: shared assignee picker for jobs. Add/Edit Job dialogs pass
+// employees grouped by company; payroll later reads the chosen
+// `completed_by_type` and `completed_by_id` from the job row.
 import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";

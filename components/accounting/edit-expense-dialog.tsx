@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { updateExpense } from "@/app/(app)/accounting/actions";
+import { updateExpense } from "@/app/(jobsyte-app)/(app)/accounting/actions";
 import type { ProjectExpense } from "@/components/accounting/types";
 import { EXPENSE_CATEGORIES } from "@/components/accounting/types";
 import { Button } from "@/components/ui/button";

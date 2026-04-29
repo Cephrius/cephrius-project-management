@@ -15,7 +15,7 @@ import {
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
-import { deleteInvoice } from "@/app/(app)/invoices/actions";
+import { deleteInvoice } from "@/app/(jobsyte-app)/(app)/invoices/actions";
 
 export function DeleteInvoiceButton({
   invoiceId,

@@ -1,5 +1,8 @@
 "use client"; 
 
+// Onboarding: settings hub composed from smaller cards in `components/settings/*`.
+// Writes go through `app/(jobsyte-app)/(app)/settings/actions.ts` and
+// `company-actions.ts`; preference parsing lives in `lib/settings/preferences.ts`.
 import Link from "next/link";
 import { useMemo, useState } from "react"; 
 import {
@@ -18,7 +21,7 @@ import {
   updateAccountPassword,
   updateCompanyProfile,   
   updatePreferences,
-} from "@/app/(app)/settings/actions";
+} from "@/app/(jobsyte-app)/(app)/settings/actions";
 import { SettingsAccountDetailsCard } from "@/components/settings/settings-account-details-card";
 import { SettingsAppearanceCard } from "@/components/settings/settings-appearance-card"; 
 import { SettingsBusinessProfileCard } from "@/components/settings/settings-business-profile-card";

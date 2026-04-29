@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: crew create/edit form. Employee choices come from the current
+// company roster loaded by the employees-crews pages and persisted through
+// `app/(jobsyte-app)/(app)/employees-crews/actions.ts`.
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Settings, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -24,7 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { createCrew, updateCrew } from "@/app/(app)/employees-crews/actions";
+import { createCrew, updateCrew } from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {

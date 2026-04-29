@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: this header owns global search, mobile navigation controls, and
+// account actions. Search suggestions come from `app/api/search/suggest/route.ts`,
+// while persistent recent searches live in `components/search/recent-searches.tsx`.
 import Link from "next/link";
 import {
   Briefcase,

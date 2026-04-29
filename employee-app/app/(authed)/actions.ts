@@ -1,5 +1,8 @@
 "use server";
 
+// Onboarding: employee-app job mutations. Unlike contractor server actions,
+// these derive authorization from `requireEmployee()` and then explicitly scope
+// every write to the employee's `company_id`.
 import { revalidatePath } from "next/cache";
 import { requireEmployee } from "@/lib/auth/employee";
 import { createServiceClient } from "@/lib/supabase/server";

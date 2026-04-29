@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: project detail job table. Row-level edits are delegated to
+// `edit-job-dialog.tsx`, deletion to `delete-job-dialog.tsx`, and payment /
+// invoice badges are driven by columns loaded in the project detail route.
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -26,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { toggleJobComplete } from "@/app/(app)/projects/[id]/actions";
+import { toggleJobComplete } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
 import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import { DeleteJobDialog } from "@/components/jobs/delete-job-dialog";

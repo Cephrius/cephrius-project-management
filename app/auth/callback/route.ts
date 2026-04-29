@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+// Onboarding: Supabase redirects email verification/password auth flows here.
+// This route bootstraps contractor profile data used by settings and company
+// membership flows; compare `app/(jobsyte-app)/(auth)/login/page.tsx`.
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");

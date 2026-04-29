@@ -1,4 +1,4 @@
-import { deleteProject } from "@/app/(app)/projects/actions";
+import { deleteProject } from "@/app/(jobsyte-app)/(app)/projects/actions";
 import { useRouter } from "next/navigation";
 
 import { useState } from "react";

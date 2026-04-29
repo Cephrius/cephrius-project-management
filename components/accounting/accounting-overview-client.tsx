@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: company-wide accounting dashboard. Project-specific expense views
+// share components with `project-accounting-client.tsx`; mutations live in
+// `app/(jobsyte-app)/(app)/accounting/actions.ts`.
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, XAxis, YAxis } from "recharts";

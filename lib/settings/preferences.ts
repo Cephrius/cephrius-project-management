@@ -1,3 +1,6 @@
+// Onboarding: preference data is stored inside Supabase user metadata and read
+// by settings UI, invoice due-date defaults, and cron notification routes. Keep
+// migration/default logic here instead of scattering metadata parsing.
 type UnknownRecord = Record<string, unknown>;
 
 export type PreferenceSettings = {

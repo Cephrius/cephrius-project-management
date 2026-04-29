@@ -1,3 +1,6 @@
+// Onboarding: employee-app dashboard. It uses `requireEmployee()` instead of
+// contractor Supabase Auth and always scopes job counts to the signed employee's
+// company from `employee-app/lib/auth/employee.ts`.
 import Link from "next/link";
 import { ArrowRight, Briefcase, ClipboardList } from "lucide-react";
 import { requireEmployee } from "@/lib/auth/employee";

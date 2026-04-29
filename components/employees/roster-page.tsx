@@ -54,7 +54,7 @@ import {
   EmployeePaymentsDialog,
   type EmployeePaymentRecord,
 } from "./employee-payments-dialog";
-import { deleteEmployee } from "@/app/(app)/employees-crews/actions";
+import { deleteEmployee } from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
 
 export type { EmployeePaymentRecord };
 

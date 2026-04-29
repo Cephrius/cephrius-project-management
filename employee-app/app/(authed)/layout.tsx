@@ -2,6 +2,9 @@ import Link from "next/link";
 import { requireEmployee } from "@/lib/auth/employee";
 import { LogoutButton } from "./logout-button";
 
+// Onboarding: all signed-in employee pages use this shell. Contractor app shell
+// lives in `components/app-shell/*`; this app is intentionally smaller and
+// mobile-first for field workers.
 export const dynamic = "force-dynamic";
 
 export default async function AuthedLayout({

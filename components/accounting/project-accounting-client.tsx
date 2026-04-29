@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: project-level accounting view. It shares expense dialogs and table
+// components with the global accounting page, all backed by
+// `app/(jobsyte-app)/(app)/accounting/actions.ts`.
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";

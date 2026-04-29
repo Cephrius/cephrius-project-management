@@ -1,5 +1,7 @@
 -- ============================================================
 -- Employee Login Credentials
+-- Onboarding: these columns are consumed by the separate employee app under
+-- `employee-app/`, especially `employee-app/app/api/auth/login/route.ts`.
 -- Adds the columns required for employees to sign into the
 -- employee.jobsyte.co web app with a unique handle + password.
 -- Run in your Supabase SQL editor before deploying the

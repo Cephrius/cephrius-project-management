@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: employee profile form plus employee-app credential issuing. The
+// server actions are in `app/(jobsyte-app)/(app)/employees-crews/actions.ts`;
+// the field employee login consumer is in `employee-app/app/api/auth/login/route.ts`.
 import { useEffect, useState, useTransition } from "react";
 import { AlertTriangle, Building2, Copy, KeyRound, Phone, User, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +28,7 @@ import {
   createEmployee,
   resetEmployeePassword,
   updateEmployee,
-} from "@/app/(app)/employees-crews/actions";
+} from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
 import { toast } from "sonner";
 import {
   EMPLOYMENT_TYPE_LABELS,

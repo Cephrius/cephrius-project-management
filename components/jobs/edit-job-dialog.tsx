@@ -1,6 +1,9 @@
 "use client";
 
-import { editJob } from "@/app/(app)/projects/[id]/actions";
+// Onboarding: edit-job mirrors `add-job-dialog.tsx` but preserves the current
+// job selection and sends updates to
+// `app/(jobsyte-app)/(app)/projects/[id]/actions.ts`.
+import { editJob } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";

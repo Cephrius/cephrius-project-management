@@ -1,0 +1,358 @@
+// Onboarding: project detail server page. It fetches project, job, and
+// profitability rows for `components/jobs/jobs-table.tsx`; job mutations live in
+// the sibling `actions.ts`.
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
+import { AddJobButton } from "@/components/jobs/add-job-button";
+import { JobsTable } from "@/components/jobs/jobs-table";
+import { createClient } from "@/lib/supabase/server";
+import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
+import type { ProjectProfitability, ProjectStatus } from "@/components/accounting/types";
+
+function formatMoney(cents: number) {
+  const dollars = cents / 100;
+  return dollars.toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+  });
+}
+
+function SmallMetricCard({
+  label,
+  value,
+  meta,
+}: {
+  label: string;
+  value: string;
+  meta: string;
+}) {
+  return (
+    <Card className="h-full p-4">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 flex items-end justify-between gap-3">
+        <div className="text-2xl font-semibold leading-none">{value}</div>
+        <div className="text-xs text-muted-foreground">{meta}</div>
+      </div>
+    </Card>
+  );
+}
+
+function MetricRow({
+  label,
+  value,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={muted ? "tabular-nums text-muted-foreground" : "tabular-nums font-medium"}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ComparisonBar({
+  label,
+  value,
+  widthPct,
+  tone,
+}: {
+  label: string;
+  value: string;
+  widthPct: number;
+  tone: "primary" | "muted";
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="tabular-nums text-muted-foreground">{value}</span>
+      </div>
+      <div className="h-2 rounded-full bg-muted/60 overflow-hidden">
+        <div
+          className={tone === "primary" ? "h-full rounded-full bg-primary" : "h-full rounded-full bg-muted-foreground/40"}
+          style={{ width: `${Math.max(widthPct, 4)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default async function ProjectDashboardPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) redirect("/login");
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, project_address, builder_name, subdivision")
+    .is("deleted_at", null)
+    .eq("id", id)
+    .single();
+
+  if (!project) {
+    return (
+      <div className="text-sm text-muted-foreground">Project not found.</div>
+    );
+  }
+
+  const [jobsRes, expensesRes] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("id, title, price_cents, scheduled_completion, is_completed, superintendent, completed_by_type, completed_by_id, completed_by_name, is_invoiced, is_paid")
+      .eq("project_id", project.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("project_expenses")
+      .select("amount_cents, cost_type, value_type")
+      .eq("project_id", project.id),
+  ]);
+
+  const { data: jobs } = jobsRes;
+  const expenses = expensesRes.data ?? [];
+
+  const allJobs = jobs ?? [];
+  const totalJobs = allJobs.length;
+  const completedJobs = allJobs.filter((j) => j.is_completed).length;
+
+  // Profitability
+  const rawStatus = (project as { status?: string }).status ?? "not-started";
+  const projStatus: ProjectStatus =
+    rawStatus === "completed" || rawStatus === "active" || rawStatus === "not-started"
+      ? rawStatus
+      : completedJobs === totalJobs && totalJobs > 0
+      ? "completed"
+      : totalJobs === 0
+      ? "not-started"
+      : "active";
+
+  const rev_cents       = allJobs.filter((j) => j.is_completed).reduce((s, j) => s + (j.price_cents ?? 0), 0);
+  const est_rev_cents   = allJobs.reduce((s, j) => s + (j.price_cents ?? 0), 0);
+  const dir_actual      = expenses.filter((e) => e.cost_type === "direct"   && e.value_type === "actual").reduce((s, e) => s + e.amount_cents, 0);
+  const dir_total       = expenses.filter((e) => e.cost_type === "direct").reduce((s, e) => s + e.amount_cents, 0);
+  const ind_actual      = expenses.filter((e) => e.cost_type === "indirect" && e.value_type === "actual").reduce((s, e) => s + e.amount_cents, 0);
+  const ind_total       = expenses.filter((e) => e.cost_type === "indirect").reduce((s, e) => s + e.amount_cents, 0);
+
+  const profitability: ProjectProfitability = {
+    project_id:              project.id,
+    project_address:         project.project_address,
+    builder_name:            project.builder_name,
+    subdivision:             project.subdivision,
+    status:                  projStatus,
+    revenue_cents:           rev_cents,
+    estimated_revenue_cents: est_rev_cents,
+    direct_actual_cents:     dir_actual,
+    direct_total_cents:      dir_total,
+    indirect_actual_cents:   ind_actual,
+    indirect_total_cents:    ind_total,
+    gross_profit_cents:      rev_cents - dir_actual,
+    net_profit_cents:        rev_cents - dir_actual - ind_actual,
+    est_gross_profit_cents:  est_rev_cents - dir_total,
+    est_net_profit_cents:    est_rev_cents - dir_total - ind_total,
+  };
+
+  // invoice actions
+  const completedNotInvoiceCount = await (async () => {
+    const completed = allJobs.filter((j) => j.is_completed);
+    if (completed.length === 0) return 0;
+
+    const { data: invoiced } = await supabase
+      .from("invoices_jobs")
+      .select("job_id")
+      .in(
+        "job_id",
+        completed.map((j) => j.id),
+      );
+
+    const invoicedSet = new Set(
+      (invoiced ?? []).map((x: { job_id: string | null }) => x.job_id ?? ""),
+    );
+    return completed.filter((j) => !invoicedSet.has(j.id)).length;
+  })();
+
+  const totalValue = allJobs.reduce((sum, j) => sum + (j.price_cents ?? 0), 0);
+  const completedValue = allJobs
+    .filter((j) => j.is_completed)
+    .reduce((sum, j) => sum + (j.price_cents ?? 0), 0);
+  const openJobs = totalJobs - completedJobs;
+  const completionPct =
+    totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
+  const remainingValue = totalValue - completedValue;
+  const invoicedJobs = allJobs.filter((j) => j.is_invoiced || j.is_paid).length;
+  const invoicedValue = allJobs
+    .filter((j) => j.is_invoiced || j.is_paid)
+    .reduce((sum, j) => sum + (j.price_cents ?? 0), 0);
+  const pendingJobs = totalJobs - invoicedJobs;
+  const totalExpenses = dir_total + ind_total;
+  const revenueForDisplay = projStatus === "completed" ? rev_cents : est_rev_cents;
+  const chartMax = Math.max(revenueForDisplay, totalExpenses, 1);
+  const revenueBarPct = Math.round((revenueForDisplay / chartMax) * 100);
+  const expensesBarPct = Math.round((totalExpenses / chartMax) * 100);
+  const grossProfitForDisplay =
+    projStatus === "completed"
+      ? profitability.gross_profit_cents
+      : profitability.est_gross_profit_cents;
+  const netProfitForDisplay =
+    projStatus === "completed"
+      ? profitability.net_profit_cents
+      : profitability.est_net_profit_cents;
+  const marginPct =
+    revenueForDisplay > 0 ? Math.round((netProfitForDisplay / revenueForDisplay) * 100) : 0;
+
+  return (
+    <div className="space-y-6">
+      <BreadcrumbSetter
+        crumbs={[
+          { label: "Projects", href: "/projects" },
+          { label: project.project_address },
+        ]}
+      />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">{project.project_address}</h1>
+          <p className="text-sm text-muted-foreground">
+          Builder: {project.builder_name} • Subdivision: {project.subdivision}
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+          <CreateInvoiceButton
+            projectId={project.id}
+            disabled={completedNotInvoiceCount === 0}
+            className="w-full sm:w-auto"
+          />
+          <AddJobButton
+            projectId={project.id}
+            label="New Job"
+            className="w-full sm:w-auto"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_minmax(0,1fr)] xl:items-stretch">
+        <div className="h-full">
+          <div className="grid gap-3 sm:grid-cols-3 xl:h-full xl:grid-cols-1 xl:grid-rows-3">
+            <SmallMetricCard
+              label="Jobs"
+              value={String(totalJobs)}
+              meta={`${openJobs} open`}
+            />
+            <SmallMetricCard
+              label="Completion"
+              value={`${completionPct}%`}
+              meta={`${openJobs} pending`}
+            />
+            <SmallMetricCard
+              label="Job Value"
+              value={formatMoney(completedValue)}
+              meta={`Total ${formatMoney(totalValue)}`}
+            />
+          </div>
+        </div>
+
+        <Card className="flex h-full flex-col p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold">Job Value</div>
+            <span className="rounded-md bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
+              {projStatus === "completed" ? "Actual" : "Estimated"}
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-1">
+            <div className="text-3xl font-semibold leading-none">
+              {formatMoney(netProfitForDisplay)}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Gross Profit: {formatMoney(grossProfitForDisplay)}
+            </div>
+          </div>
+
+          <div className="mt-4 border-t pt-3 space-y-3">
+            <MetricRow label="Revenue" value={formatMoney(revenueForDisplay)} />
+            <MetricRow label="Direct Costs" value={formatMoney(dir_total)} muted={dir_total === 0} />
+            <MetricRow label="Indirect Costs" value={formatMoney(ind_total)} muted={ind_total === 0} />
+          </div>
+
+          <div className="mt-4 border-t pt-3 space-y-2">
+            <MetricRow
+              label="Net Margin"
+              value={`${marginPct}%`}
+            />
+            <MetricRow label="Completed Value" value={formatMoney(completedValue)} muted={completedValue === 0} />
+            <MetricRow label="Remaining" value={formatMoney(remainingValue)} muted={remainingValue === 0} />
+          </div>
+
+          <div className="mt-auto border-t pt-3">
+            <Link
+              href={`/projects/${project.id}/accounting`}
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              View Accounting
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
+        </Card>
+
+        <Card className="flex h-full flex-col p-4">
+          <div className="text-sm font-semibold">Project Status</div>
+
+          <div className="mt-4 space-y-3">
+            <MetricRow label={`${invoicedJobs} Invoiced`} value={formatMoney(invoicedValue)} />
+            <MetricRow label="Remaining" value={formatMoney(totalValue - invoicedValue)} muted={totalValue - invoicedValue === 0} />
+          </div>
+
+          <div className="mt-4 border-t pt-4 space-y-3">
+            <div className="text-sm font-medium">Revenue vs. Expenses</div>
+            <ComparisonBar
+              label="Revenue"
+              value={formatMoney(revenueForDisplay)}
+              widthPct={revenueBarPct}
+              tone="primary"
+            />
+            <ComparisonBar
+              label="Expenses"
+              value={formatMoney(totalExpenses)}
+              widthPct={expensesBarPct}
+              tone="muted"
+            />
+            <div className="pt-1 text-xs text-muted-foreground">
+              {pendingJobs} job{pendingJobs === 1 ? "" : "s"} still not invoiced
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold">Jobs</div>
+            <div className="text-xs text-muted-foreground">
+              Add jobs, then mark them complete for invoicing.
+            </div>
+          </div>
+        </div>
+
+        <JobsTable jobs={allJobs} projectId={project.id} />
+      </Card>
+    </div>
+  );
+}

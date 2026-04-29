@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: client-side tenant state. The selected company is mirrored into
+// the `jobsyte:active-company-id` cookie so server helpers in
+// `lib/active-company.ts` can scope Supabase reads and writes.
 import {
   createElement,
   createContext,

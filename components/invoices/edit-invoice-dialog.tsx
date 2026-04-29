@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import { editInvoiceWithJobs } from "@/app/(app)/invoices/actions";
+import { editInvoiceWithJobs } from "@/app/(jobsyte-app)/(app)/invoices/actions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

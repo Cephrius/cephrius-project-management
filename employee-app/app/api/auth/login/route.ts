@@ -3,6 +3,10 @@ import bcrypt from "bcryptjs";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createSession } from "@/lib/auth/session";
 
+// Onboarding: employee login is intentionally separate from contractor Supabase
+// Auth. Password hashes live on `employees.password_hash`, sessions are signed
+// in `employee-app/lib/auth/session.ts`, and all business reads use company_id
+// from that signed session.
 export const runtime = "nodejs";
 
 const HANDLE_RE = /^[a-z0-9_-]{3,32}$/;

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteExpense } from "@/app/(app)/accounting/actions";
+import { deleteExpense } from "@/app/(jobsyte-app)/(app)/accounting/actions";
 import {
   AlertDialog,
   AlertDialogAction,
