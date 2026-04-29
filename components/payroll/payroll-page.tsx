@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: payroll workbench. It consumes completed job assignments created
+// through `components/jobs/completed-by-combobox.tsx` and writes payments via
+// `app/(jobsyte-app)/(app)/payroll/actions.ts`.
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DollarSign, Download, Search, Trash2, Undo2 } from "lucide-react";
@@ -52,7 +55,7 @@ import {
   addPayrollPayment,
   deletePayrollPayment,
   refundPayrollPayment,
-} from "@/app/(app)/payroll/actions";
+} from "@/app/(jobsyte-app)/(app)/payroll/actions";
 
 
 export type PayrollAssignment = {

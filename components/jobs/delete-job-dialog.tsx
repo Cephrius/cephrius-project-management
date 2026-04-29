@@ -1,4 +1,4 @@
-import { deleteJob } from "@/app/(app)/projects/[id]/actions";
+import { deleteJob } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
 import {
   AlertDialog,
   AlertDialogAction,

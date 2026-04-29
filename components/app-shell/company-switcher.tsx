@@ -1,11 +1,13 @@
 "use client";
 
+// Onboarding: company switching updates `lib/company-context.ts`, which writes
+// the active-company cookie consumed by `lib/active-company.ts` in server code.
 import * as React from "react";
 import { ChevronsUpDown, Plus, Check, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCompany, type Company } from "@/lib/company-context";
-import { createCompany, deleteCompany } from "@/app/(app)/settings/company-actions";
+import { createCompany, deleteCompany } from "@/app/(jobsyte-app)/(app)/settings/company-actions";
 
 import {
   DropdownMenu,

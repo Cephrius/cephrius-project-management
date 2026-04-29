@@ -1,3 +1,6 @@
+// Onboarding: pure data-shaping layer for the workforce dashboard. Keep complex
+// employee/crew math here so `employees-page.tsx` can stay focused on UI.
+// Tests for these calculations live in `dashboard-data.test.ts`.
 import {
   EMPLOYMENT_TYPE_LABELS,
   PAY_TYPE_LABELS,

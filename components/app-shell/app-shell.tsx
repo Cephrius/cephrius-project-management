@@ -1,3 +1,7 @@
+// Onboarding: this wraps every authenticated product route after
+// `app/(jobsyte-app)/(app)/layout.tsx` has loaded company context. Navigation
+// details are split across `desktop-sidebar.tsx`, `mobile-sidebar.tsx`, and
+// `header.tsx`.
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 import { BreadcrumbProvider } from "./breadcrumb-context";

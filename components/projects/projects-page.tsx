@@ -1,5 +1,9 @@
 "use client";
 
+// Onboarding: this is the main project workbench. Server data is loaded by
+// `app/(jobsyte-app)/(app)/projects/page.tsx`; mutations live in
+// `app/(jobsyte-app)/(app)/projects/actions.ts` and job dialogs in
+// `components/jobs/*`.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
@@ -710,7 +714,7 @@ export function ProjectsPageClient({
           <img src={"project.png"} alt="Project" className="w-48 h-48"/>
           </div>
           <div className="text-xl text-bold text-muted-foreground text-center">
-            You currently don't <br/>have any projects.
+            You currently don&apos;t <br/>have any projects.
           </div>
           <div className="text-center text-md">To get started, create a<br/> project here. </div>
             <div className="flex justify-center">

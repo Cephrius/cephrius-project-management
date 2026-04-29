@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/notifications/send-email";
 
+// Onboarding: this is the server-side pair to
+// `app/(landing)/request-demo/page.tsx`; it validates the public form and sends
+// notification email through `lib/notifications/send-email.ts`.
 export const runtime = "nodejs";
 
 type DemoRequestPayload = {

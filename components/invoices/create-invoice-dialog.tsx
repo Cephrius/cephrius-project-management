@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: invoice creation from selected completed jobs. Server writes are
+// in `app/(jobsyte-app)/(app)/invoices/actions.ts`; payment toggles after
+// creation live in `invoice-payment-controls.tsx`.
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -13,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
-import { createInvoice } from "@/app/(app)/projects/[id]/invoice-actions";
+import { createInvoice } from "@/app/(jobsyte-app)/(app)/projects/[id]/invoice-actions";
 import { readPreferenceSettings, suggestDueDate } from "@/lib/settings/preferences";
 import {
   CreatableCombobox,

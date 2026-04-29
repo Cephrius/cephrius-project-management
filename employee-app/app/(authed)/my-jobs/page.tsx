@@ -1,3 +1,6 @@
+// Onboarding: employee-specific completed/assigned jobs view. Shared job card
+// actions live in `employee-app/app/(authed)/actions.ts` and are guarded by the
+// signed employee session.
 import Link from "next/link";
 import { requireEmployee } from "@/lib/auth/employee";
 import { createServiceClient } from "@/lib/supabase/server";

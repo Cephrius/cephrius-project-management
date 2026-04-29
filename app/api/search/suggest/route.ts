@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
 
+// Onboarding: this powers the header's global search suggestions. Full-page
+// search and recent-search persistence live under
+// `app/(jobsyte-app)/(app)/search/*`.
 // Extended: added employee, crew, payment, expense
 type SuggestionType =
   | "project"

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "./session";
 import { createServiceClient } from "@/lib/supabase/server";
 
+// Onboarding: this is the employee-app equivalent of an auth guard. It turns the
+// signed cookie from `session.ts` into the employee row used by pages/actions.
 export type CurrentEmployee = {
   id: string;
   name: string;

@@ -1,3 +1,6 @@
+// Onboarding: company-wide open jobs view for employees. Employees can claim or
+// complete jobs through `employee-app/app/(authed)/actions.ts`, which verifies
+// the job belongs to the employee's company.
 import Link from "next/link";
 import { requireEmployee } from "@/lib/auth/employee";
 import { createServiceClient } from "@/lib/supabase/server";

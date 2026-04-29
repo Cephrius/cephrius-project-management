@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 
 const COOKIE_KEY = "jobsyte:active-company-id";
 
+// Onboarding: server actions use this helper to avoid trusting client-supplied
+// company IDs. The cookie is written by `lib/company-context.ts`, which is
+// mounted from `app/(jobsyte-app)/(app)/layout.tsx`.
 /**
  * Read the active company ID from the cookie, with a fallback
  * to the first company the user belongs to.

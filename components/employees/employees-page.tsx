@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: workforce dashboard for employees and crews. Server pages under
+// `app/(jobsyte-app)/(app)/employees-crews/*` fetch the rows; derived metrics
+// are built in `dashboard-data.ts`, while CRUD dialogs live beside this file.
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -63,7 +66,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteCrew, deleteEmployee } from "@/app/(app)/employees-crews/actions";
+import { deleteCrew, deleteEmployee } from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { buildWorkforceDashboardModel } from "./dashboard-data";

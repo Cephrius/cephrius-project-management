@@ -2,6 +2,9 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+// Onboarding: use this Supabase client in server components and server actions
+// that should respect the contractor's Supabase Auth session. Admin/service-role
+// access belongs in `lib/supabase/admin.ts`.
 export async function createClient() {
   const cookieStore = cookies();
 

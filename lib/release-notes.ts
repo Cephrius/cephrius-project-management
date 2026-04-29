@@ -1,3 +1,6 @@
+// Onboarding: release notes render in the app shell changelog and Settings card.
+// Update this file when user-facing features change; see
+// `components/app-shell/version-changelog-dialog.tsx` for presentation.
 export type ReleaseNote = {
   version: string;
   releasedOn: string;

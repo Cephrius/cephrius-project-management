@@ -1,5 +1,8 @@
 "use client";
 
+// Onboarding: per-invoice-line payment controls. Server updates live in
+// `app/(jobsyte-app)/(app)/invoices/payment-actions.ts` and also synchronize
+// job-level paid flags for project/payroll views.
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, DollarSign } from "lucide-react";
@@ -20,7 +23,7 @@ import {
 import {
   markInvoiceItemPaid,
   markInvoicePaid,
-} from "@/app/(app)/invoices/payment-actions";
+} from "@/app/(jobsyte-app)/(app)/invoices/payment-actions";
 
 export type InvoiceItemWithPayment = {
   id: string;

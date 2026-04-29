@@ -1,0 +1,148 @@
+// Onboarding: server entry for the Projects module. It scopes data with
+// `lib/active-company.ts`, then hands typed rows to
+// `components/projects/projects-page.tsx` for the interactive workbench.
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/active-company";
+import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
+import { ProjectsPageClient } from "@/components/projects/projects-page";
+import type { LookupItem, ProjectListItem } from "@/components/projects/types";
+
+type ProjectRow = {
+  id: string;
+  project_address: string;
+  builder_name: string | null;
+  subdivision: string | null;
+  created_at: string;
+};
+
+type ProjectJobRow = {
+  id: string;
+  project_id: string;
+  is_completed: boolean | null;
+  superintendent: string | null;
+  created_at: string | null;
+};
+
+function normalizeName(value: string | null): string {
+  return (value ?? "").trim().replace(/\s+/g, " ");
+}
+
+function toStatus(
+  jobCount: number,
+  openJobCount: number,
+): ProjectListItem["status"] {
+  if (jobCount === 0) return "not-started";
+  if (openJobCount === 0) return "completed";
+  return "active";
+}
+
+async function getProjectsPageData(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  companyId: string,
+) {
+  const [projectsRes, buildersRes, subdivisionsRes, jobsRes] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, project_address, builder_name, subdivision, created_at")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false }),
+      supabase.from("builders").select("id, name").order("name"),
+      supabase.from("subdivisions").select("id, name").order("name"),
+      supabase
+        .from("jobs")
+        .select("id, project_id, is_completed, superintendent, created_at")
+        .eq("company_id", companyId)
+        .is("deleted_at", null),
+    ]);
+
+  const jobs = (jobsRes.data ?? []) as ProjectJobRow[];
+  const projectStats = new Map<
+    string,
+    {
+      job_count: number;
+      open_job_count: number;
+      last_activity_at: string | null;
+      crew_names: Set<string>;
+    }
+  >();
+
+  for (const job of jobs) {
+    const projectId = job.project_id;
+    if (!projectId) continue;
+
+    const stat = projectStats.get(projectId) ?? {
+      job_count: 0,
+      open_job_count: 0,
+      last_activity_at: null,
+      crew_names: new Set<string>(),
+    };
+
+    stat.job_count += 1;
+    if (job.is_completed !== true) stat.open_job_count += 1;
+
+    if (job.created_at) {
+      if (!stat.last_activity_at || job.created_at > stat.last_activity_at) {
+        stat.last_activity_at = job.created_at;
+      }
+    }
+
+    const crewName = normalizeName(job.superintendent);
+    if (crewName) stat.crew_names.add(crewName);
+
+    projectStats.set(projectId, stat);
+  }
+
+  const projects = ((projectsRes.data ?? []) as ProjectRow[]).map((project) => {
+    const stat = projectStats.get(project.id);
+    const jobCount = stat?.job_count ?? 0;
+    const openJobCount = stat?.open_job_count ?? 0;
+
+    return {
+      ...project,
+      job_count: jobCount,
+      open_job_count: openJobCount,
+      last_activity_at: stat?.last_activity_at ?? project.created_at ?? null,
+      status: toStatus(jobCount, openJobCount),
+      crew_names: Array.from(stat?.crew_names ?? []).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    };
+  });
+
+  return {
+    projects: projects as ProjectListItem[],
+    builders: (buildersRes.data ?? []) as LookupItem[],
+    subdivisions: (subdivisionsRes.data ?? []) as LookupItem[],
+  };
+}
+
+export default async function ProjectsPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) redirect("/login");
+
+  const companyId = await getActiveCompanyId();
+  if (!companyId) redirect("/login");
+
+  const { projects, builders, subdivisions } =
+    await getProjectsPageData(supabase, companyId);
+
+  return (
+    <div className="space-y-6">
+      <BreadcrumbSetter crumbs={[{ label: "Projects", href: "/projects" }]} />
+      <ProjectsPageClient
+        projects={projects}
+        builders={builders}
+        subdivisions={subdivisions}
+      />
+    </div>
+  );
+}

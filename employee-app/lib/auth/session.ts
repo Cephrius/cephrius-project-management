@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 
+// Onboarding: employee sessions are app-owned JWT cookies, not Supabase Auth
+// sessions. Middleware reads the same cookie through `session-edge.ts`.
 export const SESSION_COOKIE = "jobsyte_employee_session";
 const ALG = "HS256";
 const EXP_SECONDS = 60 * 60 * 24 * 30; // 30 days

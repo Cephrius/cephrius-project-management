@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteProjects } from "@/app/(app)/projects/actions";
+import { deleteProjects } from "@/app/(jobsyte-app)/(app)/projects/actions";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";

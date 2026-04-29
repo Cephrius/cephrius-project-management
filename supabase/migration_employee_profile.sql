@@ -1,5 +1,8 @@
 -- ============================================================
 -- Employee Profile Expansion
+-- Onboarding: this migration backs `components/employees/*` and
+-- `app/(jobsyte-app)/(app)/employees-crews/actions.ts`. Employee login-specific
+-- columns are in `supabase/migration_employee_login.sql`.
 -- Run this migration in your Supabase SQL editor before
 -- deploying the updated employees page code.
 -- ============================================================

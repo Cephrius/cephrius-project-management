@@ -6,7 +6,7 @@ import {
   createBuilder,
   createSubdivision,
   editProject,
-} from "@/app/(app)/projects/actions";
+} from "@/app/(jobsyte-app)/(app)/projects/actions";
 import {
   CreatableCombobox,
   type ComboboxItem,
