@@ -3,9 +3,27 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
+const siteUrl = new URL("https://employee.jobsyte.co");
+
 export const metadata: Metadata = {
-  title: "JobSyte Employees",
+  metadataBase: siteUrl,
+  title: {
+    default: "JobSyte Employees",
+    template: "%s | JobSyte Employees",
+  },
+  applicationName: "JobSyte Employees",
   description: "View and manage your assigned jobs.",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 export default function RootLayout({

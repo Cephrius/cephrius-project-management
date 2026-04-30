@@ -41,6 +41,7 @@ import {
 } from "./types";
 
 const LOGIN_HANDLE_RE = /^[a-z0-9_-]{3,32}$/;
+const EMPLOYEE_APP_URL = "https://employee.jobsyte.co";
 
 export function EmployeeDialog({
   open,
@@ -248,8 +249,15 @@ export function EmployeeDialog({
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Used to sign in at employee.jobsyte.co. Lowercase letters,
-                      numbers, underscores, hyphens. 3\u201332 chars. Must be unique.
+                      Used to sign in at{" "}
+                      <a
+                        href={EMPLOYEE_APP_URL}
+                        className="font-medium underline underline-offset-2"
+                      >
+                        employee.jobsyte.co
+                      </a>
+                      . Lowercase letters, numbers, underscores, hyphens.
+                      3\u201332 chars. Must be unique.
                     </p>
                   )}
                   {!isEditing &&

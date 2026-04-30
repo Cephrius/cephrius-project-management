@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { REQUEST_DEMO_HREF } from "@/components/landing/marketing-data";
+import { APP_URL, REQUEST_DEMO_HREF } from "@/components/landing/marketing-data";
 import {
   EASE_OUT,
   HEADER_ENTER_DURATION,
@@ -137,7 +137,7 @@ export default function MarketingShell({
               className="rounded-full px-4"
               asChild
             >
-              <Link href="/login">Sign in</Link>
+              <Link href={`${APP_URL}/login`}>Sign in</Link>
             </Button>
             <Button size="sm" className="rounded-full px-4 shadow-sm" asChild>
               <Link href={REQUEST_DEMO_HREF}>
@@ -178,7 +178,10 @@ export default function MarketingShell({
                   className="flex-1 rounded-full"
                   asChild
                 >
-                  <Link href="/login" onClick={() => setMobileOpen(false)}>
+                  <Link
+                    href={`${APP_URL}/login`}
+                    onClick={() => setMobileOpen(false)}
+                  >
                     Sign in
                   </Link>
                 </Button>
@@ -237,7 +240,10 @@ export default function MarketingShell({
               </p>
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <Link href="/login" className="hover:text-foreground">
+                  <Link
+                    href={`${APP_URL}/login`}
+                    className="hover:text-foreground"
+                  >
                     Sign in
                   </Link>
                 </li>

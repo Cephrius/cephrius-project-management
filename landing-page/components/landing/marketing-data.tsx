@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 export const SITE_URL = "https://jobsyte.co";
+export const APP_URL = "https://app.jobsyte.co";
 export const REQUEST_DEMO_HREF = "/request-demo";
 
 export const FEATURE_HIGHLIGHTS: ReadonlyArray<{
