@@ -5,10 +5,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { DocumentTitleSync } from "@/components/document-title-sync";
 import { ThemeProvider } from "@/components/theme-provider";
 
-// Onboarding: this is the root shell for the app.jobsyte.co product app.
+// Onboarding: this is the root shell shared by marketing and app routes.
 // Start with `docs/CODEMAPS/INDEX.md`, then compare the authenticated shell in
-// `app/(jobsyte-app)/(app)/layout.tsx` and auth routes in
-// `app/(jobsyte-app)/(auth)/*`.
+// `app/(jobsyte-app)/(app)/layout.tsx` and public routes in `app/(landing)/*`.
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],

@@ -16,9 +16,10 @@ The main app uses Supabase Auth for contractors, company membership for tenant s
 
 | Area | Main Files | Purpose |
 | --- | --- | --- |
-| Root shell | `app/layout.tsx`, `app/page.tsx` | App-domain metadata, fonts, theme provider, toaster, and dashboard redirect. |
+| Root shell | `app/layout.tsx`, `app/page.tsx` | Global metadata, fonts, theme provider, toaster, and public home page routing. |
 | Product shell | `app/(jobsyte-app)/(app)/layout.tsx`, `components/app-shell/*` | Auth guard, company context, sidebar, header, search, breadcrumbs, and changelog access. |
 | Auth | `app/(jobsyte-app)/(auth)/*`, `app/auth/callback/route.ts` | Contractor login/signup/verify screens and Supabase auth callback handling. |
+| Landing pages | `app/(landing)/*`, `components/landing/*` | SEO-focused public pages and demo request funnel. |
 | Landing app | `landing-page/app/*`, `landing-page/components/landing/*` | Standalone SEO-focused public pages and demo request funnel. |
 | Projects | `app/(jobsyte-app)/(app)/projects/*`, `components/projects/*`, `components/jobs/*` | Project CRUD, grouped project list, job CRUD, quick completion, job assignment, and import workflows. |
 | Employees and crews | `app/(jobsyte-app)/(app)/employees-crews/*`, `components/employees/*` | Workforce roster, crew management, employee profiles, employee login credential issuing, and workforce analytics. |
