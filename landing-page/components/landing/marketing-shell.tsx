@@ -39,7 +39,7 @@ export default function MarketingShell({
           className="absolute inset-0 opacity-[0.35] dark:opacity-[0.18]"
           style={{
             backgroundImage:
-              "linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)",
+              "linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)",
             backgroundSize: "56px 56px",
             maskImage:
               "radial-gradient(ellipse 75% 55% at 50% 0%, black 40%, transparent 100%)",

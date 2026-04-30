@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
+const MARKETING_DEMO_URL = "https://jobsyte.co/request-demo";
+
 export default function LoginPage() {
   const supabase = createClient();
   const [email, setEmail] = useState("");
@@ -90,7 +92,7 @@ export default function LoginPage() {
         </div>
         <div className="text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <a className="underline" href="/request-demo">
+          <a className="underline" href={MARKETING_DEMO_URL}>
             Request a demo
           </a>
         </div>

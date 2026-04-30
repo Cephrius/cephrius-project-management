@@ -2,24 +2,21 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import { DocumentTitleSync } from "@/components/document-title-sync";
 import { ThemeProvider } from "@/components/theme-provider";
 
-// Onboarding: this is the root shell for the app.jobsyte.co product app.
-// Start with `docs/CODEMAPS/INDEX.md`, then compare the authenticated shell in
-// `app/(jobsyte-app)/(app)/layout.tsx` and auth routes in
-// `app/(jobsyte-app)/(auth)/*`.
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-space-grotesk",
 });
 
-const siteUrl = new URL("https://app.jobsyte.co");
-const defaultTitle = "JobSyte App";
+const siteUrl = new URL("https://jobsyte.co");
+const defaultTitle =
+  "JobSyte | Construction Project Management Software for Contractors";
 const defaultDescription =
-  "Access the JobSyte contractor dashboard for projects, schedules, invoices, payroll, accounting, and field operations.";
+  "JobSyte helps contractors manage projects, schedule jobs, track invoices, and keep field and office teams aligned in one workflow.";
 
+// Keep the root metadata focused on the public marketing site.
 export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: {
@@ -59,12 +56,15 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
     nocache: false,
     googleBot: {
-      index: false,
-      follow: false,
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
     },
   },
   openGraph: {
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "JobSyte app",
+        alt: "JobSyte — Construction project management software for contractors",
         type: "image/png",
       },
     ],
@@ -89,6 +89,7 @@ export const metadata: Metadata = {
     title: defaultTitle,
     description: defaultDescription,
     images: ["/opengraph-image"],
+    creator: "@jobsyte",
   },
   icons: {
     icon: [
@@ -124,7 +125,6 @@ export default function RootLayout({
     >
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <DocumentTitleSync />
           {children}
           <Toaster />
         </ThemeProvider>
