@@ -1,8 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt =
-  "JobSyte — Construction project management software for contractors";
+export const alt = "JobSyte app dashboard";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -62,7 +61,7 @@ export default function OpengraphImage() {
               maxWidth: 980,
             }}
           >
-            Construction project management built for sub-contractors.
+            The JobSyte contractor dashboard.
           </div>
           <div
             style={{
@@ -72,8 +71,8 @@ export default function OpengraphImage() {
               lineHeight: 1.35,
             }}
           >
-            Projects, jobs, invoices, payroll, and dashboard reporting in one
-            workflow.
+            Projects, schedules, invoices, payroll, accounting, and field
+            operations in one workflow.
           </div>
         </div>
 
@@ -86,7 +85,7 @@ export default function OpengraphImage() {
             color: "#cbd5e1",
           }}
         >
-          <div>jobsyte.co</div>
+          <div>app.jobsyte.co</div>
           <div
             style={{
               padding: "10px 20px",
@@ -96,7 +95,7 @@ export default function OpengraphImage() {
               fontWeight: 600,
             }}
           >
-            Request a demo →
+            Open dashboard →
           </div>
         </div>
       </div>

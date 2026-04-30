@@ -21,7 +21,7 @@ export function DashboardPreview() {
             </div>
             <div className="flex-1 flex justify-center ">
               <div className="rounded-md bg-secondary px-4 py-1 text-xs text-muted-foreground">
-                jobsyte.co/dashboard
+                app.jobsyte.co/dashboard
               </div>
               
             </div>
