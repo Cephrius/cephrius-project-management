@@ -24,5 +24,10 @@ JobSyte is a web-based operations management platform built for construction con
 - **Deployment:** Vercel
 
 ## Getting Started
-To get started with JobSyte Refer to the JobSyte Official Documentation
-```
+To get started with JobSyte, refer to the JobSyte official documentation.
+
+## Testing
+
+- Run `npm run lint` to catch static issues before pushing.
+- Run `npm run test:run` for the full local test suite.
+- Run `npm run test:coverage` to generate a coverage report in `coverage/`.

@@ -181,7 +181,7 @@ export function InvoicesPageClient({
           <div className="flex justify-center">
           <img src={"empty_project.png"} alt="Project" className="w-48 h-48"/>
           </div>
-          <div className="text-lg text-muted-foreground text-center">You currently don't have any invoices.</div>
+          <div className="text-lg text-muted-foreground text-center">You currently don&apos;t have any invoices.</div>
           <div className="text-md text-center"> Want to create an invoice? <br/> Create one here.</div>
         <div className="flex justify-center">
           <Link href="/invoices/new" className="w-full sm:w-auto">

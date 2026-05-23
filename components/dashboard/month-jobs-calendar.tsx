@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { format, isValid, parse } from "date-fns";
+import { format, isSameMonth, isValid, parse, startOfMonth } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { ToggleJobCompleteButton } from "@/components/dashboard/toggle-job-complete-button";
+
+const SELECTED_JOBS_VISIBLE_COUNT = 3;
 
 export type CalendarJob = {
   id: string;
@@ -13,131 +15,233 @@ export type CalendarJob = {
   is_completed: boolean;
   project_address: string;
   superintendent: string | null;
+  price_cents?: number | null;
 };
 
 function parseYmd(value: string): Date {
   return parse(value, "yyyy-MM-dd", new Date());
 }
 
+function formatCurrency(cents: number | null | undefined) {
+  if (!cents) return "$0.00";
+  return (cents / 100).toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+  });
+}
+
 export function MonthJobsCalendar({
   jobs,
   monthStart,
-  calendarEnd,
 }: {
   jobs: CalendarJob[];
   monthStart: string;
   calendarEnd: string;
 }) {
-  const monthDate = useMemo(() => parseYmd(monthStart), [monthStart]);
-  const monthEndDate = useMemo(() => parseYmd(calendarEnd), [calendarEnd]);
+  const currentMonth = useMemo(
+    () => startOfMonth(parseYmd(monthStart)),
+    [monthStart],
+  );
 
+  // Group jobs by date once so the calendar highlights and detail panel can read
+  // from the same source of truth.
   const jobsByDate = useMemo(() => {
-    const grouped = new Map<string, CalendarJob[]>();
+    const groupedJobs = new Map<string, CalendarJob[]>();
+
     for (const job of jobs) {
-      const existing = grouped.get(job.scheduled_completion) ?? [];
-      existing.push(job);
-      grouped.set(job.scheduled_completion, existing);
+      const existingJobs = groupedJobs.get(job.scheduled_completion) ?? [];
+      existingJobs.push(job);
+      groupedJobs.set(job.scheduled_completion, existingJobs);
     }
 
-    for (const [key, value] of grouped) {
-      grouped.set(
-        key,
-        [...value].sort((a, b) => a.title.localeCompare(b.title)),
+    for (const [dateKey, dateJobs] of groupedJobs) {
+      groupedJobs.set(
+        dateKey,
+        [...dateJobs].sort((left, right) => left.title.localeCompare(right.title)),
       );
     }
 
-    return grouped;
+    return groupedJobs;
   }, [jobs]);
 
-  const highlightedDates = useMemo(() => {
-    return Array.from(jobsByDate.keys())
-      .map((d) => parseYmd(d))
-      .filter((d) => isValid(d));
-  }, [jobsByDate]);
+  const scheduledDateKeys = useMemo(
+    () => Array.from(jobsByDate.keys()).sort((left, right) => left.localeCompare(right)),
+    [jobsByDate],
+  );
 
-  const initialSelected = useMemo(() => {
-    const todayKey = format(new Date(), "yyyy-MM-dd");
-    if (jobsByDate.has(todayKey)) return parseYmd(todayKey);
+  const highlightedDates = useMemo(
+    () => scheduledDateKeys.map(parseYmd).filter((date) => isValid(date)),
+    [scheduledDateKeys],
+  );
 
-    const firstKey = Array.from(jobsByDate.keys()).sort((a, b) =>
-      a.localeCompare(b),
-    )[0];
-    if (firstKey) {
-      const parsed = parseYmd(firstKey);
-      if (isValid(parsed)) return parsed;
+  const firstCurrentMonthJobDate = useMemo(() => {
+    for (const dateKey of scheduledDateKeys) {
+      const parsedDate = parseYmd(dateKey);
+      if (isSameMonth(parsedDate, currentMonth)) return parsedDate;
     }
 
-    return monthDate;
-  }, [jobsByDate, monthDate]);
+    return null;
+  }, [currentMonth, scheduledDateKeys]);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(initialSelected);
+  // Selected date handling stays inside the current month now that future-month
+  // navigation is intentionally disabled.
+  const initialSelectedDate = useMemo(() => {
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    if (jobsByDate.has(todayKey)) {
+      const parsedToday = parseYmd(todayKey);
+      if (isSameMonth(parsedToday, currentMonth)) return parsedToday;
+    }
 
-  const selectedKey = format(selectedDate, "yyyy-MM-dd");
-  const selectedJobs = jobsByDate.get(selectedKey) ?? [];
+    if (firstCurrentMonthJobDate) return firstCurrentMonthJobDate;
+
+    return currentMonth;
+  }, [currentMonth, firstCurrentMonthJobDate, jobsByDate]);
+
+  const [selectedDate, setSelectedDate] = useState<Date>(initialSelectedDate);
+
+  function handleDateSelect(nextDate: Date | undefined) {
+    if (!nextDate) return;
+
+    setSelectedDate(nextDate);
+  }
+
+  const selectedDateKey = format(selectedDate, "yyyy-MM-dd");
+  const selectedJobs = jobsByDate.get(selectedDateKey) ?? [];
+  const completedSelectedJobs = selectedJobs.filter(
+    (job) => job.is_completed,
+  ).length;
 
   return (
-    <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="flex w-full justify-center overflow-x-auto pb-1 lg:justify-start">
-        <Calendar
-          className="min-w-70 rounded-xl"
-          mode="single"
-          required
-          defaultMonth={monthDate}
-          fromMonth={monthDate}
-          toMonth={monthEndDate}
-          showOutsideDays={false}
-          selected={selectedDate}
-          onSelect={(date) => {
-            if (date) setSelectedDate(date);
-          }}
-          modifiers={{ hasJobs: highlightedDates }}
-          modifiersClassNames={{
-            hasJobs:
-              "bg-primary/10 text-primary font-semibold ring-1 ring-primary/30",
-          }}
-        />
-      </div>
+    <div className="grid h-full min-h-0 gap-2 lg:grid-cols-[minmax(18rem,0.92fr)_minmax(0,1.08fr)]">
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-xs dark:border-white/8 dark:bg-card/90">
+        <div className="flex min-h-0 flex-1 items-start justify-center overflow-hidden p-2">
+          {/* DayPicker stays pinned to the current month in this dashboard view. */}
+          <Calendar
+            className="w-full max-w-[18.5rem] rounded-xl bg-muted/20 p-1.5 text-card-foreground dark:bg-white/[0.03] dark:text-foreground [&_[data-day]]:text-foreground [&_[data-day]]:hover:bg-muted/55 dark:[&_[data-day]]:hover:bg-white/[0.06] [&_[data-selected-single=true]]:bg-primary/14 [&_[data-selected-single=true]]:text-foreground [&_[data-selected-single=true]]:ring-1 [&_[data-selected-single=true]]:ring-primary/30 dark:[&_[data-selected-single=true]]:bg-primary/24 dark:[&_[data-selected-single=true]]:text-primary-foreground dark:[&_[data-selected-single=true]]:ring-primary/35 [--cell-size:--spacing(6.5)] sm:max-w-80 sm:p-2 sm:[--cell-size:--spacing(7.5)]"
+            buttonVariant="ghost"
+            mode="single"
+            required
+            month={currentMonth}
+            fromMonth={currentMonth}
+            toMonth={currentMonth}
+            showOutsideDays={false}
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            modifiers={{ hasJobs: highlightedDates }}
+            modifiersClassNames={{
+              hasJobs:
+                "relative after:absolute after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-primary/70 dark:after:bg-primary/80",
+            }}
+            classNames={{
+              // Keep dark mode on the same muted/card palette as the rest of the dashboard.
+              root: "w-full max-w-full",
+              months: "flex w-full justify-center",
+              month: "flex w-full max-w-full flex-col gap-1.5",
+              month_caption: "relative flex h-7 items-center justify-center px-0 sm:h-8",
+              caption_label:
+                "truncate text-xs font-semibold text-foreground dark:text-foreground sm:text-sm",
+              // Hide month navigation because this dashboard view is intentionally current-month only.
+              nav: "hidden",
+              button_previous:
+                "size-6 rounded-md border border-border/70 bg-card/80 text-foreground hover:bg-muted dark:border-white/8 dark:bg-white/[0.04] dark:text-foreground dark:hover:bg-white/[0.08] sm:size-7",
+              button_next:
+                "size-6 rounded-md border border-border/70 bg-card/80 text-foreground hover:bg-muted dark:border-white/8 dark:bg-white/[0.04] dark:text-foreground dark:hover:bg-white/[0.08] sm:size-7",
+              weekdays: "mt-1.5 flex",
+              weekday:
+                "flex-1 select-none rounded-md text-center text-[0.68rem] font-medium text-muted-foreground dark:text-muted-foreground sm:text-[0.72rem]",
+              week: "mt-0.5 flex w-full sm:mt-1",
+              day: "relative aspect-square flex-1 rounded-md p-0 text-center",
+              today:
+                "rounded-md bg-muted/80 text-foreground ring-1 ring-border/70 dark:bg-white/[0.06] dark:text-foreground dark:ring-white/10",
+            }}
+          />
+        </div>
+      </section>
 
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-sm font-semibold">
-            {format(selectedDate, "EEE, MMM d")}
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-xs dark:border-white/8 dark:bg-card/90">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/80 bg-muted/25 px-3 py-2.5 dark:border-white/8 dark:bg-white/[0.03]">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold text-foreground">
+              <span className="block lg:hidden">
+                {format(selectedDate, "EEE, MMM d")}
+              </span>
+              <span className="hidden lg:block">
+                {format(selectedDate, "EEEE, MMM d, yyyy")}
+              </span>
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              {completedSelectedJobs}/{selectedJobs.length} complete
+            </div>
           </div>
-          <Badge variant="secondary">
+          <Badge
+            variant="outline"
+            className="shrink-0 border-primary/25 bg-primary/10 text-primary dark:border-primary/20 dark:bg-primary/14 dark:text-primary-foreground"
+          >
             {selectedJobs.length} job{selectedJobs.length === 1 ? "" : "s"}
           </Badge>
         </div>
 
         {selectedJobs.length === 0 ? (
-          <div className="rounded-md border p-3 text-sm text-muted-foreground">
-            No jobs scheduled for this day.
+          // Empty state rendering stays in the details pane so the calendar can
+          // keep its place while users browse dates with no scheduled work.
+          <div className="m-3 rounded-lg border border-dashed border-border/80 bg-muted/20 p-4 text-sm text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
+            No jobs scheduled for this date.
           </div>
         ) : (
-          <div className="max-h-[20rem] space-y-2 overflow-y-auto pr-1">
+          <div className="min-h-0 flex-1 divide-y divide-border/80 overflow-y-auto dark:divide-white/8">
             {selectedJobs.map((job) => (
-              <div key={job.id} className="rounded-md border bg-primary/2 dark:bg-primary/7 p-2.5 sm:p-3">
-                <div className="break-words text-sm font-medium">{job.title}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Project: {job.project_address}
-                </div>
-                {job.superintendent && (
-                  <div className="break-words text-xs text-muted-foreground">
-                    Superintendent / GC: {job.superintendent}
+              <article
+                key={job.id}
+                className="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/35 dark:hover:bg-white/[0.04]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-foreground">
+                    {job.title}
                   </div>
-                )}
-                <div className="mt-2">
+                  <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
+                    {job.project_address}
+                  </div>
+                  {job.superintendent ? (
+                    <div className="truncate text-[12px] text-muted-foreground">
+                      Supt / GC: {job.superintendent}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  {job.price_cents ? (
+                    <div className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
+                      {formatCurrency(job.price_cents)}
+                    </div>
+                  ) : null}
+
                   {job.is_completed ? (
-                    <Badge className="border-gray-300 border dark:border-gray-500">Completed</Badge>
+                    <Badge className="border border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      Completed
+                    </Badge>
                   ) : (
-                    <Badge className="border-gray-300 border dark:border-gray-500" variant="secondary">Incomplete</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className="hidden border border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 sm:inline-flex"
+                        variant="secondary"
+                      >
+                        Incomplete
+                      </Badge>
+                      <ToggleJobCompleteButton jobId={job.id} compact />
+                    </div>
                   )}
                 </div>
-                {!job.is_completed && <ToggleJobCompleteButton jobId={job.id} />}
-              </div>
+              </article>
             ))}
           </div>
         )}
-      </div>
+
+        {selectedJobs.length > SELECTED_JOBS_VISIBLE_COUNT ? (
+          <div className="shrink-0 border-t border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground dark:border-white/8 dark:bg-white/[0.03]">
+            Scroll to view all {selectedJobs.length} jobs for this date.
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }
