@@ -33,6 +33,7 @@ function formatCurrency(cents: number | null | undefined) {
 export function MonthJobsCalendar({
   jobs,
   monthStart,
+  calendarEnd,
 }: {
   jobs: CalendarJob[];
   monthStart: string;
@@ -41,6 +42,10 @@ export function MonthJobsCalendar({
   const currentMonth = useMemo(
     () => startOfMonth(parseYmd(monthStart)),
     [monthStart],
+  );
+  const lastCalendarMonth = useMemo(
+    () => startOfMonth(parseYmd(calendarEnd)),
+    [calendarEnd],
   );
 
   // Group jobs by date once so the calendar highlights and detail panel can read
@@ -115,15 +120,15 @@ export function MonthJobsCalendar({
     <div className="grid h-full min-h-0 gap-2 lg:grid-cols-[minmax(18rem,0.92fr)_minmax(0,1.08fr)]">
       <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-xs dark:border-white/8 dark:bg-card/90">
         <div className="flex min-h-0 flex-1 items-start justify-center overflow-hidden p-2">
-          {/* DayPicker stays pinned to the current month in this dashboard view. */}
+          {/* DayPicker shows the current month first, then lets users browse upcoming scheduled months. */}
           <Calendar
             className="w-full max-w-[18.5rem] rounded-xl bg-muted/20 p-1.5 text-card-foreground dark:bg-white/[0.03] dark:text-foreground [&_[data-day]]:text-foreground [&_[data-day]]:hover:bg-muted/55 dark:[&_[data-day]]:hover:bg-white/[0.06] [&_[data-selected-single=true]]:bg-primary/14 [&_[data-selected-single=true]]:text-foreground [&_[data-selected-single=true]]:ring-1 [&_[data-selected-single=true]]:ring-primary/30 dark:[&_[data-selected-single=true]]:bg-primary/24 dark:[&_[data-selected-single=true]]:text-primary-foreground dark:[&_[data-selected-single=true]]:ring-primary/35 [--cell-size:--spacing(6.5)] sm:max-w-80 sm:p-2 sm:[--cell-size:--spacing(7.5)]"
             buttonVariant="ghost"
             mode="single"
             required
-            month={currentMonth}
+            defaultMonth={currentMonth}
             fromMonth={currentMonth}
-            toMonth={currentMonth}
+            toMonth={lastCalendarMonth}
             showOutsideDays={false}
             selected={selectedDate}
             onSelect={handleDateSelect}
@@ -134,18 +139,18 @@ export function MonthJobsCalendar({
             }}
             classNames={{
               // Keep dark mode on the same muted/card palette as the rest of the dashboard.
-              root: "w-full max-w-full",
+              root: "relative w-full max-w-full",
               months: "flex w-full justify-center",
               month: "flex w-full max-w-full flex-col gap-1.5",
-              month_caption: "relative flex h-7 items-center justify-center px-0 sm:h-8",
+              month_caption:
+                "relative flex h-8 items-center justify-center px-8",
               caption_label:
                 "truncate text-xs font-semibold text-foreground dark:text-foreground sm:text-sm",
-              // Hide month navigation because this dashboard view is intentionally current-month only.
-              nav: "hidden",
+              nav: "absolute inset-x-0 top-0 z-10 flex h-8 items-center justify-between px-1",
               button_previous:
-                "size-6 rounded-md border border-border/70 bg-card/80 text-foreground hover:bg-muted dark:border-white/8 dark:bg-white/[0.04] dark:text-foreground dark:hover:bg-white/[0.08] sm:size-7",
+                "size-7 rounded-full bg-transparent p-0 text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground disabled:pointer-events-none disabled:opacity-30 dark:text-muted-foreground dark:hover:bg-transparent dark:hover:text-foreground [&_svg]:size-4",
               button_next:
-                "size-6 rounded-md border border-border/70 bg-card/80 text-foreground hover:bg-muted dark:border-white/8 dark:bg-white/[0.04] dark:text-foreground dark:hover:bg-white/[0.08] sm:size-7",
+                "size-7 rounded-full bg-transparent p-0 text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground disabled:pointer-events-none disabled:opacity-30 dark:text-muted-foreground dark:hover:bg-transparent dark:hover:text-foreground [&_svg]:size-4",
               weekdays: "mt-1.5 flex",
               weekday:
                 "flex-1 select-none rounded-md text-center text-[0.68rem] font-medium text-muted-foreground dark:text-muted-foreground sm:text-[0.72rem]",
