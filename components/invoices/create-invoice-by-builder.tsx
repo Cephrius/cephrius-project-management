@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createInvoiceForBuilder } from "@/app/(jobsyte-app)/(app)/invoices/actions";
+import { createInvoiceForBuilder } from "@/app/(jobsyte-app)/invoices/actions";
 import { cn } from "@/lib/utils";
 import { suggestDueDate } from "@/lib/settings/preferences";
 import {

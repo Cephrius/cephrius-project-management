@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { toggleJobComplete } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
+import { toggleJobComplete } from "@/app/(jobsyte-app)/projects/[id]/actions";
 import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import { DeleteJobDialog } from "@/components/jobs/delete-job-dialog";

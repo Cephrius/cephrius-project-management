@@ -3,7 +3,7 @@
 // Onboarding: add-job client form. It seeds suggestions from Supabase, lets the
 // user assign an employee/crew through `completed-by-combobox.tsx`, then calls
 // `app/(jobsyte-app)/(app)/projects/[id]/actions.ts`.
-import { createJob } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
+import { createJob } from "@/app/(jobsyte-app)/projects/[id]/actions";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";

@@ -23,7 +23,7 @@ import {
 import {
   markInvoiceItemPaid,
   markInvoicePaid,
-} from "@/app/(jobsyte-app)/(app)/invoices/payment-actions";
+} from "@/app/(jobsyte-app)/invoices/payment-actions";
 
 export type InvoiceItemWithPayment = {
   id: string;

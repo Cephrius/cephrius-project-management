@@ -55,7 +55,7 @@ import {
   addPayrollPayment,
   deletePayrollPayment,
   refundPayrollPayment,
-} from "@/app/(jobsyte-app)/(app)/payroll/actions";
+} from "@/app/(jobsyte-app)/payroll/actions";
 
 
 export type PayrollAssignment = {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { toggleJobComplete } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
+import { toggleJobComplete } from "@/app/(jobsyte-app)/projects/[id]/actions";
 import { cn } from "@/lib/utils";
 
 export function ToggleJobCompleteButton({

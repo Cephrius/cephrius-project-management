@@ -66,7 +66,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteCrew, deleteEmployee } from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
+import { deleteCrew, deleteEmployee } from "@/app/(jobsyte-app)/employees-crews/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { buildWorkforceDashboardModel } from "./dashboard-data";

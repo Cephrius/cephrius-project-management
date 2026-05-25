@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toggleJobComplete } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
+import { toggleJobComplete } from "@/app/(jobsyte-app)/projects/[id]/actions";
 
 function formatPrice(cents: number | null): string {
   if (cents === null) return "0";

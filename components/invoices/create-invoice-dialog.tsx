@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
-import { createInvoice } from "@/app/(jobsyte-app)/(app)/projects/[id]/invoice-actions";
+import { createInvoice } from "@/app/(jobsyte-app)/projects/[id]/invoice-actions";
 import { readPreferenceSettings, suggestDueDate } from "@/lib/settings/preferences";
 import {
   CreatableCombobox,

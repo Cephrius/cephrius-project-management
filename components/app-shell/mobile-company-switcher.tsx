@@ -5,7 +5,7 @@ import { Check, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCompany, type Company } from "@/lib/company-context";
-import { createCompany, deleteCompany } from "@/app/(jobsyte-app)/(app)/settings/company-actions";
+import { createCompany, deleteCompany } from "@/app/(jobsyte-app)/settings/company-actions";
 
 import {
   Drawer,
