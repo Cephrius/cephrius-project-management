@@ -6,7 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { ProjectsPageClient } from "@/components/projects/projects-page";
-import type { LookupItem, ProjectListItem } from "@/components/projects/types";
+import type {
+  LookupItem,
+  ProjectBillingStatus,
+  ProjectListItem,
+} from "@/components/projects/types";
 
 type ProjectRow = {
   id: string;
@@ -20,6 +24,8 @@ type ProjectJobRow = {
   id: string;
   project_id: string;
   is_completed: boolean | null;
+  is_invoiced: boolean | null;
+  is_paid: boolean | null;
   superintendent: string | null;
   created_at: string | null;
 };
@@ -35,6 +41,20 @@ function toStatus(
   if (jobCount === 0) return "not-started";
   if (openJobCount === 0) return "completed";
   return "active";
+}
+
+function toBillingStatuses(
+  invoicedJobCount: number,
+  paidJobCount: number,
+): ProjectBillingStatus[] {
+  const statuses: ProjectBillingStatus[] = [];
+
+  // Billing is independent from lifecycle, so keep these as additive badges
+  // instead of replacing "Completed" with "Invoiced" or "Paid".
+  if (invoicedJobCount > 0 || paidJobCount > 0) statuses.push("invoiced");
+  if (paidJobCount > 0) statuses.push("paid");
+
+  return statuses;
 }
 
 async function getProjectsPageData(
@@ -53,7 +73,9 @@ async function getProjectsPageData(
       supabase.from("subdivisions").select("id, name").order("name"),
       supabase
         .from("jobs")
-        .select("id, project_id, is_completed, superintendent, created_at")
+        .select(
+          "id, project_id, is_completed, is_invoiced, is_paid, superintendent, created_at",
+        )
         .eq("company_id", companyId)
         .is("deleted_at", null),
     ]);
@@ -64,6 +86,8 @@ async function getProjectsPageData(
     {
       job_count: number;
       open_job_count: number;
+      invoiced_job_count: number;
+      paid_job_count: number;
       last_activity_at: string | null;
       crew_names: Set<string>;
     }
@@ -76,12 +100,16 @@ async function getProjectsPageData(
     const stat = projectStats.get(projectId) ?? {
       job_count: 0,
       open_job_count: 0,
+      invoiced_job_count: 0,
+      paid_job_count: 0,
       last_activity_at: null,
       crew_names: new Set<string>(),
     };
 
     stat.job_count += 1;
     if (job.is_completed !== true) stat.open_job_count += 1;
+    if (job.is_invoiced === true) stat.invoiced_job_count += 1;
+    if (job.is_paid === true) stat.paid_job_count += 1;
 
     if (job.created_at) {
       if (!stat.last_activity_at || job.created_at > stat.last_activity_at) {
@@ -104,8 +132,14 @@ async function getProjectsPageData(
       ...project,
       job_count: jobCount,
       open_job_count: openJobCount,
+      invoiced_job_count: stat?.invoiced_job_count ?? 0,
+      paid_job_count: stat?.paid_job_count ?? 0,
       last_activity_at: stat?.last_activity_at ?? project.created_at ?? null,
       status: toStatus(jobCount, openJobCount),
+      billing_statuses: toBillingStatuses(
+        stat?.invoiced_job_count ?? 0,
+        stat?.paid_job_count ?? 0,
+      ),
       crew_names: Array.from(stat?.crew_names ?? []).sort((a, b) =>
         a.localeCompare(b),
       ),

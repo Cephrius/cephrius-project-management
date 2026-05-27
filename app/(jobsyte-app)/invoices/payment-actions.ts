@@ -38,6 +38,26 @@ export async function markInvoiceItemPaid(
   if (itemFetchErr) return { ok: false, message: itemFetchErr.message };
   if (!item) return { ok: false, message: "Invoice item not found." };
 
+  if (isPaid && item.job_id) {
+    const { data: job, error: jobFetchErr } = await supabase
+      .from("jobs")
+      .select("id, is_completed")
+      .eq("id", item.job_id)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (jobFetchErr) return { ok: false, message: jobFetchErr.message };
+    if (!job) return { ok: false, message: "Linked job not found." };
+    // Paid status is only valid after the job has been completed. Invoice
+    // controls still own the write path, but incomplete jobs are blocked here.
+    if (!job.is_completed) {
+      return {
+        ok: false,
+        message: "Only completed jobs can be marked as paid.",
+      };
+    }
+  }
+
   const now = new Date().toISOString();
 
   // ── Update the invoice item ──────────────────────────────────────────
@@ -167,6 +187,34 @@ export async function markInvoicePaid(invoiceId: string) {
   const jobIds = (items ?? [])
     .map((i) => i.job_id)
     .filter((id): id is string => Boolean(id));
+
+  if (jobIds.length > 0) {
+    const { data: linkedJobs, error: linkedJobsErr } = await supabase
+      .from("jobs")
+      .select("id, is_completed")
+      .in("id", jobIds)
+      .is("deleted_at", null);
+
+    if (linkedJobsErr) return { ok: false, message: linkedJobsErr.message };
+
+    const completedJobIds = new Set(
+      (linkedJobs ?? [])
+        .filter((job) => job.is_completed)
+        .map((job) => job.id),
+    );
+    const allLinkedJobsCompleted = jobIds.every((jobId) =>
+      completedJobIds.has(jobId),
+    );
+
+    // Keep the bulk action aligned with per-line payment: invoices remain the
+    // place to mark paid, but every linked job must already be completed.
+    if (!allLinkedJobsCompleted) {
+      return {
+        ok: false,
+        message: "Only completed jobs can be marked as paid.",
+      };
+    }
+  }
 
   // ── Mark all invoice items as paid ───────────────────────────────────
   const { data: updatedItems, error: itemsUpdateErr } = await supabase

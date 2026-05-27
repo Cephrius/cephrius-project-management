@@ -2,7 +2,7 @@
 
 import { useTransition, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, MoreHorizontal } from "lucide-react";
+import { CheckCircle2, DollarSign, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toggleJobComplete } from "@/app/(jobsyte-app)/projects/[id]/actions";
+import { markProjectJobPaid } from "@/components/projects/actions";
 
 function formatPrice(cents: number | null): string {
   if (cents === null) return "0";
@@ -30,6 +31,29 @@ export type QuickJobItem = {
   is_invoiced: boolean;
   is_paid: boolean;
 };
+
+function QuickJobStateBadges({ job }: { job: QuickJobItem }) {
+  return (
+    <>
+      {/* Job completion and billing are additive states; do not hide one with another. */}
+      {job.is_completed && (
+        <span className="shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-400">
+          Completed
+        </span>
+      )}
+      {job.is_invoiced && (
+        <span className="shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-400">
+          Invoiced
+        </span>
+      )}
+      {job.is_paid && (
+        <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+          Paid
+        </span>
+      )}
+    </>
+  );
+}
 
 export function QuickJobComplete({
   jobs,
@@ -73,6 +97,32 @@ export function QuickJobComplete({
   const completedCount = optimisticJobs.filter((j) => j.is_completed).length;
   const incompleteJobs = optimisticJobs.filter((j) => !j.is_completed);
 
+  function setPaid(job: QuickJobItem, nextPaid: boolean) {
+    setOptimisticJobs((prev) =>
+      prev.map((item) =>
+        item.id === job.id ? { ...item, is_paid: nextPaid } : item,
+      ),
+    );
+
+    startTransition(async () => {
+      const result = await markProjectJobPaid(job.id, nextPaid);
+      if (!result?.ok) {
+        setOptimisticJobs(jobs);
+        toast.error(result?.message ?? "Failed to update payment status.");
+        return;
+      }
+
+      toast.success(
+        job.is_invoiced
+          ? "Job and invoice payment status updated."
+          : nextPaid
+            ? "Job marked as paid."
+            : "Job marked as unpaid.",
+      );
+      router.refresh();
+    });
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -104,12 +154,7 @@ export function QuickJobComplete({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 truncate">
                 <span className="truncate font-medium">{job.title}</span>
-                {job.is_paid && (
-                  <span className="shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-400">Paid</span>
-                )}
-                {!job.is_paid && job.is_invoiced && (
-                  <span className="shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-400">Invoiced</span>
-                )}
+                <QuickJobStateBadges job={job} />
               </div>
               <div className="text-xs text-muted-foreground space-y-0.5">
                 <div className="flex justify-between gap-2">
@@ -213,12 +258,7 @@ export function QuickJobComplete({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 truncate">
                       <span className="truncate font-medium line-through text-muted-foreground">{job.title}</span>
-                      {job.is_paid && (
-                        <span className="shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-400">Paid</span>
-                      )}
-                      {!job.is_paid && job.is_invoiced && (
-                        <span className="shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-400">Invoiced</span>
-                      )}
+                      <QuickJobStateBadges job={job} />
                     </div>
                     <div className="text-xs text-muted-foreground space-y-0.5">
                       <div className="flex justify-between gap-2">
@@ -234,6 +274,23 @@ export function QuickJobComplete({
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 cursor-pointer p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                      disabled={isPending}
+                      title={
+                        job.is_paid
+                          ? "Mark as unpaid"
+                          : job.is_invoiced
+                            ? "Mark paid and update invoice"
+                            : "Mark as paid"
+                      }
+                      onClick={() => setPaid(job, !job.is_paid)}
+                    >
+                      <DollarSign className="size-4" />
+                    </Button>
                     <Button
                       type="button"
                       size="sm"
@@ -276,6 +333,14 @@ export function QuickJobComplete({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                          className="cursor-pointer text-xs"
+                          disabled={isPending}
+                          onSelect={() => setPaid(job, !job.is_paid)}
+                        >
+                          <DollarSign className="size-4" />
+                          {job.is_paid ? "Unmark Paid" : "Mark Paid"}
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           className="cursor-pointer text-xs"
                           disabled={isPending || job.is_paid || job.is_invoiced}

@@ -70,7 +70,7 @@ export async function createInvoice(projectId: string, formData: FormData) {
   // Fetch selected jobs (ensure they belong to this project and are completed)
   const { data: jobs, error: jobsErr } = await (await supabase)
     .from("jobs")
-    .select("id, title, price_cents, is_completed")
+    .select("id, title, price_cents, is_completed, is_paid, paid_at")
     .eq("project_id", projectId)
     .is("deleted_at", null)
     .in("id", jobIds);
@@ -90,6 +90,9 @@ export async function createInvoice(projectId: string, formData: FormData) {
 
   // Create invoice
   const invoice_number = formatInvoiceNumber();
+  const paidAt = new Date().toISOString();
+  const allSelectedJobsPaid =
+    selected.length > 0 && selected.every((job) => job.is_paid === true);
 
   const companyId = await getActiveCompanyId();
   if (!companyId) return { ok: false, message: "No active company found." };
@@ -111,6 +114,8 @@ export async function createInvoice(projectId: string, formData: FormData) {
       bill_to_name,
       bill_to_address,
       subtotal_cents,
+      is_paid: allSelectedJobsPaid,
+      paid_at: allSelectedJobsPaid ? paidAt : null,
     })
     .select("id")
     .single();
@@ -132,6 +137,10 @@ export async function createInvoice(projectId: string, formData: FormData) {
     builder_name_snapshot: project.builder_name,
     job_title_snapshot: j.title,
     job_price_cents_snapshot: j.price_cents,
+    // A job can be paid from Projects before invoicing. Carry that state onto
+    // the new invoice item so Invoices immediately matches the job status.
+    is_paid: j.is_paid === true,
+    paid_at: j.is_paid === true ? j.paid_at ?? paidAt : null,
   }));
 
   const { error: itemsErr } = await (await supabase)

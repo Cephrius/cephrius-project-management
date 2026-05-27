@@ -28,7 +28,11 @@ import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog";
 import { ImportProjectJobsButton } from "@/components/projects/import-project-jobs-button";
 import { NewProjectButton } from "@/components/projects/new-project-button";
-import type { LookupItem, ProjectListItem } from "@/components/projects/types";
+import type {
+  LookupItem,
+  ProjectBillingStatus,
+  ProjectListItem,
+} from "@/components/projects/types";
 import { QuickJobComplete, type QuickJobItem } from "@/components/projects/quick-job-complete";
 import { QuickJobDrawer } from "@/components/projects/quick-job-drawer";
 import { getProjectJobs } from "@/components/projects/actions";
@@ -65,7 +69,7 @@ const UNASSIGNED_BUILDER = "__unassigned_builder__";
 const UNASSIGNED_SUBDIVISION = "__unassigned_subdivision__";
 
 type ViewMode = "list" | "grouped";
-type StatusFilter = "all" | ProjectListItem["status"];
+type StatusFilter = "all" | ProjectListItem["status"] | ProjectBillingStatus;
 
 type StreetGroup = {
   key: string;
@@ -106,6 +110,41 @@ function statusLabel(status: ProjectListItem["status"]): string {
   if (status === "not-started") return "Not Started";
   if (status === "completed") return "Completed";
   return "Active";
+}
+
+function billingStatusLabel(status: ProjectBillingStatus): string {
+  if (status === "paid") return "Paid";
+  return "Invoiced";
+}
+
+function ProjectStatusBadges({ project }: { project: ProjectListItem }) {
+  const lifecycleClassName =
+    project.status === "completed"
+      ? "border-green-300 bg-green-100 text-green-800"
+      : project.status === "not-started"
+        ? "border-slate-300 bg-slate-100 text-slate-700"
+        : "border-blue-300 bg-blue-100 text-blue-800";
+
+  return (
+    <>
+      <Badge variant="outline" className={lifecycleClassName}>
+        {statusLabel(project.status)}
+      </Badge>
+      {project.billing_statuses.map((status) => (
+        <Badge
+          key={status}
+          variant="outline"
+          className={
+            status === "paid"
+              ? "border-emerald-300 bg-emerald-100 text-emerald-800"
+              : "border-violet-300 bg-violet-50 text-violet-700"
+          }
+        >
+          {billingStatusLabel(status)}
+        </Badge>
+      ))}
+    </>
+  );
 }
 
 function toInitials(name: string): string {
@@ -426,8 +465,12 @@ export function ProjectsPageClient({
         const matchesSubdivision =
           subdivisionFilter === "all" ||
           subdivisionFilter === normalizedSubdivision;
+        // Lifecycle and billing are separate states, so the status filter can
+        // match either the work state ("Completed") or billing state ("Invoiced").
         const matchesStatus =
-          statusFilter === "all" || statusFilter === project.status;
+          statusFilter === "all" ||
+          statusFilter === project.status ||
+          project.billing_statuses.includes(statusFilter as ProjectBillingStatus);
         const matchesQuery =
           q.length === 0 ||
           project.project_address.toLowerCase().includes(q) ||
@@ -861,6 +904,8 @@ export function ProjectsPageClient({
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="invoiced">Invoiced</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="not-started">Not Started</SelectItem>
             </SelectContent>
           </Select>
@@ -1059,24 +1104,9 @@ export function ProjectsPageClient({
                                                     </div>
 
                                                     <div className="flex flex-wrap items-center gap-2">
-                                                      {project.status ===
-                                                      "completed" ? (
-                                                        <Badge
-                                                          variant="outline"
-                                                          className="border-green-300 bg-green-100 text-green-800"
-                                                        >
-                                                          Completed
-                                                        </Badge>
-                                                      ) : (
-                                                        <Badge
-                                                          variant="outline"
-                                                          className="border-blue-300 bg-blue-100 text-blue-800"
-                                                        >
-                                                          {statusLabel(
-                                                            project.status,
-                                                          )}
-                                                        </Badge>
-                                                      )}
+                                                      <ProjectStatusBadges
+                                                        project={project}
+                                                      />
                                                       <div
                                                         onClick={(event) =>
                                                           event.stopPropagation()
@@ -1155,21 +1185,7 @@ export function ProjectsPageClient({
                             <div className="break-words text-lg font-semibold leading-tight sm:text-xl">
                               {project.project_address}
                             </div>
-                            {project.status === "completed" ? (
-                              <Badge
-                                variant="outline"
-                                className="border-green-300 bg-green-100 text-green-800"
-                              >
-                                Completed
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="border-blue-300 bg-blue-100 text-blue-800"
-                              >
-                                {statusLabel(project.status)}
-                              </Badge>
-                            )}
+                            <ProjectStatusBadges project={project} />
                           </div>
                           <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
@@ -1310,24 +1326,9 @@ export function ProjectsPageClient({
                 <div className="flex items-center gap-2">
                   <UserRound className="size-4" />
                   Status:
-                  {selectedProject.status === "completed" ? (
-                    <Badge
-                      variant="outline"
-                      className="border-green-300 bg-green-100 text-green-800"
-                    >
-                      Completed
-                    </Badge>
-                  ) : (
-                    <span>
-                      {" "}
-                      <Badge
-                        variant="outline"
-                        className="border-blue-300 bg-blue-100 text-blue-800"
-                      >
-                        {statusLabel(selectedProject.status)}
-                      </Badge>
-                    </span>
-                  )}
+                  <span className="flex flex-wrap items-center gap-2">
+                    <ProjectStatusBadges project={selectedProject} />
+                  </span>
                 </div>
               </div>
 
