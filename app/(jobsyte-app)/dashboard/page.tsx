@@ -15,7 +15,6 @@ import {
   DollarSign,
   FolderKanban,
   TrendingUp,
-  ArrowUpRight,
   AlertTriangle,
   BarChart3,
 } from "lucide-react";
@@ -29,7 +28,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardAction,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -50,13 +48,6 @@ type JobSummaryRow = {
   project_id: string;
   superintendent: string | null;
   price_cents?: number | null;
-};
-
-type InvoiceRow = {
-  id: string;
-  invoice_number: string;
-  invoice_date: string;
-  subtotal_cents: number;
 };
 
 function money(cents: number) {
@@ -105,7 +96,6 @@ export default async function DashboardPage() {
     openJobsCountRes,
     completedMonthCountRes,
     monthInvoicesRes,
-    recentInvoicesRes,
     upcomingJobsRes,
   ] = await Promise.all([
     supabase.from("projects").select("id, project_address").eq("company_id", companyId).is("deleted_at", null),
@@ -156,13 +146,6 @@ export default async function DashboardPage() {
       .gte("invoice_date", monthStart)
       .lte("invoice_date", monthEnd),
     supabase
-      .from("invoices")
-      .select("id, invoice_number, invoice_date, subtotal_cents")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false })
-      .is("deleted_at", null)
-      .limit(5),
-    supabase
       .from("jobs")
       .select("id, title, scheduled_completion, project_id, superintendent")
       .eq("company_id", companyId)
@@ -181,7 +164,6 @@ export default async function DashboardPage() {
     openJobsCountRes.error ??
     completedMonthCountRes.error ??
     monthInvoicesRes.error ??
-    recentInvoicesRes.error ??
     upcomingJobsRes.error;
 
   if (firstError) {
@@ -233,7 +215,6 @@ export default async function DashboardPage() {
     }),
   );
 
-  const recentInvoices = (recentInvoicesRes.data ?? []) as InvoiceRow[];
   const monthName = format(monthStartDate, "MMMM yyyy");
 
   // Derived stats for new widgets
@@ -248,11 +229,6 @@ export default async function DashboardPage() {
     if (!j.scheduled_completion) return false;
     return j.scheduled_completion < today;
   });
-
-  const highValueJobs = ((monthJobsRes.data ?? []) as JobSummaryRow[])
-    .filter((j) => (j.price_cents ?? 0) > 0)
-    .sort((a, b) => (b.price_cents ?? 0) - (a.price_cents ?? 0))
-    .slice(0, 5);
 
   const totalPipelineValue = ((monthJobsRes.data ?? []) as JobSummaryRow[])
     .filter((j) => !j.is_completed)
@@ -419,10 +395,9 @@ export default async function DashboardPage() {
           ROW 2 — Main content panels (fill remaining space, each scrolls internally)
          ═══════════════════════════════════════════════ */}
       <div className="min-h-0 flex-1 grid gap-4 xl:grid-cols-[2fr_1fr] xl:grid-rows-[1fr]">
-        {/* Left column — Calendar + Invoices/High-Value stacked, scrolls internally */}
-        <div className="min-h-0 flex flex-col gap-4 overflow-y-auto pr-1">
-          {/* Jobs Calendar is height-bounded so selected-date details cannot stretch the dashboard. */}
-          <Card className="flex h-[40rem] min-h-0 shrink-0 flex-col border-primary/20 lg:h-[28rem]">
+        {/* Left column — Calendar fills the available dashboard height. */}
+        <div className="min-h-0 flex flex-col gap-4 overflow-hidden pr-1">
+          <Card className="flex min-h-[40rem] flex-1 flex-col border-primary/20 xl:min-h-0">
             <CardHeader className="shrink-0">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -445,111 +420,6 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Invoices + High-Value Jobs side by side */}
-          <div className="grid gap-4 shrink-0 lg:grid-cols-2">
-            {/* Recent Invoices */}
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-primary">
-                  Recent Invoices
-                </CardTitle>
-                <CardDescription>
-                  Most recently created invoices.
-                </CardDescription>
-                <CardAction>
-                  <Link href="/invoices">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-primary/30 hover:bg-primary/10"
-                    >
-                      View All
-                    </Button>
-                  </Link>
-                </CardAction>
-              </CardHeader>
-                <CardContent className="min-h-0 flex-1 overflow-y-auto p-0">
-                  {recentInvoices.length === 0 ? (
-                    <div className="rounded-md border p-3 text-center text-sm text-muted-foreground">
-                      No invoices yet.
-                    </div>
-                  ) : (
-                    // Compact, responsive list: smaller vertical padding and
-                    // truncation prevent the list from appearing chunky and
-                    // causing layout overflow on small viewports.
-                    <ul className="divide-y divide-primary/10">
-                      {recentInvoices.map((invoice) => (
-                        <li key={invoice.id}>
-                          <Link href={`/invoices/${invoice.id}`}>
-                            <div className="flex items-center justify-between gap-3 py-2 px-3 hover:bg-primary/6 transition">
-                              <div className="min-w-0">
-                                <div className="truncate text-sm font-medium">
-                                  {invoice.invoice_number}
-                                </div>
-                                <div className="truncate text-[11px] text-muted-foreground">
-                                  {invoice.invoice_date}
-                                </div>
-                              </div>
-                              <div className="shrink-0 text-sm font-semibold tabular-nums">
-                                {money(invoice.subtotal_cents)}
-                              </div>
-                            </div>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-            </Card>
-
-            {/* High-Value Jobs */}
-            <Card className="border-primary/20">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <ArrowUpRight className="size-4 text-green-600 dark:text-green-400" />
-                  <CardTitle className="text-primary">
-                    Top Jobs by Value
-                  </CardTitle>
-                </div>
-                <CardDescription>
-                  Highest-priced jobs this period.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="min-h-0 flex-1 overflow-y-auto p-0">
-                {highValueJobs.length === 0 ? (
-                  <div className="rounded-md border p-3 text-center text-sm text-muted-foreground">
-                    No priced jobs found. Add prices to jobs to see them here.
-                  </div>
-                ) : (
-                  // Use a compact list with a small index badge and tight
-                  // paddings so the content fits comfortably on mobile while
-                  // remaining readable on desktop.
-                  <ul className="divide-y divide-primary/10">
-                    {highValueJobs.map((job, idx) => (
-                      <li key={job.id}>
-                        <div className="flex items-center gap-3 py-2 px-3">
-                          <div className="flex w-6 h-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
-                            {idx + 1}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium">
-                              {job.title}
-                            </div>
-                            <div className="truncate text-[11px] text-muted-foreground">
-                              {projectMap.get(job.project_id) ?? "Unknown project"}
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-sm font-semibold tabular-nums text-green-700 dark:text-green-400">
-                            {money(job.price_cents ?? 0)}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </div>
         </div>
 
         {/* Removed Quick Actions , Month overview and Futrure Ideas widget */}
