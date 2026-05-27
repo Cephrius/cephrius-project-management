@@ -182,8 +182,10 @@ export function QuickJobDrawer({
                       className="flex items-center justify-between gap-2 rounded-md border border-primary/10 bg-primary/2 p-3 text-sm hover:bg-primary/5"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 truncate">
-                          <span className="truncate font-medium">{job.title}</span>
+                        {/* Title gets its own row so it isn't squeezed out by the status badges. */}
+                        <div className="truncate font-medium">{job.title}</div>
+                        {/* Badges wrap to a new line if they don't fit; never overlap the title. */}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
                           <QuickJobStateBadges job={job} />
                         </div>
                         <div className="text-xs text-muted-foreground space-y-1 mt-1">
@@ -230,8 +232,12 @@ export function QuickJobDrawer({
                         className="flex items-center justify-between gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-900 dark:bg-green-950/20"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 truncate">
-                            <span className="truncate font-medium line-through text-muted-foreground">{job.title}</span>
+                          {/* Title gets its own row so it isn't squeezed out by the status badges. */}
+                          <div className="truncate font-medium line-through text-muted-foreground">
+                            {job.title}
+                          </div>
+                          {/* Badges wrap to a new line if they don't fit; never overlap the title. */}
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1">
                             <QuickJobStateBadges job={job} />
                           </div>
                           <div className="text-xs text-muted-foreground space-y-1 mt-1">

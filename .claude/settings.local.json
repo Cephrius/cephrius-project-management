@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(sips -s format png \"Screenshot 2026-05-27 at 14.40.18.heic\" --out /tmp/jobsyte-screenshot.png)",
+      "Bash(npm run *)",
+      "Bash(tee /tmp/lint.out)"
+    ]
+  },
   "hooks": {
     "UserPromptSubmit": [
       {
