@@ -51,4 +51,5 @@ create-sanitize-issue.sh
 
 # Claude Code project skills (kept local, not committed)
 .claude/skills/
+.codex
 
