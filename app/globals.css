@@ -74,7 +74,7 @@
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
   --radius: 0.625rem;
-  --sidebar: oklch(92.191% 0.0001 271.152 )
+  --sidebar: oklch(92.191% 0.0001 271.152);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.546 0.245 262.881);
   --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
@@ -82,8 +82,8 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
-  --navheader: oklch(92.191% 0.0001 271.152 )
-  --mainview: oklch(92.191% 0.0001 271.152 )
+  --navheader: oklch(92.191% 0.0001 271.152);
+  --mainview: oklch(92.191% 0.0001 271.152);
 }
 
 .dark {
@@ -128,6 +128,11 @@
   }
   body {
     @apply bg-background text-foreground;
+    color-scheme: light;
+  }
+
+  .dark body {
+    color-scheme: dark;
   }
 }
 
@@ -196,16 +201,61 @@
   }
 }
 
-html.theme-transitioning,
-html.theme-transitioning * {
-  transition-property: background-color, color, border-color, fill, stroke, box-shadow;
-  transition-duration: 350ms;
+/* Theme changes used to transition every element and box-shadow for 350ms,
+   which forced too much style work on dense pages. Keep the effect scoped to
+   visible color surfaces so light/dark mode feels immediate instead of sticky. */
+html.theme-transitioning :where(
+  body,
+  main,
+  header,
+  footer,
+  aside,
+  nav,
+  section,
+  article,
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td,
+  button,
+  input,
+  textarea,
+  select,
+  [role="dialog"],
+  [role="menu"],
+  [data-slot]
+) {
+  transition-property: background-color, color, border-color, outline-color, fill, stroke;
+  transition-duration: 180ms;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.theme-transitioning,
-  html.theme-transitioning * {
+  html.theme-transitioning :where(
+    body,
+    main,
+    header,
+    footer,
+    aside,
+    nav,
+    section,
+    article,
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td,
+    button,
+    input,
+    textarea,
+    select,
+    [role="dialog"],
+    [role="menu"],
+    [data-slot]
+  ) {
     transition: none !important;
   }
 }
