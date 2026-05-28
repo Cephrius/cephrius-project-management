@@ -10,9 +10,11 @@ import { cn } from "@/lib/utils";
 
 export function ToggleJobCompleteButton({
   jobId,
+  isCompleted = false,
   compact = false,
 }: {
   jobId: string;
+  isCompleted?: boolean;
   compact?: boolean;
 }) {
   const router = useRouter();
@@ -29,20 +31,31 @@ export function ToggleJobCompleteButton({
         compact ? "h-7 shrink-0 gap-1 px-2 text-[11px]" : "mt-2",
       )}
       disabled={isPending}
-      onClick={() => {
+      onClick={(event) => {
+        event.stopPropagation();
         startTransition(async () => {
-          const result = await toggleJobComplete(jobId, true);
+          const result = await toggleJobComplete(jobId, !isCompleted);
           if (!result?.ok) {
             toast.error(result?.message ?? "Failed to update job.");
             return;
           }
-          toast.success("Job marked as complete.");
+          toast.success(
+            isCompleted ? "Job marked as incomplete." : "Job marked as complete.",
+          );
           router.refresh();
         });
       }}
     >
       <CheckCircle2 className="size-4" />
-      {isPending ? "Saving..." : compact ? "Done" : "Mark Complete"}
+      {isPending
+        ? "Saving..."
+        : compact
+          ? isCompleted
+            ? "Undo"
+            : "Done"
+          : isCompleted
+            ? "Undo Completion"
+            : "Mark Complete"}
     </Button>
   );
 }
