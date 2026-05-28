@@ -235,7 +235,7 @@ export default async function DashboardPage() {
     .reduce((sum, j) => sum + (j.price_cents ?? 0), 0);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex min-h-full flex-col xl:h-full xl:overflow-hidden">
       <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/" }]} />
 
       {/* ─── Page heading ─── */}
@@ -392,12 +392,13 @@ export default async function DashboardPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════
-          ROW 2 — Main content panels (fill remaining space, each scrolls internally)
+          ROW 2 — Below xl, panels stack and the app shell owns page scrolling.
+          At xl and above, panels fit the viewport and scroll internally.
          ═══════════════════════════════════════════════ */}
-      <div className="min-h-0 flex-1 grid gap-4 xl:grid-cols-[2fr_1fr] xl:grid-rows-[1fr]">
+      <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[2fr_1fr] xl:grid-rows-[1fr]">
         {/* Left column — Calendar fills the available dashboard height. */}
-        <div className="min-h-0 flex flex-col gap-4 overflow-hidden pr-1">
-          <Card className="flex min-h-[40rem] flex-1 flex-col border-primary/20 xl:min-h-0">
+        <div className="flex flex-col gap-4 xl:min-h-0 xl:overflow-hidden xl:pr-1">
+          <Card className="flex min-h-[40rem] flex-col border-primary/20 xl:min-h-0 xl:flex-1">
             <CardHeader className="shrink-0">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -425,7 +426,7 @@ export default async function DashboardPage() {
         {/* Removed Quick Actions , Month overview and Futrure Ideas widget */}
 
         {/* Right column — Jobs this week + Overdue */}
-        <div className="min-h-0 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 xl:min-h-0">
           {/* Overdue alert */}
           {overdueJobs.length > 0 && (
             <Card className="border-destructive/30 bg-destructive/5 shrink-0" size="sm">
@@ -470,7 +471,7 @@ export default async function DashboardPage() {
           )}
 
           {/* Jobs This Week */}
-          <Card className="border-primary/20 min-h-0 flex flex-1 flex-col max-h-[60vh] xl:max-h-none mb-20 md:mb-0">
+          <Card className="mb-20 flex max-h-[60vh] min-h-0 flex-1 flex-col border-primary/20 md:mb-0 xl:max-h-none">
             <CardHeader className="shrink-0">
               <div className="flex items-center justify-between ">
                 <div>
