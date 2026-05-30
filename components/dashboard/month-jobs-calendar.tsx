@@ -1,19 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format, isSameMonth, isValid, parse, startOfMonth } from "date-fns";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  FolderKanban,
+  Home,
+  MapPin,
+  UserRound,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { ToggleJobCompleteButton } from "@/components/dashboard/toggle-job-complete-button";
-
-const SELECTED_JOBS_VISIBLE_COUNT = 3;
+import { cn } from "@/lib/utils";
 
 export type CalendarJob = {
   id: string;
   title: string;
   scheduled_completion: string;
   is_completed: boolean;
+  project_id: string;
   project_address: string;
+  builder_name: string | null;
+  subdivision: string | null;
   superintendent: string | null;
   price_cents?: number | null;
 };
@@ -39,6 +51,11 @@ export function MonthJobsCalendar({
   monthStart: string;
   calendarEnd: string;
 }) {
+  const router = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const calendarRailRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [calendarRailWidth, setCalendarRailWidth] = useState(0);
   const currentMonth = useMemo(
     () => startOfMonth(parseYmd(monthStart)),
     [monthStart],
@@ -115,14 +132,100 @@ export function MonthJobsCalendar({
   const completedSelectedJobs = selectedJobs.filter(
     (job) => job.is_completed,
   ).length;
+  const selectedDayRevenue = selectedJobs.reduce(
+    (sum, job) => sum + (job.price_cents ?? 0),
+    0,
+  );
+  const selectedDayProjects = new Set(selectedJobs.map((job) => job.project_id))
+    .size;
+  const selectedDayBuilders = new Set(
+    selectedJobs
+      .map((job) => job.builder_name?.trim())
+      .filter((builderName): builderName is string => Boolean(builderName)),
+  ).size;
+
+  function openProject(projectId: string) {
+    router.push(`/projects/${projectId}`);
+  }
+
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+
+    const resizeObservers: ResizeObserver[] = [];
+
+    if (containerRef.current) {
+      const containerObserver = new ResizeObserver(([entry]) => {
+        setContainerWidth(entry.contentRect.width);
+      });
+      containerObserver.observe(containerRef.current);
+      resizeObservers.push(containerObserver);
+    }
+
+    if (calendarRailRef.current) {
+      const railObserver = new ResizeObserver(([entry]) => {
+        setCalendarRailWidth(entry.contentRect.width);
+      });
+      railObserver.observe(calendarRailRef.current);
+      resizeObservers.push(railObserver);
+    }
+
+    return () => {
+      for (const observer of resizeObservers) observer.disconnect();
+    };
+  }, []);
+
+  // The dashboard can resize without a clean breakpoint transition, especially
+  // while users drag the app window. Drive this layout from the actual
+  // component width so day cells keep shrinking before dates get clipped.
+  // Split this widget much earlier than the page-level xl breakpoint. The
+  // dashboard card can be around 650-760px wide on smaller desktop windows, and
+  // stacking the month above the job list there causes the calendar to collide
+  // with the detail panel.
+  const isSplitLayout = containerWidth >= 600;
+  const shouldStackMetrics = isSplitLayout && calendarRailWidth < 360;
+  const shouldLimitDailyJobs = !isSplitLayout;
+  const computedCalendarCellSize = useMemo(() => {
+    if (!calendarRailWidth) return 42;
+
+    const usableWidth = Math.max(calendarRailWidth - 22, 238);
+    const nextSize = Math.floor(usableWidth / 7);
+
+    return Math.max(28, Math.min(nextSize, isSplitLayout ? 40 : 48));
+  }, [calendarRailWidth, isSplitLayout]);
 
   return (
-    <div className="grid h-full min-h-0 gap-2 lg:grid-cols-[minmax(18rem,0.92fr)_minmax(0,1.08fr)]">
+    <div
+      ref={containerRef}
+      className={cn(
+        "grid h-full min-h-0 gap-3",
+        isSplitLayout
+          ? "grid-cols-[minmax(15.5rem,18rem)_minmax(0,1fr)]"
+          : "grid-cols-1",
+      )}
+    >
       <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-xs dark:border-white/8 dark:bg-card/90">
-        <div className="flex min-h-0 flex-1 items-start justify-center overflow-hidden p-2">
+        <div className="border-b border-border/80 bg-muted/25 px-3 py-2.5 dark:border-white/8 dark:bg-white/[0.03]">
+          <div className="text-sm font-semibold text-foreground">Calendar Overview</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {selectedJobs.length} scheduled job{selectedJobs.length === 1 ? "" : "s"} on{" "}
+            {format(selectedDate, "MMM d")}
+          </div>
+        </div>
+        <div
+          ref={calendarRailRef}
+          className="flex min-h-0 flex-1 flex-col gap-3 p-3"
+        >
           {/* DayPicker shows the current month first, then lets users browse upcoming scheduled months. */}
           <Calendar
-            className="w-full max-w-[18.5rem] rounded-xl bg-muted/20 p-1.5 text-card-foreground dark:bg-white/[0.03] dark:text-foreground [&_[data-day]]:text-foreground [&_[data-day]]:hover:bg-muted/55 dark:[&_[data-day]]:hover:bg-white/[0.06] [&_[data-selected-single=true]]:bg-primary/14 [&_[data-selected-single=true]]:text-foreground [&_[data-selected-single=true]]:ring-1 [&_[data-selected-single=true]]:ring-primary/30 dark:[&_[data-selected-single=true]]:bg-primary/24 dark:[&_[data-selected-single=true]]:text-primary-foreground dark:[&_[data-selected-single=true]]:ring-primary/35 [--cell-size:--spacing(6.5)] sm:max-w-80 sm:p-2 sm:[--cell-size:--spacing(7.5)]"
+            className={cn(
+              "mx-auto w-full rounded-xl bg-muted/20 p-1.5 text-card-foreground dark:bg-white/[0.03] dark:text-foreground [&_[data-day]]:text-foreground [&_[data-day]]:hover:bg-muted/55 dark:[&_[data-day]]:hover:bg-white/[0.06] [&_[data-selected-single=true]]:bg-primary/14 [&_[data-selected-single=true]]:text-foreground [&_[data-selected-single=true]]:ring-1 [&_[data-selected-single=true]]:ring-primary/30 dark:[&_[data-selected-single=true]]:bg-primary/24 dark:[&_[data-selected-single=true]]:text-primary-foreground dark:[&_[data-selected-single=true]]:ring-primary/35",
+              isSplitLayout ? "max-w-[18rem]" : "max-w-[24rem]",
+            )}
+            style={
+              {
+                "--cell-size": `${computedCalendarCellSize}px`,
+              } as CSSProperties
+            }
             buttonVariant="ghost"
             mode="single"
             required
@@ -160,6 +263,54 @@ export function MonthJobsCalendar({
                 "rounded-md bg-muted/80 text-foreground ring-1 ring-border/70 dark:bg-white/[0.06] dark:text-foreground dark:ring-white/10",
             }}
           />
+
+          <div
+            className={cn(
+              "grid gap-2",
+              shouldStackMetrics
+                ? "grid-cols-1"
+                : isSplitLayout
+                  ? "grid-cols-3"
+                  : "sm:grid-cols-3",
+            )}
+          >
+            {/* Fill the left panel with high-signal day metrics so larger screens
+                don't leave a dead block of whitespace under the calendar. */}
+            <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5  dark:border-white/8 dark:bg-white/[0.03]">
+              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Completed Today
+              </div>
+              <div className="mt-1 flex items-end justify-between gap-2">
+                <div className="text-lg font-semibold text-foreground">
+                  {completedSelectedJobs}/{selectedJobs.length}
+                </div>
+                <CheckCircle2 className="size-4 text-primary" />
+              </div>
+            </div>
+            <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 dark:border-white/8 dark:bg-white/[0.03]">
+              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Pipeline
+              </div>
+              <div className="mt-1 flex items-end justify-between gap-2">
+                <div className="text-lg font-semibold text-foreground">
+                  {formatCurrency(selectedDayRevenue)}
+                </div>
+                <FolderKanban className="size-4 text-primary" />
+              </div>
+            </div>
+            <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 dark:border-white/8 dark:bg-white/[0.03]">
+              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Coverage
+              </div>
+              <div className="mt-1 flex items-end justify-between gap-2">
+                <div className="text-lg font-semibold text-foreground">
+                  {selectedDayProjects} projects | {selectedDayBuilders} builder
+                  {selectedDayBuilders === 1 ? "" : "s"}
+                </div>
+                <Building2 className="size-4 text-primary" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -193,59 +344,103 @@ export function MonthJobsCalendar({
             No jobs scheduled for this date.
           </div>
         ) : (
-          <div className="min-h-0 flex-1 divide-y divide-border/80 overflow-y-auto dark:divide-white/8">
+          <div
+            className={cn(
+              "min-h-0 overflow-y-auto p-3",
+              shouldLimitDailyJobs
+                // Narrow stacked layouts keep the first ~5 cards in view, then
+                // let the day list scroll so the month grid stays fully visible.
+                ? "max-h-[44rem]"
+                : "flex-1",
+            )}
+          >
+            <div className="grid gap-3 2xl:grid-cols-2">
             {selectedJobs.map((job) => (
               <article
                 key={job.id}
-                className="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/35 dark:hover:bg-white/[0.04]"
+                role="button"
+                tabIndex={0}
+                onClick={() => openProject(job.project_id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openProject(job.project_id);
+                  }
+                }}
+                className="grid min-h-32 grid-cols-[minmax(0,1fr)_auto] gap-4 rounded-xl border border-border/80 bg-muted/20 p-4 text-left transition-colors hover:bg-muted/35 sm:min-h-40 dark:border-white/8 dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
               >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-foreground">
-                    {job.title}
-                  </div>
-                  <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
-                    {job.project_address}
-                  </div>
-                  {job.superintendent ? (
-                    <div className="truncate text-[12px] text-muted-foreground">
-                      Supt / GC: {job.superintendent}
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-foreground">
+                        {job.title}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="size-3.5" />
+                          {job.project_address}
+                        </span>
+                      </div>
                     </div>
-                  ) : null}
+                    <Badge
+                      className={
+                        job.is_completed
+                          ? "border border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                          : "border border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                      }
+                      variant="secondary"
+                    >
+                      {job.is_completed ? "Completed" : "Incomplete"}
+                    </Badge>
+                  </div>
+
+                  <div className="grid gap-2 text-[12px] text-muted-foreground sm:grid-cols-2">
+                    <div className="inline-flex items-center gap-1.5">
+                      <Building2 className="size-3.5" />
+                      {job.builder_name ?? "Unknown builder"}
+                    </div>
+                    <div className="inline-flex items-center gap-1.5">
+                      <Home className="size-3.5" />
+                      {job.subdivision ?? "Unassigned subdivision"}
+                    </div>
+                    {job.superintendent ? (
+                      <div className="inline-flex items-center gap-1.5 sm:col-span-2">
+                        <UserRound className="size-3.5" />
+                        Supt / GC: {job.superintendent}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3 dark:border-white/8">
+                    <div>
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                        Scheduled
+                      </div>
+                      <div className="text-sm font-medium text-foreground">
+                        {format(parseYmd(job.scheduled_completion), "EEE, MMM d")}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
+                        {formatCurrency(job.price_cents)}
+                      </div>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  {job.price_cents ? (
-                    <div className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
-                      {formatCurrency(job.price_cents)}
-                    </div>
-                  ) : null}
-
-                  {job.is_completed ? (
-                    <Badge className="border border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                      Completed
-                    </Badge>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        className="hidden border border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 sm:inline-flex"
-                        variant="secondary"
-                      >
-                        Incomplete
-                      </Badge>
-                      <ToggleJobCompleteButton jobId={job.id} compact />
-                    </div>
-                  )}
+                <div className="flex shrink-0 flex-col items-end justify-between gap-3">
+                  <ToggleJobCompleteButton
+                    jobId={job.id}
+                    isCompleted={job.is_completed}
+                    compact
+                  />
                 </div>
               </article>
             ))}
+            </div>
           </div>
         )}
-
-        {selectedJobs.length > SELECTED_JOBS_VISIBLE_COUNT ? (
-          <div className="shrink-0 border-t border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground dark:border-white/8 dark:bg-white/[0.03]">
-            Scroll to view all {selectedJobs.length} jobs for this date.
-          </div>
-        ) : null}
       </section>
     </div>
   );

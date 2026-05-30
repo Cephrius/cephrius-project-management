@@ -17,6 +17,11 @@ import {
   TrendingUp,
   AlertTriangle,
   BarChart3,
+  Building2,
+  ChevronRight,
+  Home,
+  MapPin,
+  UserRound,
 } from "lucide-react";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { MonthJobsCalendar } from "@/components/dashboard/month-jobs-calendar";
@@ -38,6 +43,8 @@ import { getActiveCompanyId } from "@/lib/active-company";
 type ProjectRow = {
   id: string;
   project_address: string;
+  builder_name: string | null;
+  subdivision: string | null;
 };
 
 type JobSummaryRow = {
@@ -98,7 +105,11 @@ export default async function DashboardPage() {
     monthInvoicesRes,
     upcomingJobsRes,
   ] = await Promise.all([
-    supabase.from("projects").select("id, project_address").eq("company_id", companyId).is("deleted_at", null),
+    supabase
+      .from("projects")
+      .select("id, project_address, builder_name, subdivision")
+      .eq("company_id", companyId)
+      .is("deleted_at", null),
     supabase
       .from("jobs")
       .select("id")
@@ -147,7 +158,9 @@ export default async function DashboardPage() {
       .lte("invoice_date", monthEnd),
     supabase
       .from("jobs")
-      .select("id, title, scheduled_completion, project_id, superintendent")
+      .select(
+        "id, title, scheduled_completion, is_completed, project_id, superintendent",
+      )
       .eq("company_id", companyId)
       .eq("is_completed", false)
       .is("deleted_at", null)
@@ -180,7 +193,7 @@ export default async function DashboardPage() {
   }
 
   const projects = (projectsRes.data ?? []) as ProjectRow[];
-  const projectMap = new Map(projects.map((p) => [p.id, p.project_address]));
+  const projectMap = new Map(projects.map((project) => [project.id, project]));
 
   const monthJobs = ((monthJobsRes.data ?? []) as JobSummaryRow[])
     .filter((j) => !!j.scheduled_completion)
@@ -189,8 +202,12 @@ export default async function DashboardPage() {
       title: j.title,
       scheduled_completion: j.scheduled_completion!,
       is_completed: j.is_completed,
+      project_id: j.project_id,
       superintendent: j.superintendent,
-      project_address: projectMap.get(j.project_id) ?? "Unknown project",
+      project_address:
+        projectMap.get(j.project_id)?.project_address ?? "Unknown project",
+      builder_name: projectMap.get(j.project_id)?.builder_name ?? null,
+      subdivision: projectMap.get(j.project_id)?.subdivision ?? null,
       price_cents: j.price_cents ?? null,
     }));
 
@@ -211,7 +228,10 @@ export default async function DashboardPage() {
   const upcomingJobs = ((upcomingJobsRes.data ?? []) as JobSummaryRow[]).map(
     (j) => ({
       ...j,
-      project_address: projectMap.get(j.project_id) ?? "Unknown project",
+      project_address:
+        projectMap.get(j.project_id)?.project_address ?? "Unknown project",
+      builder_name: projectMap.get(j.project_id)?.builder_name ?? null,
+      subdivision: projectMap.get(j.project_id)?.subdivision ?? null,
     }),
   );
 
@@ -396,7 +416,6 @@ export default async function DashboardPage() {
           At xl and above, panels fit the viewport and scroll internally.
          ═══════════════════════════════════════════════ */}
       <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[2fr_1fr] xl:grid-rows-[1fr]">
-        {/* Left column — Calendar fills the available dashboard height. */}
         <div className="flex flex-col gap-4 xl:min-h-0 xl:overflow-hidden xl:pr-1">
           <Card className="flex min-h-[40rem] flex-col border-primary/20 xl:min-h-0 xl:flex-1">
             <CardHeader className="shrink-0">
@@ -490,33 +509,63 @@ export default async function DashboardPage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <CardContent className="min-h-0 flex-1 overflow-y-auto pr-1">
               {upcomingJobs.length === 0 ? (
                 <div className="rounded-md border p-3 text-center text-sm text-muted-foreground">
                   No incomplete jobs this week 🎉
                 </div>
               ) : (
-                <div className="space-y-2 pr-1 ">
+                <div className="space-y-3 pr-1">
                   {upcomingJobs.map((job) => (
                     <div
                       key={job.id}
-                      className="rounded-md border border-primary/20 bg-primary/3 p-3 dark:bg-primary/7"
+                      className="rounded-lg border border-primary/20 bg-primary/3 p-3 dark:bg-primary/7"
                     >
-                      <div className="text-sm font-medium wrap-break-word">
-                        {job.title}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {job.scheduled_completion}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {job.project_address}
-                      </div>
-                      {job.superintendent && (
-                        <div className="text-xs text-muted-foreground wrap-break-word">
-                          Supt / GC: {job.superintendent}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-2">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium wrap-break-word">
+                              {job.title}
+                            </div>
+                            <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="size-3.5" />
+                              {job.project_address}
+                            </div>
+                          </div>
+                          {/* Match the day-detail cards so the right rail uses its height
+                              for real job context instead of sparse one-line rows. */}
+                          <div className="grid gap-1.5 text-xs text-muted-foreground">
+                            <div className="inline-flex items-center gap-1">
+                              <Building2 className="size-3.5" />
+                              {job.builder_name ?? "Unknown builder"}
+                            </div>
+                            <div className="inline-flex items-center gap-1">
+                              <Home className="size-3.5" />
+                              {job.subdivision ?? "Unassigned subdivision"}
+                            </div>
+                            {job.superintendent && (
+                              <div className="inline-flex items-center gap-1 wrap-break-word">
+                                <UserRound className="size-3.5" />
+                                Supt / GC: {job.superintendent}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <span>{job.scheduled_completion}</span>
+                            <Link
+                              href={`/projects/${job.project_id}`}
+                              className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+                            >
+                              Open project
+                              <ChevronRight className="size-3.5" />
+                            </Link>
+                          </div>
                         </div>
-                      )}
-                      <ToggleJobCompleteButton jobId={job.id} />
+                        <ToggleJobCompleteButton
+                          jobId={job.id}
+                          isCompleted={job.is_completed}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
