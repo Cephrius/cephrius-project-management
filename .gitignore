@@ -53,4 +53,5 @@ create-sanitize-issue.sh
 .claude/skills/
 .codex
 JobSyte/.claude
+/supabase/
 

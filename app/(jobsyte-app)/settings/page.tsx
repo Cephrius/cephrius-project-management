@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { SettingsPageClient } from "@/components/settings/settings-page";
 import { readPreferenceSettings } from "@/lib/settings/preferences";
+import type { ProjectPresetForSettings } from "@/app/(jobsyte-app)/settings/actions";
 
 type CompanyProfile = {
   id: string;
@@ -16,6 +17,19 @@ type CompanyProfile = {
 
 type CompanyMembershipRow = {
   company: CompanyProfile | null;
+};
+
+type ProjectPresetRow = {
+  id: string;
+  name: string;
+};
+
+type ProjectPresetJobRow = {
+  id: string;
+  preset_id: string;
+  title: string;
+  price_cents: number;
+  sort_order: number | null;
 };
 
 export default async function SettingsPage() {
@@ -55,6 +69,44 @@ export default async function SettingsPage() {
   }
 
   const settings = readPreferenceSettings(user.user_metadata);
+  let projectPresets: ProjectPresetForSettings[] = [];
+
+  if (company?.id) {
+    const [presetsRes, jobsRes] = await Promise.all([
+      supabase
+        .from("project_presets")
+        .select("id, name")
+        .eq("company_id", company.id)
+        .is("deleted_at", null)
+        .order("name"),
+      supabase
+        .from("project_preset_jobs")
+        .select("id, preset_id, title, price_cents, sort_order")
+        .order("sort_order", { ascending: true }),
+    ]);
+
+    if (!presetsRes.error && !jobsRes.error) {
+      const jobsByPreset = new Map<string, ProjectPresetForSettings["jobs"]>();
+      for (const job of (jobsRes.data ?? []) as ProjectPresetJobRow[]) {
+        const list = jobsByPreset.get(job.preset_id) ?? [];
+        list.push({
+          id: job.id,
+          title: job.title,
+          price_cents: job.price_cents,
+          sort_order: job.sort_order ?? 0,
+        });
+        jobsByPreset.set(job.preset_id, list);
+      }
+
+      projectPresets = ((presetsRes.data ?? []) as ProjectPresetRow[]).map(
+        (preset) => ({
+          id: preset.id,
+          name: preset.name,
+          jobs: jobsByPreset.get(preset.id) ?? [],
+        }),
+      );
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -77,6 +129,7 @@ export default async function SettingsPage() {
           productUpdates: settings.product_updates,
           defaultDueDays: settings.default_due_days,
         }}
+        initialProjectPresets={projectPresets}
       />
     </div>
   );

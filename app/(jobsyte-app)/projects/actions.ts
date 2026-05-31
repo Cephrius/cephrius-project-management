@@ -8,6 +8,10 @@ import { getActiveCompanyId } from "@/lib/active-company";
 import { revalidatePath } from "next/cache";
 
 type IdName = { id: string; name: string };
+type ProjectPresetJobInput = {
+  title: string;
+  price_cents: number;
+};
 
 function normalizeWhitespace(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -58,6 +62,119 @@ function parsePriceToCents(value: string) {
   return Math.round(amount * 100);
 }
 
+function parseProjectPresetJobs(formData: FormData) {
+  const titles = formData
+    .getAll("preset_job_title")
+    .map((value) => toTitleCase(String(value || "")));
+  const prices = formData
+    .getAll("preset_job_price")
+    .map((value) => String(value || "").trim());
+  const jobs: ProjectPresetJobInput[] = [];
+
+  for (let index = 0; index < Math.max(titles.length, prices.length); index += 1) {
+    const title = titles[index] ?? "";
+    const priceRaw = prices[index] ?? "";
+
+    if (!title && !priceRaw) continue;
+    if (!title) {
+      return {
+        ok: false as const,
+        message: `Preset job ${index + 1} needs a title.`,
+      };
+    }
+
+    const price_cents = parsePriceToCents(priceRaw);
+    if (price_cents === null) {
+      return {
+        ok: false as const,
+        message: `Preset job "${title}" needs a valid price.`,
+      };
+    }
+
+    jobs.push({ title, price_cents });
+  }
+
+  return { ok: true as const, jobs };
+}
+
+async function saveProjectPreset({
+  companyId,
+  userId,
+  name,
+  jobs,
+}: {
+  companyId: string;
+  userId: string;
+  name: string;
+  jobs: ProjectPresetJobInput[];
+}) {
+  const supabase = await createClient();
+  const presetName = normalizeName(name);
+  if (!presetName) return { ok: true };
+  if (jobs.length === 0) {
+    return { ok: false, message: "Add at least one job before saving a preset." };
+  }
+
+  // Upsert manually because the case-insensitive unique index is expression
+  // based; Supabase upsert cannot target lower(name) directly.
+  const existing = await supabase
+    .from("project_presets")
+    .select("id")
+    .eq("company_id", companyId)
+    .ilike("name", presetName)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (existing.error) return { ok: false, message: existing.error.message };
+
+  const presetId = existing.data?.id as string | undefined;
+  const presetResult = presetId
+    ? await supabase
+        .from("project_presets")
+        .update({ name: presetName, updated_at: new Date().toISOString() })
+        .eq("id", presetId)
+        .eq("company_id", companyId)
+        .select("id")
+        .single()
+    : await supabase
+        .from("project_presets")
+        .insert({
+          company_id: companyId,
+          user_id: userId,
+          name: presetName,
+        })
+        .select("id")
+        .single();
+
+  if (presetResult.error || !presetResult.data?.id) {
+    return {
+      ok: false,
+      message: presetResult.error?.message ?? "Failed to save project preset.",
+    };
+  }
+
+  const savedPresetId = presetResult.data.id as string;
+
+  const deleteJobs = await supabase
+    .from("project_preset_jobs")
+    .delete()
+    .eq("preset_id", savedPresetId);
+  if (deleteJobs.error) return { ok: false, message: deleteJobs.error.message };
+
+  const insertJobs = await supabase.from("project_preset_jobs").insert(
+    jobs.map((job, index) => ({
+      preset_id: savedPresetId,
+      title: job.title,
+      price_cents: job.price_cents,
+      sort_order: index,
+    })),
+  );
+
+  if (insertJobs.error) return { ok: false, message: insertJobs.error.message };
+
+  return { ok: true };
+}
+
 function parseScheduledDate(value: string) {
   const raw = normalizeWhitespace(value);
   if (!raw) return null;
@@ -103,6 +220,27 @@ function parseCompositeCell(value: string) {
     jobTitle: match[2],
     priceRaw: match[3],
   };
+}
+
+function isMissingStatusColumnError(message: string | undefined) {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("column") && normalized.includes("status");
+}
+
+async function setProjectStatusActive(projectId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ status: "active" })
+    .eq("id", projectId);
+
+  // Some older databases may not have the status column yet; project list pages
+  // already derive status from jobs, so only real update failures should block.
+  if (error && !isMissingStatusColumnError(error.message)) {
+    return { ok: false, message: error.message };
+  }
+
+  return { ok: true };
 }
 
 function parseCsv(content: string) {
@@ -693,6 +831,15 @@ export async function createProject(formData: FormData) {
     return { ok: false, message: "Project address is required." };
   }
 
+  const presetJobsResult = parseProjectPresetJobs(formData);
+  if (!presetJobsResult.ok) {
+    return { ok: false, message: presetJobsResult.message };
+  }
+  const presetJobs = presetJobsResult.jobs;
+  const presetNameToSave = normalizeName(
+    String(formData.get("save_preset_name") || ""),
+  );
+
   // Resolve builder
   let finalBuilderId: string | null = builder_id;
   let builder_name_snapshot = "";
@@ -754,6 +901,16 @@ export async function createProject(formData: FormData) {
   const companyId = await getActiveCompanyId();
   if (!companyId) return { ok: false, message: "No active company found." };
 
+  if (presetNameToSave) {
+    const savePreset = await saveProjectPreset({
+      companyId,
+      userId: user.id,
+      name: presetNameToSave,
+      jobs: presetJobs,
+    });
+    if (!savePreset.ok) return savePreset;
+  }
+
   const { data, error } = await (
     await supabase
   )
@@ -771,6 +928,41 @@ export async function createProject(formData: FormData) {
     .single();
 
   if (error) return { ok: false, message: error.message };
+
+  if (presetJobs.length > 0) {
+    // Preset-generated jobs intentionally start unscheduled. Dates remain a
+    // normal job-edit concern after the project shell and repeated scope exist.
+    const { error: jobsError } = await (
+      await supabase
+    )
+      .from("jobs")
+      .insert(
+        presetJobs.map((job) => ({
+          project_id: data.id as string,
+          company_id: companyId,
+          title: job.title,
+          price_cents: job.price_cents,
+          scheduled_completion: null,
+        })),
+      );
+
+    if (jobsError) {
+      await (
+        await supabase
+      )
+        .from("projects")
+        .delete()
+        .eq("id", data.id as string)
+        .eq("user_id", user.id);
+      return { ok: false, message: jobsError.message };
+    }
+
+    const statusResult = await setProjectStatusActive(data.id as string);
+    if (!statusResult.ok) return statusResult;
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
 
   return { ok: true, projectId: data.id as string };
   // Reload window

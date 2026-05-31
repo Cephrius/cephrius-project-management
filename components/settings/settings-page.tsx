@@ -3,16 +3,7 @@
 // Onboarding: settings hub composed from smaller cards in `components/settings/*`.
 // Writes go through `app/(jobsyte-app)/(app)/settings/actions.ts` and
 // `company-actions.ts`; preference parsing lives in `lib/settings/preferences.ts`.
-import Link from "next/link";
 import { useMemo, useState } from "react"; 
-import {
-  Bell,
-  Download,
-  KeyRound,
-  LogOut,
-  Mail,
-  Shield,
-} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";   
 import { createClient } from "@/lib/supabase/client";  
@@ -29,11 +20,8 @@ import { SettingsPreferencesCard } from "@/components/settings/settings-preferen
 import { SettingsSecurityCard } from "@/components/settings/settings-security-card";
 import { SettingsDataSessionCard } from "@/components/settings/settings-data-session-card";
 import { SettingsReleaseNotesCard } from "@/components/settings/settings-release-notes-card";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";         
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { SettingsProjectPresetsCard } from "@/components/settings/settings-project-presets-card";
+import type { ProjectPresetForSettings } from "@/app/(jobsyte-app)/settings/actions";
 
 type SettingsPageClientProps = {
   initialProfile: {
@@ -53,6 +41,7 @@ type SettingsPageClientProps = {
     productUpdates: boolean;
     defaultDueDays: number;
   };
+  initialProjectPresets: ProjectPresetForSettings[];
 };
 
 const PROJECT_STORAGE_KEYS_TO_CLEAR_ON_SIGN_OUT = [   
@@ -70,6 +59,7 @@ export function SettingsPageClient({
   initialProfile,
   account,
   initialPreferences,
+  initialProjectPresets,
 }: SettingsPageClientProps) {
   const router = useRouter();  
   const supabase = useMemo(() => createClient(), []);  
@@ -239,6 +229,8 @@ export function SettingsPageClient({
         savingPreferences={savingPreferences}
         onSavePreferences={onSavePreferences}
       />
+
+      <SettingsProjectPresetsCard initialPresets={initialProjectPresets} />
 
       <SettingsSecurityCard
         newEmail={newEmail}
