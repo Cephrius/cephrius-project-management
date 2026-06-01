@@ -96,6 +96,7 @@ export function NewProjectDialog({
   onOpenChange,
   initialBuilders = [],
   initialSubdivisions = [],
+  initialBuilderId = "",
   initialSubdivisionId = "",
   initialHouseNumber = "",
   initialStreetAddress = "",
@@ -104,6 +105,7 @@ export function NewProjectDialog({
   onOpenChange: (v: boolean) => void;
   initialBuilders?: Item[];
   initialSubdivisions?: Item[];
+  initialBuilderId?: string;
   initialSubdivisionId?: string;
   initialHouseNumber?: string;
   initialStreetAddress?: string;
@@ -126,7 +128,9 @@ export function NewProjectDialog({
   const [subdivisions, setSubdivisions] =
     useState<ComboboxItem[]>(initialSubdivisions);
 
-  const [builder, setBuilder] = useState<ComboboxItem | null>(null);
+  const [builder, setBuilder] = useState<ComboboxItem | null>(
+    findItemById(initialBuilders, initialBuilderId),
+  );
   const [subdivision, setSubdivision] = useState<ComboboxItem | null>(
     findItemById(initialSubdivisions, initialSubdivisionId),
   );
@@ -156,7 +160,14 @@ export function NewProjectDialog({
 
       if (!isActive) return;
       if (needsBuilders && buildersRes.data) {
-        setBuilders(buildersRes.data as ComboboxItem[]);
+        const loadedBuilders = buildersRes.data as ComboboxItem[];
+        setBuilders(loadedBuilders);
+        if (initialBuilderId) {
+          const initialBuilder = findItemById(loadedBuilders, initialBuilderId);
+          if (initialBuilder) {
+            setBuilder((current) => current ?? initialBuilder);
+          }
+        }
       }
       if (needsSubdivisions && subdivisionsRes.data) {
         const loadedSubdivisions = subdivisionsRes.data as ComboboxItem[];
@@ -180,6 +191,7 @@ export function NewProjectDialog({
     open,
     initialBuilders,
     initialSubdivisions,
+    initialBuilderId,
     initialSubdivisionId,
     supabase,
   ]);
@@ -352,6 +364,10 @@ export function NewProjectDialog({
       const res = await createProject(fd);
       if (!res.ok) {
         setError(res.message ?? "Failed to create project.");
+        return;
+      }
+      if (!("projectId" in res)) {
+        setError("Project was created, but no project ID was returned.");
         return;
       }
 

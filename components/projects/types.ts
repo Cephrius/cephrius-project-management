@@ -6,6 +6,8 @@ export type ProjectListItem = {
   project_address: string;
   builder_name: string | null;
   subdivision: string | null;
+  builder_id: string | null;
+  subdivision_id: string | null;
   created_at: string;
   job_count: number;
   open_job_count: number;

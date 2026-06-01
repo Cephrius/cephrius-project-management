@@ -17,6 +17,8 @@ type ProjectRow = {
   project_address: string;
   builder_name: string | null;
   subdivision: string | null;
+  builder_id: string | null;
+  subdivision_id: string | null;
   created_at: string;
 };
 
@@ -65,7 +67,9 @@ async function getProjectsPageData(
     await Promise.all([
       supabase
         .from("projects")
-        .select("id, project_address, builder_name, subdivision, created_at")
+        // Updated to include builder_id and subdivision_id for better filtering and linking in the UI
+        // Reason - preselecting by ID is more reliable than mathcing by name 
+        .select("id, project_address, builder_name, subdivision, builder_id, subdivision_id, created_at")
         .eq("company_id", companyId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false }),

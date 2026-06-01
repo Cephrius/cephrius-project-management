@@ -83,6 +83,7 @@ type BuilderGroup = {
   key: string;
   label: string;
   streets: StreetGroup[];
+  builder_id: string | null;
   projectCount: number;
   totalJobCount: number;
   openJobCount: number;
@@ -92,6 +93,7 @@ type SubdivisionGroup = {
   key: string;
   label: string;
   builders: BuilderGroup[];
+  subdivision_id: string | null;
   projectCount: number;
   totalJobCount: number;
   openJobCount: number;
@@ -200,7 +202,7 @@ function ProjectCardActionsDropdown({
     <>
       <DropdownMenu >
         <DropdownMenuTrigger asChild>
-          <Button 
+          <Button
             type="button"
             variant="outline"
             size="sm"
@@ -506,11 +508,13 @@ export function ProjectsPageClient({
       {
         key: string;
         label: string;
+        subdivision_id: string | null;
         builders: Map<
           string,
           {
             key: string;
             label: string;
+            builder_id: string | null;
             streets: Map<
               string,
               {
@@ -526,21 +530,32 @@ export function ProjectsPageClient({
 
     for (const project of filteredProjects) {
       const subdivisionLabel = project.subdivision?.trim() || "Unassigned Subdivision";
-      const subdivisionKey = subdivisionLabel.toLowerCase();
+      const subdivisionKey =
+        project.subdivision_id ??
+        (project.subdivision?.trim()
+          ? `subdivision:${subdivisionLabel.toLowerCase()}`
+          : UNASSIGNED_SUBDIVISION);
       const builderLabel = project.builder_name?.trim() || "Unassigned Builder";
-      const builderKey = `${subdivisionKey}::${builderLabel.toLowerCase()}`;
+      const builderKey = `${subdivisionKey}::${
+        project.builder_id ??
+        (project.builder_name?.trim()
+          ? `builder:${builderLabel.toLowerCase()}`
+          : UNASSIGNED_BUILDER)
+      }`;
       const streetLabel = getStreetFolderLabel(project.project_address);
       const streetKey = `${builderKey}::${streetLabel.toLowerCase()}`;
 
       const subdivisionGroup = subdivisionMap.get(subdivisionKey) ?? {
         key: subdivisionKey,
         label: subdivisionLabel,
+        subdivision_id: project.subdivision_id,
         builders: new Map(),
       };
 
       const builderGroup = subdivisionGroup.builders.get(builderKey) ?? {
         key: builderKey,
         label: builderLabel,
+        builder_id: project.builder_id,
         streets: new Map(),
       };
 
@@ -586,6 +601,7 @@ export function ProjectsPageClient({
               key: builderGroup.key,
               label: builderGroup.label,
               streets,
+              builder_id: builderGroup.builder_id,
               projectCount: streets.reduce(
                 (sum, streetGroup) => sum + streetGroup.projects.length,
                 0,
@@ -606,6 +622,7 @@ export function ProjectsPageClient({
           key: subdivisionGroup.key,
           label: subdivisionGroup.label,
           builders,
+          subdivision_id: subdivisionGroup.subdivision_id,
           projectCount: builders.reduce(
             (sum, builderGroup) => sum + builderGroup.projectCount,
             0,
@@ -754,20 +771,20 @@ export function ProjectsPageClient({
         </div>
         <Card className="p-8">
           <div className="flex justify-center">
-          <img src={"project.png"} alt="Project" className="w-48 h-48"/>
+            <img src={"project.png"} alt="Project" className="w-48 h-48" />
           </div>
           <div className="text-xl text-bold text-muted-foreground text-center">
-            You currently don&apos;t <br/>have any projects.
+            You currently don&apos;t <br />have any projects.
           </div>
-          <div className="text-center text-md">To get started, create a<br/> project here. </div>
-            <div className="flex justify-center">
-              <NewProjectButton 
-                initialBuilders={builders}
-                initialSubdivisions={subdivisions}
-                buttonClassName="w-full sm:w-auto  "
-                buttonLabel="Create Project"
-              />
-         </div>
+          <div className="text-center text-md">To get started, create a<br /> project here. </div>
+          <div className="flex justify-center">
+            <NewProjectButton
+              initialBuilders={builders}
+              initialSubdivisions={subdivisions}
+              buttonClassName="w-full sm:w-auto  "
+              buttonLabel="Create Project"
+            />
+          </div>
         </Card>
       </div>
     );
@@ -926,12 +943,6 @@ export function ProjectsPageClient({
                 const isSubdivisionExpanded = effectiveExpandedSubdivisions.includes(
                   subdivisionGroup.key,
                 );
-                const subdivisionOption =
-                  subdivisions.find(
-                    (subdivision) =>
-                      subdivision.name.trim().toLowerCase() ===
-                      subdivisionGroup.label.trim().toLowerCase(),
-                  ) ?? null;
 
                 return (
                   <Card
@@ -967,7 +978,7 @@ export function ProjectsPageClient({
                       <NewProjectButton
                         initialBuilders={builders}
                         initialSubdivisions={subdivisions}
-                        initialSubdivisionId={subdivisionOption?.id}
+                        initialSubdivisionId={subdivisionGroup.subdivision_id ?? undefined}
                         buttonLabel="Add Project"
                         buttonClassName="w-full sm:w-auto"
                       />
@@ -983,6 +994,8 @@ export function ProjectsPageClient({
                         className="w-full sm:w-auto"
                       />
                     </div>
+
+                    {/* User viewing after subdivision selection */}
 
                     {isSubdivisionExpanded && (
                       <div className="space-y-3 border-t p-3 sm:p-4">
@@ -1019,6 +1032,8 @@ export function ProjectsPageClient({
                                 </div>
                               </button>
 
+
+                              {/* User viewing after builder selection */}
                               {isBuilderExpanded && (
                                 <div className="space-y-2 pl-2 sm:pl-5">
                                   {builderGroup.streets.map((streetGroup) => {
@@ -1055,6 +1070,16 @@ export function ProjectsPageClient({
                                               {streetGroup.openJobCount} open
                                             </div>
                                           </button>
+                                          {/* Delete button for the street group */}
+                                          <NewProjectButton
+                                            initialBuilders={builders}
+                                            initialBuilderId={builderGroup.builder_id ?? undefined}
+                                            initialStreetAddress={streetGroup.label}
+                                            initialSubdivisions={subdivisions}
+                                            initialSubdivisionId={subdivisionGroup.subdivision_id ?? undefined}
+                                            buttonLabel="New Project"
+                                            buttonClassName="w-full sm:w-auto"
+                                          />
                                           <DeleteProjectsButton
                                             groupKind="street"
                                             groupLabel={streetGroup.label}
@@ -1065,6 +1090,8 @@ export function ProjectsPageClient({
                                           />
                                         </div>
 
+
+                                        {/* Where user views projects via the street. */}
                                         {isStreetExpanded && (
                                           <div className="space-y-2 pl-2 sm:pl-4">
                                             {streetGroup.projects.map((project) => {
@@ -1352,7 +1379,7 @@ export function ProjectsPageClient({
 
       {/* Quick Complete Drawer for mobile/card actions */}
       {selectedProjectJobs.length > 0 && (
-        <QuickJobDrawer 
+        <QuickJobDrawer
           jobs={selectedProjectJobs}
           open={quickCompleteDrawerOpen}
           onOpenChange={setQuickCompleteDrawerOpen}
