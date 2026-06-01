@@ -28,7 +28,6 @@ export function DeleteJobDialog({
   const router = useRouter();
 
   async function onDelete() {
-    // TODO: Implement delete job action
     const res = await deleteJob(jobId);
     if (!res.ok) {
       // Handle error (e.g. show toast)
