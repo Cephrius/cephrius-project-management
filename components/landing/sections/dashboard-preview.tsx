@@ -98,6 +98,7 @@ export function DashboardPreviewSection() {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Add new item"
                 className="rounded-full border border-border"
               >
                 <Plus className="size-4" />

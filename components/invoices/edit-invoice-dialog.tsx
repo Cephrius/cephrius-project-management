@@ -393,6 +393,7 @@ export function EditInvoiceDialog({
                           size="icon"
                           className="size-7 text-muted-foreground hover:text-destructive"
                           disabled={isPaid}
+                          aria-label="Remove item"
                           title={
                             isPaid
                               ? "Paid items cannot be removed"
