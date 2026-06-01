@@ -10,7 +10,6 @@ import {
   Building2,
   CalendarDays,
   ChevronDown,
-  Filter,
   List,
   ReceiptText,
   UserRound,
@@ -26,6 +25,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
 import { cn } from "@/lib/utils";
 
 type InvoiceStatus = "issued" | "due" | "overdue" | "paid";
@@ -275,8 +278,10 @@ export function InvoicesPageClient({
     );
   }, [filteredInvoices, effectiveSelectedInvoiceId]);
 
-  const hasActiveFilters =
-    query.trim().length > 0 || billToFilter !== "all" || statusFilter !== "all";
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(billToFilter !== "all") +
+    Number(statusFilter !== "all");
 
   function resetFilters() {
     setQuery("");
@@ -341,26 +346,54 @@ export function InvoicesPageClient({
 
           <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-              {hasActiveFilters && (
-                <div className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary dark:text-white">
-                  <span className="inline-flex items-center gap-1">
-                    <Filter className="size-3" />
-                    Filters Active
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs sm:h-8 sm:gap-2 sm:text-sm"
-                    onClick={resetFilters}
-                    disabled={!hasActiveFilters}
+              <FilterDialog
+                title="Invoice Filters"
+                description="Search and narrow invoices from a single modal."
+                activeCount={activeFilterCount}
+                onClear={resetFilters}
+              >
+                <FilterDialogSection title="Search">
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search invoices..."
+                  />
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Bill To">
+                  <Select value={billToFilter} onValueChange={setBillToFilter}>
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Builders" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Builders</SelectItem>
+                      {billToOptions.map((builderName) => (
+                        <SelectItem key={builderName} value={builderName}>
+                          {builderName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Status">
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => setStatusFilter(value as StatusFilter)}
                   >
-                    <Filter className="size-3.5 sm:size-4" />
-                    <span className="hidden sm:inline">Clear Filters</span>
-                    <span className="sm:hidden">Clear</span>
-                  </Button>
-                </div>
-              )}
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="issued">Issued</SelectItem>
+                      <SelectItem value="due">Due</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+              </FilterDialog>
               <div className="ml-auto inline-flex overflow-hidden rounded-md border bg-background sm:ml-0">
                 <Button
                   type="button"
@@ -385,49 +418,10 @@ export function InvoicesPageClient({
               </div>
             </div>
 
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search invoices..."
-              className="w-full sm:w-72"
-            />
-
             <Link href="/invoices/new" className="w-full sm:w-auto">
               <Button className="w-full sm:w-auto">Create Invoice</Button>
             </Link>
           </div>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Select value={billToFilter} onValueChange={setBillToFilter}>
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Builders" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Builders</SelectItem>
-              {billToOptions.map((builderName) => (
-                <SelectItem key={builderName} value={builderName}>
-                  {builderName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
-          >
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="issued">Issued</SelectItem>
-              <SelectItem value="due">Due</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 

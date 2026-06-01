@@ -14,6 +14,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import {
@@ -23,6 +24,10 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
 import {
   InputGroup,
   InputGroupAddon,
@@ -36,7 +41,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ProfitabilityInline } from "@/components/accounting/profitability-card";
 import { cn } from "@/lib/utils";
 import type {
@@ -204,6 +208,10 @@ export function AccountingOverviewClient({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatus] = useState<StatusFilter>("all");
   const [dateRange, setDateRange] = useState<AccountingDateRangePreset>("90d");
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(statusFilter !== "all") +
+    Number(dateRange !== "90d");
 
   const rangeStart = useMemo(() => getRangeStart(dateRange), [dateRange]);
   const today = useMemo(() => startOfToday(), []);
@@ -496,23 +504,90 @@ export function AccountingOverviewClient({
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <ToggleGroup
-                type="single"
-                value={dateRange}
-                onValueChange={(value) => {
-                  if (value === "all" || value === "30d" || value === "90d" || value === "365d") {
-                    setDateRange(value);
-                  }
+              <FilterDialog
+                title="Accounting Filters"
+                description="Apply one set of filters across the snapshot and profitability table."
+                activeCount={activeFilterCount}
+                onClear={() => {
+                  setQuery("");
+                  setStatus("all");
+                  setDateRange("90d");
                 }}
-                variant="outline"
-                size="sm"
               >
-                {(["30d", "90d", "365d", "all"] as AccountingDateRangePreset[]).map((preset) => (
-                  <ToggleGroupItem key={preset} value={preset} aria-label={`Show ${preset} range`}>
-                    {formatPresetLabel(preset)}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+                <FilterDialogSection title="Date Range">
+                  <div className="flex flex-wrap gap-2">
+                    {(["30d", "90d", "365d", "all"] as AccountingDateRangePreset[]).map(
+                      (preset) => {
+                        const active = dateRange === preset;
+                        return (
+                          <Button
+                            key={preset}
+                            type="button"
+                            variant={active ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDateRange(preset)}
+                          >
+                            {formatPresetLabel(preset)}
+                          </Button>
+                        );
+                      },
+                    )}
+                  </div>
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Status">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                    {[
+                      { key: "all", label: "All", count: counts.all },
+                      { key: "active", label: "Active", count: counts.active },
+                      { key: "completed", label: "Completed", count: counts.completed },
+                      {
+                        key: "not-started",
+                        label: "Not Started",
+                        count: counts["not-started"],
+                      },
+                    ].map((tab) => {
+                      const active = statusFilter === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setStatus(tab.key as StatusFilter)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 border-b-2 px-2 py-1 text-sm transition-colors",
+                            active
+                              ? "border-primary font-medium text-foreground"
+                              : "border-transparent text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <span>{tab.label}</span>
+                          <span
+                            className={cn(
+                              "text-xs",
+                              active ? "text-primary" : "text-muted-foreground",
+                            )}
+                          >
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Search">
+                  <InputGroup>
+                    <InputGroupAddon>
+                      <Search className="size-4" />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search projects..."
+                    />
+                  </InputGroup>
+                </FilterDialogSection>
+              </FilterDialog>
               <Badge variant="outline">{filtered.length} Visible Projects</Badge>
             </div>
           </div>
@@ -707,60 +782,17 @@ export function AccountingOverviewClient({
       </Card>
 
       <Card className="overflow-hidden">
-          <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-3">
-              <div>
-                <div className="text-sm font-semibold">Project Profitability</div>
-                <div className="text-xs text-muted-foreground">
-                  Drill into a project to review its accounting breakdown, expenses, and chart view.
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-              {[
-                { key: "all", label: "All", count: counts.all },
-                { key: "active", label: "Active", count: counts.active },
-                { key: "completed", label: "Completed", count: counts.completed },
-                { key: "not-started", label: "Not Started", count: counts["not-started"] },
-              ].map((tab) => {
-                const active = statusFilter === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setStatus(tab.key as StatusFilter)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 border-b-2 px-2 py-1 text-sm transition-colors",
-                      active
-                        ? "border-primary font-medium text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <span>{tab.label}</span>
-                    <span className={cn("text-xs", active ? "text-primary" : "text-muted-foreground")}>
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
+        <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-sm font-semibold">Project Profitability</div>
+            <div className="text-xs text-muted-foreground">
+              Drill into a project to review its accounting breakdown, expenses, and chart view.
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <InputGroup className="w-full sm:w-72">
-              <InputGroupAddon>
-                <Search className="size-4" />
-              </InputGroupAddon>
-              <InputGroupInput
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search projects..."
-              />
-            </InputGroup>
-            <span className="text-sm text-muted-foreground">
-              {filtered.length} project{filtered.length === 1 ? "" : "s"}
-            </span>
-          </div>
+          <span className="text-sm text-muted-foreground">
+            {filtered.length} project{filtered.length === 1 ? "" : "s"}
+          </span>
         </div>
 
         <div className="max-h-[55vh] overflow-auto xl:max-h-[calc(100vh-22rem)]">

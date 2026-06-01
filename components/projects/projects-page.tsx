@@ -4,6 +4,7 @@
 // `app/(jobsyte-app)/(app)/projects/page.tsx`; mutations live in
 // `app/(jobsyte-app)/(app)/projects/actions.ts` and job dialogs in
 // `components/jobs/*`.
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
@@ -14,7 +15,6 @@ import {
   Building2,
   ChevronDown,
   FileText,
-  Filter,
   Hammer,
   Home,
   List,
@@ -54,10 +54,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
 import { cn } from "@/lib/utils";
 import { DeleteProjectButton } from "./delete-project-button";
 import { DeleteProjectsButton } from "./delete-projects-button";
 import { EditProjectDialog } from "./edit-project-dialog";
+import { StreetGroupActionsMenu } from "./street-group-actions-menu";
 
 const PROJECTS_VIEW_STORAGE_KEY = "projects:view";
 const PROJECTS_SELECTED_STORAGE_KEY = "projects:selected-project-id";
@@ -697,12 +702,13 @@ export function ProjectsPageClient({
     );
   }, [filteredProjects, effectiveSelectedProjectId]);
 
-  const hasActiveFilters =
-    query.trim().length > 0 ||
-    crewFilter !== "all" ||
-    builderFilter !== "all" ||
-    subdivisionFilter !== "all" ||
-    statusFilter !== "all";
+  // Count both text and structured filters so the trigger shows the full state.
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(crewFilter !== "all") +
+    Number(builderFilter !== "all") +
+    Number(subdivisionFilter !== "all") +
+    Number(statusFilter !== "all");
 
   function resetFilters() {
     setQuery("");
@@ -771,7 +777,7 @@ export function ProjectsPageClient({
         </div>
         <Card className="p-8">
           <div className="flex justify-center">
-            <img src={"project.png"} alt="Project" className="w-48 h-48" />
+            <Image src="/project.png" alt="Project" width={192} height={192} />
           </div>
           <div className="text-xl text-bold text-muted-foreground text-center">
             You currently don&apos;t <br />have any projects.
@@ -804,26 +810,90 @@ export function ProjectsPageClient({
 
           <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-              {hasActiveFilters && (
-                <div className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary dark:text-white">
-                  <span className="inline-flex items-center gap-1">
-                    <Filter className="size-3" />
-                    Filters Active
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs sm:h-8 sm:gap-2 sm:text-sm"
-                    onClick={resetFilters}
-                    disabled={!hasActiveFilters}
+              <FilterDialog
+                title="Project Filters"
+                description="Search and filter projects from a single modal."
+                activeCount={activeFilterCount}
+                onClear={resetFilters}
+              >
+                <FilterDialogSection title="Search">
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search projects..."
+                  />
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Superintendent / GC">
+                  <Select value={crewFilter} onValueChange={setCrewFilter}>
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Crew" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Superintendents / GC</SelectItem>
+                      {crewOptions.map((crewName) => (
+                        <SelectItem key={crewName} value={crewName}>
+                          {crewName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Builder">
+                  <Select value={builderFilter} onValueChange={setBuilderFilter}>
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Builders" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Builders</SelectItem>
+                      {builders.map((builder) => (
+                        <SelectItem key={builder.id} value={builder.name}>
+                          {builder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Subdivision">
+                  <Select
+                    value={subdivisionFilter}
+                    onValueChange={setSubdivisionFilter}
                   >
-                    <Filter className="size-3.5 sm:size-4" />
-                    <span className="hidden sm:inline">Clear Filters</span>
-                    <span className="sm:hidden">Clear</span>
-                  </Button>
-                </div>
-              )}
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Subdivisions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Subdivisions</SelectItem>
+                      {subdivisions.map((subdivision) => (
+                        <SelectItem key={subdivision.id} value={subdivision.name}>
+                          {subdivision.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Status">
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+                  >
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="invoiced">Invoiced</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="not-started">Not Started</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+              </FilterDialog>
               <div className="ml-auto sm:ml-0 inline-flex overflow-hidden rounded-md border bg-background">
                 <Button
                   type="button"
@@ -848,13 +918,6 @@ export function ProjectsPageClient({
               </div>
             </div>
 
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search projects..."
-              className="w-full sm:w-72"
-            />
-
             <NewProjectButton
               initialBuilders={builders}
               initialSubdivisions={subdivisions}
@@ -862,70 +925,6 @@ export function ProjectsPageClient({
             />
             <ImportProjectJobsButton className="w-full sm:w-auto" />
           </div>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <Select value={crewFilter} onValueChange={setCrewFilter}>
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Crew" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Superintendents / GC </SelectItem>
-              {crewOptions.map((crewName) => (
-                <SelectItem key={crewName} value={crewName}>
-                  {crewName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={builderFilter} onValueChange={setBuilderFilter}>
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Builders" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Builders</SelectItem>
-              {builders.map((builder) => (
-                <SelectItem key={builder.id} value={builder.name}>
-                  {builder.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={subdivisionFilter}
-            onValueChange={setSubdivisionFilter}
-          >
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Subdivisions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Subdivisions</SelectItem>
-              {subdivisions.map((subdivision) => (
-                <SelectItem key={subdivision.id} value={subdivision.name}>
-                  {subdivision.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
-          >
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="invoiced">Invoiced</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="not-started">Not Started</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
@@ -1070,23 +1069,18 @@ export function ProjectsPageClient({
                                               {streetGroup.openJobCount} open
                                             </div>
                                           </button>
-                                          {/* Delete button for the street group */}
-                                          <NewProjectButton
-                                            initialBuilders={builders}
-                                            initialBuilderId={builderGroup.builder_id ?? undefined}
-                                            initialStreetAddress={streetGroup.label}
-                                            initialSubdivisions={subdivisions}
-                                            initialSubdivisionId={subdivisionGroup.subdivision_id ?? undefined}
-                                            buttonLabel="New Project"
-                                            buttonClassName="w-full sm:w-auto"
-                                          />
-                                          <DeleteProjectsButton
-                                            groupKind="street"
-                                            groupLabel={streetGroup.label}
+                                          <StreetGroupActionsMenu
+                                            builders={builders}
+                                            subdivisions={subdivisions}
+                                            builderId={builderGroup.builder_id ?? undefined}
+                                            subdivisionId={
+                                              subdivisionGroup.subdivision_id ?? undefined
+                                            }
+                                            streetAddress={streetGroup.label}
+                                            streetLabel={streetGroup.label}
                                             projectIds={streetGroup.projects.map(
                                               (project) => project.id,
                                             )}
-                                            className="w-full sm:w-auto"
                                           />
                                         </div>
 
