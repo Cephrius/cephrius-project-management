@@ -60,8 +60,8 @@ import {
 } from "@/components/ui/filter-dialog";
 import { cn } from "@/lib/utils";
 import { DeleteProjectButton } from "./delete-project-button";
-import { DeleteProjectsButton } from "./delete-projects-button";
 import { EditProjectDialog } from "./edit-project-dialog";
+import { SubdivisionGroupActionsMenu } from "./subdivision-group-actions-menu";
 import { StreetGroupActionsMenu } from "./street-group-actions-menu";
 
 const PROJECTS_VIEW_STORAGE_KEY = "projects:view";
@@ -974,23 +974,17 @@ export function ProjectsPageClient({
                           {subdivisionGroup.openJobCount} open
                         </div>
                       </button>
-                      <NewProjectButton
-                        initialBuilders={builders}
-                        initialSubdivisions={subdivisions}
-                        initialSubdivisionId={subdivisionGroup.subdivision_id ?? undefined}
-                        buttonLabel="Add Project"
-                        buttonClassName="w-full sm:w-auto"
-                      />
-                      <DeleteProjectsButton
-                        groupKind="subdivision"
-                        groupLabel={subdivisionGroup.label}
+                      <SubdivisionGroupActionsMenu
+                        builders={builders}
+                        subdivisions={subdivisions}
+                        subdivisionId={subdivisionGroup.subdivision_id ?? undefined}
+                        subdivisionLabel={subdivisionGroup.label}
                         projectIds={subdivisionGroup.builders.flatMap(
                           (builderGroup) =>
                             builderGroup.streets.flatMap((streetGroup) =>
                               streetGroup.projects.map((project) => project.id),
                             ),
                         )}
-                        className="w-full sm:w-auto"
                       />
                     </div>
 
