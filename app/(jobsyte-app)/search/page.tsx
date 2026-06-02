@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
   ArrowRight,
   Briefcase,
+  Calculator,
   DollarSign,
   FileText,
   FolderKanban,
@@ -21,23 +22,87 @@ import { getRecentSearches, recordRecentSearch } from "./actions";
 type SearchPageProps = { searchParams: Promise<{ q?: string; type?: string }> };
 
 type ProjectRow = { id: string; project_address: string; builder_name: string | null; subdivision: string | null; created_at: string | null };
-type JobRow = { id: string; title: string; project_id: string; superintendent: string | null; is_completed: boolean | null; created_at: string | null };
-type InvoiceRow = { id: string; invoice_number: string; bill_to_name: string | null; contractor_name: string | null; invoice_date: string | null; subtotal_cents: number | null; created_at: string | null };
+type JobRow = { id: string; title: string; project_id: string; superintendent: string | null; is_completed: boolean | null; scheduled_completion: string | null; created_at: string | null };
+type InvoiceRow = { id: string; invoice_number: string; bill_to_name: string | null; contractor_name: string | null; project_id: string | null; invoice_date: string | null; due_date: string | null; subtotal_cents: number | null; created_at: string | null };
 type EmployeeRow = { id: string; name: string; email: string | null; phone: string | null; role: string | null; job_title: string | null; is_active: boolean | null };
 type CrewRow = { id: string; name: string; specialization: string | null; description: string | null; is_active: boolean | null };
-type PaymentRow = { id: string; reference_number: string | null; payment_method: string | null; paid_to_type: string | null; paid_to_id: string | null; amount_cents: number | null; paid_at: string | null };
-type ExpenseRow = { id: string; description: string | null; project_id: string; amount_cents: number | null; cost_type: string | null; expense_date: string | null };
+type PaymentRow = { id: string; job_id: string | null; reference_number: string | null; payment_method: string | null; paid_to_type: string | null; paid_to_id: string | null; amount_cents: number | null; paid_at: string | null };
+type ExpenseRow = { id: string; name: string | null; description: string | null; project_id: string; amount_cents: number | null; category: string | null; cost_type: string | null; expense_date: string | null };
+type AccountingRow = ProjectRow & { matchedBy: string };
 
-type CategoryKey = "all" | "projects" | "jobs" | "employees" | "crews" | "invoices" | "payments" | "expenses";
+type CategoryKey = "all" | "projects" | "jobs" | "employees" | "crews" | "invoices" | "accounting" | "payments" | "expenses";
 
 function money(cents: number | null) {
   const value = cents ?? 0;
   return (value / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
 }
 
-function toIlikePattern(value: string) {
+function toSearchPatterns(value: string) {
   const normalized = value.trim().replace(/[(),]/g, " ").replace(/\s+/g, " ");
-  return `%${normalized}%`;
+  const splitCompactAddress = normalized.replace(/^(\d+)([A-Za-z])/, "$1 $2");
+
+  return Array.from(new Set([normalized, splitCompactAddress]))
+    .filter((term) => term.length > 0)
+    .map((term) => `%${term}%`);
+}
+
+function ilikeAny(fields: string[], patterns: string[]) {
+  return fields
+    .flatMap((field) => patterns.map((pattern) => `${field}.ilike.${pattern}`))
+    .join(",");
+}
+
+function toDateKey(value: string) {
+  const normalized = value.trim();
+  const isoMatch = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const slashMatch = normalized.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})$/);
+
+  const parts = isoMatch
+    ? {
+        year: Number(isoMatch[1]),
+        month: Number(isoMatch[2]),
+        day: Number(isoMatch[3]),
+      }
+    : slashMatch
+      ? {
+          year:
+            slashMatch[3].length === 2
+              ? Number(`20${slashMatch[3]}`)
+              : Number(slashMatch[3]),
+          month: Number(slashMatch[1]),
+          day: Number(slashMatch[2]),
+        }
+      : null;
+
+  if (!parts) return null;
+
+  const candidate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  if (
+    candidate.getUTCFullYear() !== parts.year ||
+    candidate.getUTCMonth() + 1 !== parts.month ||
+    candidate.getUTCDate() !== parts.day
+  ) {
+    return null;
+  }
+
+  return [
+    String(parts.year).padStart(4, "0"),
+    String(parts.month).padStart(2, "0"),
+    String(parts.day).padStart(2, "0"),
+  ].join("-");
+}
+
+function uniqueRowsById<T extends { id: string }>(rows: T[]) {
+  const seen = new Set<string>();
+  const uniqueRows: T[] = [];
+
+  for (const row of rows) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    uniqueRows.push(row);
+  }
+
+  return uniqueRows;
 }
 
 function initials(name: string) {
@@ -79,30 +144,31 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   await recordRecentSearch(q);
 
-  const pattern = toIlikePattern(q);
+  const patterns = toSearchPatterns(q);
+  const dateKey = toDateKey(q);
   const PAGE_LIMIT = 15;
 
   const [projectsRes, jobsRes, invoicesRes, employeesRes, crewsRes, paymentsRes, expensesRes] = await Promise.all([
     supabase.from("projects").select("id, project_address, builder_name, subdivision, created_at").eq("company_id", companyId).is("deleted_at", null)
-      .or(`project_address.ilike.${pattern},builder_name.ilike.${pattern},subdivision.ilike.${pattern}`)
+      .or(ilikeAny(["project_address", "builder_name", "subdivision"], patterns))
       .order("created_at", { ascending: false }).limit(PAGE_LIMIT),
-    supabase.from("jobs").select("id, title, project_id, superintendent, is_completed, created_at").eq("company_id", companyId).is("deleted_at", null)
-      .or(`title.ilike.${pattern},superintendent.ilike.${pattern}`)
+    supabase.from("jobs").select("id, title, project_id, superintendent, is_completed, scheduled_completion, created_at").eq("company_id", companyId).is("deleted_at", null)
+      .or(ilikeAny(["title", "superintendent"], patterns))
       .order("created_at", { ascending: false }).limit(PAGE_LIMIT),
-    supabase.from("invoices").select("id, invoice_number, bill_to_name, contractor_name, invoice_date, subtotal_cents, created_at").eq("company_id", companyId).is("deleted_at", null)
-      .or(`invoice_number.ilike.${pattern},bill_to_name.ilike.${pattern},contractor_name.ilike.${pattern}`)
+    supabase.from("invoices").select("id, invoice_number, bill_to_name, contractor_name, project_id, invoice_date, due_date, subtotal_cents, created_at").eq("company_id", companyId).is("deleted_at", null)
+      .or(ilikeAny(["invoice_number", "bill_to_name", "contractor_name"], patterns))
       .order("created_at", { ascending: false }).limit(PAGE_LIMIT),
     supabase.from("employees").select("id, name, email, phone, role, job_title, is_active").eq("company_id", companyId).is("deleted_at", null)
-      .or(`name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},role.ilike.${pattern},job_title.ilike.${pattern}`)
+      .or(ilikeAny(["name", "email", "phone", "role", "job_title"], patterns))
       .order("created_at", { ascending: false }).limit(PAGE_LIMIT),
     supabase.from("crews").select("id, name, specialization, description, is_active").eq("company_id", companyId).is("deleted_at", null)
-      .or(`name.ilike.${pattern},specialization.ilike.${pattern},description.ilike.${pattern}`)
+      .or(ilikeAny(["name", "specialization", "description"], patterns))
       .order("created_at", { ascending: false }).limit(PAGE_LIMIT),
-    supabase.from("payments").select("id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents, paid_at").eq("company_id", companyId)
-      .or(`reference_number.ilike.${pattern},payment_method.ilike.${pattern}`)
+    supabase.from("payments").select("id, job_id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents, paid_at").eq("company_id", companyId)
+      .or(ilikeAny(["reference_number", "payment_method", "paid_to_type"], patterns))
       .order("paid_at", { ascending: false }).limit(PAGE_LIMIT),
-    supabase.from("project_expenses").select("id, description, project_id, amount_cents, cost_type, expense_date").eq("company_id", companyId)
-      .ilike("description", pattern)
+    supabase.from("project_expenses").select("id, name, description, project_id, amount_cents, category, cost_type, expense_date").eq("company_id", companyId)
+      .or(ilikeAny(["name", "description", "category", "cost_type"], patterns))
       .order("created_at", { ascending: false }).limit(PAGE_LIMIT),
   ]);
 
@@ -123,28 +189,187 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   }
 
   const projects = (projectsRes.data ?? []) as ProjectRow[];
-  const jobs = (jobsRes.data ?? []) as JobRow[];
-  const invoices = (invoicesRes.data ?? []) as InvoiceRow[];
+  let jobs = (jobsRes.data ?? []) as JobRow[];
+  let invoices = (invoicesRes.data ?? []) as InvoiceRow[];
   const employees = (employeesRes.data ?? []) as EmployeeRow[];
   const crews = (crewsRes.data ?? []) as CrewRow[];
-  const payments = (paymentsRes.data ?? []) as PaymentRow[];
-  const expenses = (expensesRes.data ?? []) as ExpenseRow[];
+  let payments = (paymentsRes.data ?? []) as PaymentRow[];
+  let expenses = (expensesRes.data ?? []) as ExpenseRow[];
+
+  if (dateKey) {
+    const [dateJobsRes, dateInvoicesRes, dateExpensesRes] = await Promise.all([
+      supabase
+        .from("jobs")
+        .select("id, title, project_id, superintendent, is_completed, scheduled_completion, created_at")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .eq("scheduled_completion", dateKey)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_LIMIT),
+      supabase
+        .from("invoices")
+        .select("id, invoice_number, bill_to_name, contractor_name, project_id, invoice_date, due_date, subtotal_cents, created_at")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .or(`invoice_date.eq.${dateKey},due_date.eq.${dateKey}`)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_LIMIT),
+      supabase
+        .from("project_expenses")
+        .select("id, name, description, project_id, amount_cents, category, cost_type, expense_date")
+        .eq("company_id", companyId)
+        .eq("expense_date", dateKey)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_LIMIT),
+    ]);
+
+    const firstDateError =
+      dateJobsRes.error ?? dateInvoicesRes.error ?? dateExpensesRes.error;
+    if (firstDateError) {
+      return (
+        <div className="space-y-6">
+          <BreadcrumbSetter crumbs={[{ label: "Search", href: "/search" }]} />
+          <Card className="p-8 shadow-none">
+            <div className="text-sm text-muted-foreground">
+              Failed to load search results: {firstDateError.message}
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    // Dates are not text fields in Postgres, so date searches use equality
+    // lookups and merge into the same result groups as text matches.
+    jobs = uniqueRowsById([...jobs, ...((dateJobsRes.data ?? []) as JobRow[])]);
+    invoices = uniqueRowsById([
+      ...invoices,
+      ...((dateInvoicesRes.data ?? []) as InvoiceRow[]),
+    ]);
+    expenses = uniqueRowsById([
+      ...expenses,
+      ...((dateExpensesRes.data ?? []) as ExpenseRow[]),
+    ]);
+  }
+
+  const matchedProjectIds = projects.map((project) => project.id);
+  const matchedEmployeeIds = employees.map((employee) => employee.id);
+  const matchedCrewIds = crews.map((crew) => crew.id);
+
+  // Global search is page-oriented, not table-oriented. After the direct text
+  // matches, pull in related records so a project address can surface its jobs,
+  // invoices, accounting expenses, and payroll payments.
+  const relatedLookups: PromiseLike<unknown>[] = [];
+  if (matchedProjectIds.length > 0) {
+    relatedLookups.push(
+      supabase
+        .from("jobs")
+        .select("id, title, project_id, superintendent, is_completed, scheduled_completion, created_at")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .in("project_id", matchedProjectIds)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_LIMIT)
+        .then((res) => {
+          jobs = uniqueRowsById([...jobs, ...((res.data ?? []) as JobRow[])]);
+        }),
+    );
+    relatedLookups.push(
+      supabase
+        .from("invoices")
+        .select("id, invoice_number, bill_to_name, contractor_name, project_id, invoice_date, due_date, subtotal_cents, created_at")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .in("project_id", matchedProjectIds)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_LIMIT)
+        .then((res) => {
+          invoices = uniqueRowsById([...invoices, ...((res.data ?? []) as InvoiceRow[])]);
+        }),
+    );
+    relatedLookups.push(
+      supabase
+        .from("project_expenses")
+        .select("id, name, description, project_id, amount_cents, category, cost_type, expense_date")
+        .eq("company_id", companyId)
+        .in("project_id", matchedProjectIds)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_LIMIT)
+        .then((res) => {
+          expenses = uniqueRowsById([...expenses, ...((res.data ?? []) as ExpenseRow[])]);
+        }),
+    );
+  }
+
+  if (matchedEmployeeIds.length > 0) {
+    relatedLookups.push(
+      supabase
+        .from("payments")
+        .select("id, job_id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents, paid_at")
+        .eq("company_id", companyId)
+        .eq("paid_to_type", "employee")
+        .in("paid_to_id", matchedEmployeeIds)
+        .order("paid_at", { ascending: false })
+        .limit(PAGE_LIMIT)
+        .then((res) => {
+          payments = uniqueRowsById([...payments, ...((res.data ?? []) as PaymentRow[])]);
+        }),
+    );
+  }
+
+  if (matchedCrewIds.length > 0) {
+    relatedLookups.push(
+      supabase
+        .from("payments")
+        .select("id, job_id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents, paid_at")
+        .eq("company_id", companyId)
+        .eq("paid_to_type", "crew")
+        .in("paid_to_id", matchedCrewIds)
+        .order("paid_at", { ascending: false })
+        .limit(PAGE_LIMIT)
+        .then((res) => {
+          payments = uniqueRowsById([...payments, ...((res.data ?? []) as PaymentRow[])]);
+        }),
+    );
+  }
+
+  await Promise.all(relatedLookups);
+
+  const matchedJobIds = jobs.map((job) => job.id);
+  if (matchedJobIds.length > 0) {
+    const { data: jobPayments } = await supabase
+      .from("payments")
+      .select("id, job_id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents, paid_at")
+      .eq("company_id", companyId)
+      .in("job_id", matchedJobIds)
+      .order("paid_at", { ascending: false })
+      .limit(PAGE_LIMIT);
+    payments = uniqueRowsById([...payments, ...((jobPayments ?? []) as PaymentRow[])]);
+  }
 
   const jobProjectIds = jobs.map((j) => j.project_id).filter(Boolean);
+  const invoiceProjectIds = invoices.map((invoice) => invoice.project_id).filter(Boolean) as string[];
   const expenseProjectIds = expenses.map((e) => e.project_id).filter(Boolean);
-  const allProjectIds = Array.from(new Set([...jobProjectIds, ...expenseProjectIds]));
+  const accountingProjectIds = Array.from(
+    new Set([...matchedProjectIds, ...jobProjectIds, ...invoiceProjectIds, ...expenseProjectIds]),
+  );
+  const allProjectIds = Array.from(
+    new Set([...jobProjectIds, ...invoiceProjectIds, ...expenseProjectIds, ...accountingProjectIds]),
+  );
   const paymentEmployeeIds = payments.filter((p) => p.paid_to_type === "employee").map((p) => p.paid_to_id).filter(Boolean) as string[];
   const paymentCrewIds = payments.filter((p) => p.paid_to_type === "crew").map((p) => p.paid_to_id).filter(Boolean) as string[];
 
   let projectAddressMap = new Map<string, string>();
+  let projectInfoMap = new Map<string, ProjectRow>();
   let empNameMap = new Map<string, string>();
   let crewNameMap = new Map<string, string>();
 
   const joins: PromiseLike<unknown>[] = [];
   if (allProjectIds.length > 0) {
     joins.push(
-      supabase.from("projects").select("id, project_address").in("id", allProjectIds).then((r) => {
-        projectAddressMap = new Map((r.data ?? []).map((p) => [p.id as string, p.project_address as string]));
+      supabase.from("projects").select("id, project_address, builder_name, subdivision, created_at").in("id", allProjectIds).then((r) => {
+        const projectRows = (r.data ?? []) as ProjectRow[];
+        projectAddressMap = new Map(projectRows.map((p) => [p.id, p.project_address]));
+        projectInfoMap = new Map(projectRows.map((p) => [p.id, p]));
       }),
     );
   }
@@ -164,12 +389,27 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   }
   await Promise.all(joins);
 
+  const accountingRows: AccountingRow[] = accountingProjectIds
+    .map((projectId) => projectInfoMap.get(projectId))
+    .filter((project): project is ProjectRow => Boolean(project))
+    .map((project) => ({
+      ...project,
+      matchedBy: expenses.some((expense) => expense.project_id === project.id)
+        ? "Expense ledger"
+        : invoices.some((invoice) => invoice.project_id === project.id)
+          ? "Invoice activity"
+          : jobs.some((job) => job.project_id === project.id)
+            ? "Job activity"
+            : "Project profile",
+    }));
+
   const counts: Record<Exclude<CategoryKey, "all">, number> = {
     projects: projects.length,
     jobs: jobs.length,
     employees: employees.length,
     crews: crews.length,
     invoices: invoices.length,
+    accounting: accountingRows.length,
     payments: payments.length,
     expenses: expenses.length,
   };
@@ -193,6 +433,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     { key: "employees", label: "Employees", count: counts.employees, icon: <UserRound className="size-3.5" /> },
     { key: "crews", label: "Crews", count: counts.crews, icon: <Users className="size-3.5" /> },
     { key: "invoices", label: "Invoices", count: counts.invoices, icon: <FileText className="size-3.5" /> },
+    { key: "accounting", label: "Accounting", count: counts.accounting, icon: <Calculator className="size-3.5" /> },
     { key: "payments", label: "Payments", count: counts.payments, icon: <DollarSign className="size-3.5" /> },
     { key: "expenses", label: "Expenses", count: counts.expenses, icon: <Receipt className="size-3.5" /> },
   ];
@@ -341,8 +582,27 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   href={`/invoices/${invoice.id}`}
                   leading={<IconBadge><FileText className="size-4" /></IconBadge>}
                   title={invoice.invoice_number}
-                  subtitle={`${invoice.bill_to_name ?? "Unassigned"} · from ${invoice.contractor_name ?? "Unknown"}`}
+                  subtitle={[
+                    invoice.bill_to_name ?? "Unassigned",
+                    invoice.contractor_name ? `from ${invoice.contractor_name}` : null,
+                    invoice.project_id ? projectAddressMap.get(invoice.project_id) : null,
+                    invoice.invoice_date ? `Invoice ${invoice.invoice_date}` : null,
+                  ].filter(Boolean).join(" · ")}
                   trailing={<span className="text-sm font-semibold tabular-nums">{money(invoice.subtotal_cents)}</span>}
+                />
+              ))}
+            </Section>
+          )}
+
+          {show("accounting") && (
+            <Section title="Accounting" count={counts.accounting} icon={<Calculator className="size-4" />}>
+              {accountingRows.map((row) => (
+                <ResultRow
+                  key={row.id}
+                  href={`/accounting?highlight=${row.id}`}
+                  leading={<IconBadge><Calculator className="size-4" /></IconBadge>}
+                  title={row.project_address}
+                  subtitle={[row.builder_name ?? "Unassigned builder", row.subdivision ?? "No subdivision", row.matchedBy].join(" · ")}
                 />
               ))}
             </Section>
@@ -375,8 +635,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   key={e.id}
                   href={`/accounting?highlight=${e.project_id}`}
                   leading={<IconBadge><Receipt className="size-4" /></IconBadge>}
-                  title={e.description ?? "Expense"}
-                  subtitle={`${projectAddressMap.get(e.project_id) ?? "Unknown project"} · ${e.cost_type ?? "—"}`}
+                  title={e.name ?? e.description ?? "Expense"}
+                  subtitle={[
+                    projectAddressMap.get(e.project_id) ?? "Unknown project",
+                    e.category,
+                    e.cost_type,
+                    e.expense_date,
+                  ].filter(Boolean).join(" · ")}
                   trailing={<span className="text-sm font-semibold tabular-nums">{money(e.amount_cents)}</span>}
                 />
               ))}

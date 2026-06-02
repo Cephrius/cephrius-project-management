@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { MonitorIcon, MoonIcon, PaletteIcon, SunIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,16 @@ type PrimaryColorKey = (typeof PRIMARY_COLORS)[number]["id"];
 
 const DEFAULT_PRIMARY_COLOR: PrimaryColorKey = "yellow";
 
+function isPrimaryColorKey(value: string | null): value is PrimaryColorKey {
+  return PRIMARY_COLORS.some((color) => color.id === value);
+}
+
+function getStoredPrimaryColor(): PrimaryColorKey {
+  if (typeof window === "undefined") return DEFAULT_PRIMARY_COLOR;
+
+  const saved = window.localStorage.getItem(PRIMARY_COLOR_STORAGE_KEY);
+  return isPrimaryColorKey(saved) ? saved : DEFAULT_PRIMARY_COLOR;
+}
 
 // The "white" primary color (#ffffff) doesn't adapt to the current theme —
 // on light mode it's invisible against the light background.
@@ -77,60 +87,63 @@ export function ThemeSwitcher({
   const [primaryColor, setPrimaryColor] = useState<PrimaryColorKey>(
     DEFAULT_PRIMARY_COLOR,
   );
+  const transitionCleanupRef = useRef<number | null>(null);
 
-  const THEME_DELAY_MS = 100;
-  const THEME_TRANSITION_MS = 350;
+  const THEME_TRANSITION_MS = 180;
 
-  // Pass resolvedTheme when applying colors on init, and re-run
-  // whenever the resolved theme changes so the "white" color adapts
-  // when switching between light and dark mode.
+  function beginThemeTransition() {
+    const root = document.documentElement;
+
+    if (transitionCleanupRef.current !== null) {
+      window.clearTimeout(transitionCleanupRef.current);
+      transitionCleanupRef.current = null;
+    }
+
+    root.classList.add("theme-transitioning");
+    transitionCleanupRef.current = window.setTimeout(() => {
+      root.classList.remove("theme-transitioning");
+      transitionCleanupRef.current = null;
+    }, THEME_TRANSITION_MS + 80);
+  }
+
   useEffect(() => {
-    const saved = window.localStorage.getItem(
-      PRIMARY_COLOR_STORAGE_KEY,
-    ) as PrimaryColorKey | null;
+    return () => {
+      if (transitionCleanupRef.current !== null) {
+        window.clearTimeout(transitionCleanupRef.current);
+      }
+      document.documentElement.classList.remove("theme-transitioning");
+    };
+  }, []);
 
-    const valid = PRIMARY_COLORS.some((c) => c.id === saved);
-    const next = valid && saved ? saved : DEFAULT_PRIMARY_COLOR;
+  useEffect(() => {
+    const storedPrimaryColor = getStoredPrimaryColor();
+    if (storedPrimaryColor === DEFAULT_PRIMARY_COLOR) return;
 
+    // Load localStorage after hydration so a saved accent color cannot create
+    // a server/client mismatch in the theme dropdown or trigger swatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPrimaryColor(next);
-    applyPrimaryColor(next, resolvedTheme);
-  }, [resolvedTheme]);
+    setPrimaryColor(storedPrimaryColor);
+  }, []);
 
-  // Re-apply the primary color whenever the resolved theme changes.
-  // This ensures the "white" color adapts automatically when the user
-  // switches between light and dark mode.
+  // Apply the accent once per actual color/theme value. Keeping this separate
+  // from storage reads avoids duplicate CSS variable writes during theme flips.
   useEffect(() => {
     applyPrimaryColor(primaryColor, resolvedTheme);
   }, [resolvedTheme, primaryColor]);
 
   function setThemeSmooth(next: ThemeMode) {
-    const root = document.documentElement;
-    root.classList.add("theme-transitioning");
-
-    window.setTimeout(() => {
-      setTheme(next);
-    }, THEME_DELAY_MS);
-
-    window.setTimeout(
-      () => {
-        root.classList.remove("theme-transitioning");
-      },
-      THEME_DELAY_MS + THEME_TRANSITION_MS + 30,
-    );
+    beginThemeTransition();
+    // Let the transition class land before next-themes flips .dark on <html>.
+    // This avoids the old 100ms pause while still giving the browser a stable
+    // before/after style pair to interpolate.
+    window.requestAnimationFrame(() => setTheme(next));
   }
 
   function setPrimaryColorSmooth(next: PrimaryColorKey) {
-    const root = document.documentElement;
-    root.classList.add("theme-transitioning");
-
+    beginThemeTransition();
     setPrimaryColor(next);
     applyPrimaryColor(next, resolvedTheme);
     window.localStorage.setItem(PRIMARY_COLOR_STORAGE_KEY, next);
-
-    window.setTimeout(() => {
-      root.classList.remove("theme-transitioning");
-    }, THEME_TRANSITION_MS + 30);
   }
 
   const ActiveIcon = useMemo(() => {

@@ -12,6 +12,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
 import type { CrewProfile, EmployeeProfile } from "./types";
 import { CrewDialog } from "./crew-dialog";
 import { FilterChip } from "./filter-chip";
@@ -63,6 +67,9 @@ export function CrewsPageClient({
         .includes(q);
     });
   }, [crews, filter, query]);
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(filter !== "all");
 
   return (
     <div className="space-y-6 pb-6">
@@ -87,32 +94,46 @@ export function CrewsPageClient({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-1">
-          {filterTabs.map((tab) => {
-            const active = filter === tab.key;
-            return (
-              <FilterChip
-                key={tab.key}
-                active={active}
-                label={tab.label}
-                count={tab.count}
-                onClick={() => setFilter(tab.key)}
+      <div className="flex justify-end">
+        <FilterDialog
+          title="Crew Filters"
+          description="Search and filter crews from a modal."
+          activeCount={activeFilterCount}
+          onClear={() => {
+            setQuery("");
+            setFilter("all");
+          }}
+        >
+          <FilterDialogSection title="Search">
+            <InputGroup>
+              <InputGroupAddon>
+                <Search className="size-4" />
+              </InputGroupAddon>
+              <InputGroupInput
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search crews, leads, specializations..."
               />
-            );
-          })}
-        </div>
+            </InputGroup>
+          </FilterDialogSection>
 
-        <InputGroup className="w-full sm:w-72">
-          <InputGroupAddon>
-            <Search className="size-4" />
-          </InputGroupAddon>
-          <InputGroupInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search crews, leads, specializations..."
-          />
-        </InputGroup>
+          <FilterDialogSection title="Status">
+            <div className="flex flex-wrap items-center gap-1">
+              {filterTabs.map((tab) => {
+                const active = filter === tab.key;
+                return (
+                  <FilterChip
+                    key={tab.key}
+                    active={active}
+                    label={tab.label}
+                    count={tab.count}
+                    onClick={() => setFilter(tab.key)}
+                  />
+                );
+              })}
+            </div>
+          </FilterDialogSection>
+        </FilterDialog>
       </div>
 
       {/* Crew cards */}

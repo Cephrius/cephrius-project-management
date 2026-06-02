@@ -27,7 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { createCrew, updateCrew } from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
+import { createCrew, updateCrew } from "@/app/(jobsyte-app)/employees-crews/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {

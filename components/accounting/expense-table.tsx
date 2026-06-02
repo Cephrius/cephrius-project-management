@@ -16,6 +16,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -93,6 +97,9 @@ export function ExpenseTable({
     { key: "actual", label: "Actual", count: counts.actual },
     { key: "estimated", label: "Estimated", count: counts.estimated },
   ] as const;
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(filter !== "all");
 
   function isPayrollExpense(expense: ProjectExpense) {
     return (
@@ -116,38 +123,59 @@ export function ExpenseTable({
     <>
       <div className="space-y-3">
         <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-            {tabs.map((tab) => {
-              const active = filter === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setFilter(tab.key)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 border-b-2 px-2 py-1 text-sm transition-colors",
-                    active
-                      ? "border-primary font-medium text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <span>{tab.label}</span>
-                  <span className={cn("text-xs", active ? "text-primary" : "text-muted-foreground")}>{tab.count}</span>
-                </button>
-              );
-            })}
-          </div>
+          <FilterDialog
+            title="Expense Filters"
+            description="Search and filter the expense ledger from a modal."
+            activeCount={activeFilterCount}
+            onClear={() => {
+              setQuery("");
+              setFilter("all");
+            }}
+          >
+            <FilterDialogSection title="Search">
+              <InputGroup>
+                <InputGroupAddon>
+                  <Search className="size-4" />
+                </InputGroupAddon>
+                <InputGroupInput
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search expenses..."
+                />
+              </InputGroup>
+            </FilterDialogSection>
 
-          <InputGroup className="w-full md:w-72">
-            <InputGroupAddon>
-              <Search className="size-4" />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search expenses..."
-            />
-          </InputGroup>
+            <FilterDialogSection title="Type">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                {tabs.map((tab) => {
+                  const active = filter === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setFilter(tab.key)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 border-b-2 px-2 py-1 text-sm transition-colors",
+                        active
+                          ? "border-primary font-medium text-foreground"
+                          : "border-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={cn(
+                          "text-xs",
+                          active ? "text-primary" : "text-muted-foreground",
+                        )}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </FilterDialogSection>
+          </FilterDialog>
         </div>
 
         <div className="md:hidden space-y-2">

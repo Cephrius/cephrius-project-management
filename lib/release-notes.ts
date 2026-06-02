@@ -11,6 +11,26 @@ export type ReleaseNote = {
 // New releases every tuesday (Or whenever I finish a batch of features and fixes that feel worth sharing)
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "v0.3.0",
+    releasedOn: "Jun 2, 2026",
+    majorAdditions: [
+      "Added a dedicated Calendar page for browsing scheduled jobs across the company, selecting days, reviewing job details, opening related projects, and creating printable job lists.",
+      "Added project preset management in Settings so job titles, prices, builders, and subdivision data can be reused more consistently across new projects.",
+      "Expanded global search so results can surface projects, jobs, invoices, accounting, employees, crews, payroll payments, and expenses from one query.",
+    ],
+    changes: [
+      "Moved page filtering into reusable modal dialogs across projects, invoices, payroll, accounting, jobs, employees, crews, and roster pages.",
+      "Added compact action menus for subdivision and street project groups so Add Project and Delete actions live in a cleaner row menu.",
+      "Street-level Add Project now carries builder and subdivision context into the new project dialog, reducing duplicate entry when adding another project on the same street.",
+      "Dashboard calendar behavior is now focused on the current month, while the full Calendar page handles longer-range schedule browsing.",
+      "Updated navigation and document titles to include the new Calendar page.",
+    ],
+    bugFixes: [
+      "Improved calendar and search routing behavior so project, accounting, and scheduled-job workflows link to the right destination more consistently.",
+      "Reduced project grouping edge cases by carrying builder and subdivision IDs through the grouped project data instead of relying only on display names.",
+    ],
+  },
+  {
     version: "v0.2.3",
     releasedOn: "Apr 29, 2026",
     majorAdditions: [

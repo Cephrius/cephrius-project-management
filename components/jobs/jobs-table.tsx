@@ -5,15 +5,19 @@
 // invoice badges are driven by columns loaded in the project detail route.
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { CheckCircle2, DollarSign, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
 import {
   Table,
   TableBody,
@@ -29,7 +33,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { toggleJobComplete } from "@/app/(jobsyte-app)/(app)/projects/[id]/actions";
+import { toggleJobComplete } from "@/app/(jobsyte-app)/projects/[id]/actions";
+import { markProjectJobPaid } from "@/components/projects/actions";
 import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 import { HighlightScroller } from "@/components/ui/highlight-scroller";
 import { DeleteJobDialog } from "@/components/jobs/delete-job-dialog";
@@ -66,6 +71,32 @@ function formatDate(value: string | null) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function JobStatusBadges({ job }: { job: JobRow }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Completion and billing can both be true, so render badges additively. */}
+      {job.is_completed ? (
+        <Badge>Completed</Badge>
+      ) : (
+        <Badge variant="secondary">In progress</Badge>
+      )}
+      {job.is_invoiced && (
+        <Badge
+          variant="outline"
+          className="border-violet-300 bg-violet-50 text-violet-700"
+        >
+          Invoiced
+        </Badge>
+      )}
+      {job.is_paid && (
+        <Badge className="bg-green-600 text-white hover:bg-green-600">
+          Paid
+        </Badge>
+      )}
+    </div>
+  );
 }
 
 export function JobsTable({
@@ -131,50 +162,93 @@ export function JobsTable({
     setAddJobOpen(true);
   }
 
+  function setPaid(job: JobRow, nextPaid: boolean) {
+    startTransition(async () => {
+      const result = await markProjectJobPaid(job.id, nextPaid);
+      if (!result?.ok) {
+        toast.error(result?.message ?? "Failed to update payment status.");
+        return;
+      }
+
+      toast.success(
+        job.is_invoiced
+          ? "Job and invoice payment status updated."
+          : nextPaid
+            ? "Job marked as paid."
+            : "Job marked as unpaid.",
+      );
+      router.refresh();
+    });
+  }
+
   const filterTabs = [
     { key: "all", label: "Jobs", count: allCount },
     { key: "open", label: "Incomplete", count: openCount },
     { key: "done", label: "Completed", count: doneCount },
   ] as const;
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(filter !== "all");
 
   return (
     <div className="space-y-3">
       <HighlightScroller />
       <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-          {filterTabs.map((tab) => {
-            const active = filter === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setFilter(tab.key)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 border-b-2 px-2 py-1 text-sm transition-colors",
-                  active
-                    ? "border-primary font-medium text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <span>{tab.label}</span>
-                <span className={cn("text-xs", active ? "text-primary" : "text-muted-foreground")}>{tab.count}</span>
-              </button>
-            );
-          })}
-        </div>
+        <FilterDialog
+          title="Job Filters"
+          description="Search and filter project jobs from a modal."
+          activeCount={activeFilterCount}
+          onClear={() => {
+            setQuery("");
+            setFilter("all");
+          }}
+        >
+          <FilterDialogSection title="Search">
+            <InputGroup>
+              <InputGroupAddon>
+                <Search className="size-4" />
+              </InputGroupAddon>
+              <InputGroupInput
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search jobs..."
+              />
+            </InputGroup>
+          </FilterDialogSection>
+
+          <FilterDialogSection title="Status">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              {filterTabs.map((tab) => {
+                const active = filter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setFilter(tab.key)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 border-b-2 px-2 py-1 text-sm transition-colors",
+                      active
+                        ? "border-primary font-medium text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={cn(
+                        "text-xs",
+                        active ? "text-primary" : "text-muted-foreground",
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </FilterDialogSection>
+        </FilterDialog>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <InputGroup className="w-full sm:w-72">
-            <InputGroupAddon>
-              <Search className="size-4" />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search jobs..."
-            />
-          </InputGroup>
-
           <Button
             type="button"
             size="sm"
@@ -249,6 +323,19 @@ export function JobsTable({
                       <CheckCircle2 className="size-4" />
                       {job.is_completed ? "Unmark Completed" : "Mark Completed"}
                     </DropdownMenuItem>
+                    {job.is_completed && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onSelect={(event) => {
+                          event.preventDefault();
+                          setPaid(job, !job.is_paid);
+                        }}
+                        disabled={isPending}
+                      >
+                        <DollarSign className="size-4" />
+                        {job.is_paid ? "Unmark Paid" : "Mark Paid"}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="cursor-pointer text-destructive focus:text-destructive"
                       onSelect={(event) => {
@@ -265,20 +352,7 @@ export function JobsTable({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {job.is_paid ? (
-                  <Badge className="bg-green-600 text-white hover:bg-green-600">Paid</Badge>
-                ) : job.is_invoiced ? (
-                  <Badge
-                    variant="outline"
-                    className="border-violet-300 bg-violet-50 text-violet-700"
-                  >
-                    Invoiced
-                  </Badge>
-                ) : job.is_completed ? (
-                  <Badge>Completed</Badge>
-                ) : (
-                  <Badge variant="secondary">In progress</Badge>
-                )}
+                <JobStatusBadges job={job} />
                 {showScheduled && (
                   <span className="text-xs text-muted-foreground">
                     {formatDate(job.scheduled_completion)}
@@ -349,22 +423,7 @@ export function JobsTable({
                     </TableCell>
                   )}
                   <TableCell>
-                    {job.is_paid ? (
-                      <Badge className="bg-green-600 text-white hover:bg-green-600">
-                        Paid
-                      </Badge>
-                    ) : job.is_invoiced ? (
-                      <Badge
-                        variant="outline"
-                        className="border-violet-300 bg-violet-50 text-violet-700"
-                      >
-                        Invoiced
-                      </Badge>
-                    ) : job.is_completed ? (
-                      <Badge>Completed</Badge>
-                    ) : (
-                      <Badge variant="secondary">In progress</Badge>
-                    )}
+                    <JobStatusBadges job={job} />
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -413,6 +472,19 @@ export function JobsTable({
                             </span>
                           )}
                         </DropdownMenuItem>
+                        {job.is_completed && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onSelect={(event) => {
+                              event.preventDefault();
+                              setPaid(job, !job.is_paid);
+                            }}
+                            disabled={isPending}
+                          >
+                            <DollarSign className="size-4" />
+                            {job.is_paid ? "Unmark Paid" : "Mark Paid"}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           className="cursor-pointer text-destructive focus:text-destructive"
                           onSelect={(event) => {

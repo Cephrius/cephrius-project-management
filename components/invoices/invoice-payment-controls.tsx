@@ -23,7 +23,7 @@ import {
 import {
   markInvoiceItemPaid,
   markInvoicePaid,
-} from "@/app/(jobsyte-app)/(app)/invoices/payment-actions";
+} from "@/app/(jobsyte-app)/invoices/payment-actions";
 
 export type InvoiceItemWithPayment = {
   id: string;
@@ -88,18 +88,18 @@ export function InvoicePaymentControls({
     });
   }
 
-  function markAllPaid() {
-    const updatedItems = items.map((i) => ({ ...i, is_paid: true }));
+  function setAllPaid(nextPaid: boolean) {
+    const updatedItems = items.map((i) => ({ ...i, is_paid: nextPaid }));
     // Optimistic update
     setItems(updatedItems);
 
     startTransition(async () => {
-      const result = await markInvoicePaid(invoiceId);
+      const result = await markInvoicePaid(invoiceId, nextPaid);
       if (!result.ok) {
-        toast.error(result.message ?? "Failed to mark invoice as paid.");
+        toast.error(result.message ?? "Failed to update invoice payment status.");
         setItems(initialItems);
       } else {
-        toast.success("Invoice marked as paid.");
+        toast.success(nextPaid ? "Invoice marked as paid." : "Invoice marked as unpaid.");
         router.refresh();
       }
     });
@@ -129,38 +129,72 @@ export function InvoicePaymentControls({
           )}
         </div>
 
-        {!allPaid && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isPending}
-                className="gap-1.5"
-              >
-                <DollarSign className="size-3.5" />
-                Mark All as Paid
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Mark Invoice as Paid?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will mark all {items.length} job
-                  {items.length !== 1 ? "s" : ""} on this invoice as paid. Paid
-                  jobs are locked from status changes in the Projects section.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={markAllPaid}>
-                  Mark as Paid
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+        <div className="flex flex-wrap justify-end gap-2">
+          {paidCount > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  className="gap-1.5"
+                >
+                  <DollarSign className="size-3.5" />
+                  Mark All as Unpaid
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Mark Invoice as Unpaid?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will unmark every paid job on this invoice and sync the
+                    linked project jobs back to unpaid.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => setAllPaid(false)}>
+                    Mark as Unpaid
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
+          {!allPaid && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  className="gap-1.5"
+                >
+                  <DollarSign className="size-3.5" />
+                  Mark All as Paid
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Mark Invoice as Paid?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will mark all {items.length} job
+                    {items.length !== 1 ? "s" : ""} on this invoice as paid. Paid
+                    jobs are locked from status changes in the Projects section.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => setAllPaid(true)}>
+                    Mark as Paid
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
 
       {/* Items table */}

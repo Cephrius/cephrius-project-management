@@ -40,6 +40,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -54,7 +58,7 @@ import {
   EmployeePaymentsDialog,
   type EmployeePaymentRecord,
 } from "./employee-payments-dialog";
-import { deleteEmployee } from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
+import { deleteEmployee } from "@/app/(jobsyte-app)/employees-crews/actions";
 
 export type { EmployeePaymentRecord };
 
@@ -126,6 +130,9 @@ export function EmployeeRosterPageClient({
         .includes(q);
     });
   }, [deferredQuery, employees, filter]);
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(filter !== "all");
 
   const handleDelete = (employee: EmployeeProfile) => {
     startTransition(async () => {
@@ -163,32 +170,46 @@ export function EmployeeRosterPageClient({
 
       <Card className="overflow-hidden shadow-none">
         <div className="border-b p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-1">
-              {filterTabs.map((tab) => {
-                const active = filter === tab.key;
-                return (
-                  <FilterChip
-                    key={tab.key}
-                    active={active}
-                    label={tab.label}
-                    count={tab.count}
-                    onClick={() => setFilter(tab.key)}
+          <div className="flex justify-end">
+            <FilterDialog
+              title="Employee Filters"
+              description="Search and filter employees from a modal."
+              activeCount={activeFilterCount}
+              onClear={() => {
+                setQuery("");
+                setFilter("all");
+              }}
+            >
+              <FilterDialogSection title="Search">
+                <InputGroup>
+                  <InputGroupAddon>
+                    <Search className="size-4" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search by name, role, contact..."
                   />
-                );
-              })}
-            </div>
+                </InputGroup>
+              </FilterDialogSection>
 
-            <InputGroup className="w-full sm:w-72">
-              <InputGroupAddon>
-                <Search className="size-4" />
-              </InputGroupAddon>
-              <InputGroupInput
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name, role, contact..."
-              />
-            </InputGroup>
+              <FilterDialogSection title="Status">
+                <div className="flex flex-wrap items-center gap-1">
+                  {filterTabs.map((tab) => {
+                    const active = filter === tab.key;
+                    return (
+                      <FilterChip
+                        key={tab.key}
+                        active={active}
+                        label={tab.label}
+                        count={tab.count}
+                        onClick={() => setFilter(tab.key)}
+                      />
+                    );
+                  })}
+                </div>
+              </FilterDialogSection>
+            </FilterDialog>
           </div>
         </div>
 
@@ -354,4 +375,3 @@ export function EmployeeRosterPageClient({
     </div>
   );
 }
-

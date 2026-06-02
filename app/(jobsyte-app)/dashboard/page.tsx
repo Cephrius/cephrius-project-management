@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  addMonths,
   endOfMonth,
   endOfWeek,
   format,
@@ -15,10 +14,13 @@ import {
   DollarSign,
   FolderKanban,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
   AlertTriangle,
   BarChart3,
+  Building2,
+  ChevronRight,
+  Home,
+  MapPin,
+  UserRound,
 } from "lucide-react";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { MonthJobsCalendar } from "@/components/dashboard/month-jobs-calendar";
@@ -30,7 +32,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardAction,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -41,6 +42,8 @@ import { getActiveCompanyId } from "@/lib/active-company";
 type ProjectRow = {
   id: string;
   project_address: string;
+  builder_name: string | null;
+  subdivision: string | null;
 };
 
 type JobSummaryRow = {
@@ -51,13 +54,6 @@ type JobSummaryRow = {
   project_id: string;
   superintendent: string | null;
   price_cents?: number | null;
-};
-
-type InvoiceRow = {
-  id: string;
-  invoice_number: string;
-  invoice_date: string;
-  subtotal_cents: number;
 };
 
 function money(cents: number) {
@@ -93,10 +89,8 @@ export default async function DashboardPage() {
 
   const monthStartDate = startOfMonth(now);
   const monthEndDate = endOfMonth(now);
-  const calendarEndDate = endOfMonth(addMonths(now, 12));
   const monthStart = format(monthStartDate, "yyyy-MM-dd");
   const monthEnd = format(monthEndDate, "yyyy-MM-dd");
-  const calendarEnd = format(calendarEndDate, "yyyy-MM-dd");
 
   const [
     projectsRes,
@@ -106,10 +100,13 @@ export default async function DashboardPage() {
     openJobsCountRes,
     completedMonthCountRes,
     monthInvoicesRes,
-    recentInvoicesRes,
     upcomingJobsRes,
   ] = await Promise.all([
-    supabase.from("projects").select("id, project_address").eq("company_id", companyId).is("deleted_at", null),
+    supabase
+      .from("projects")
+      .select("id, project_address, builder_name, subdivision")
+      .eq("company_id", companyId)
+      .is("deleted_at", null),
     supabase
       .from("jobs")
       .select("id")
@@ -132,8 +129,10 @@ export default async function DashboardPage() {
       )
       .eq("company_id", companyId)
       .is("deleted_at", null)
+      // The dashboard calendar is intentionally scoped to the current month so
+      // the month widget always matches the surrounding dashboard metrics.
       .gte("scheduled_completion", monthStart)
-      .lte("scheduled_completion", calendarEnd)
+      .lte("scheduled_completion", monthEnd)
       .order("scheduled_completion", { ascending: true }),
     supabase
       .from("jobs")
@@ -157,15 +156,10 @@ export default async function DashboardPage() {
       .gte("invoice_date", monthStart)
       .lte("invoice_date", monthEnd),
     supabase
-      .from("invoices")
-      .select("id, invoice_number, invoice_date, subtotal_cents")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false })
-      .is("deleted_at", null)
-      .limit(5),
-    supabase
       .from("jobs")
-      .select("id, title, scheduled_completion, project_id, superintendent")
+      .select(
+        "id, title, scheduled_completion, is_completed, project_id, superintendent",
+      )
       .eq("company_id", companyId)
       .eq("is_completed", false)
       .is("deleted_at", null)
@@ -182,7 +176,6 @@ export default async function DashboardPage() {
     openJobsCountRes.error ??
     completedMonthCountRes.error ??
     monthInvoicesRes.error ??
-    recentInvoicesRes.error ??
     upcomingJobsRes.error;
 
   if (firstError) {
@@ -199,7 +192,7 @@ export default async function DashboardPage() {
   }
 
   const projects = (projectsRes.data ?? []) as ProjectRow[];
-  const projectMap = new Map(projects.map((p) => [p.id, p.project_address]));
+  const projectMap = new Map(projects.map((project) => [project.id, project]));
 
   const monthJobs = ((monthJobsRes.data ?? []) as JobSummaryRow[])
     .filter((j) => !!j.scheduled_completion)
@@ -208,8 +201,13 @@ export default async function DashboardPage() {
       title: j.title,
       scheduled_completion: j.scheduled_completion!,
       is_completed: j.is_completed,
+      project_id: j.project_id,
       superintendent: j.superintendent,
-      project_address: projectMap.get(j.project_id) ?? "Unknown project",
+      project_address:
+        projectMap.get(j.project_id)?.project_address ?? "Unknown project",
+      builder_name: projectMap.get(j.project_id)?.builder_name ?? null,
+      subdivision: projectMap.get(j.project_id)?.subdivision ?? null,
+      price_cents: j.price_cents ?? null,
     }));
 
   const dueTodayCount = (dueTodayRes.data ?? []).length;
@@ -229,11 +227,13 @@ export default async function DashboardPage() {
   const upcomingJobs = ((upcomingJobsRes.data ?? []) as JobSummaryRow[]).map(
     (j) => ({
       ...j,
-      project_address: projectMap.get(j.project_id) ?? "Unknown project",
+      project_address:
+        projectMap.get(j.project_id)?.project_address ?? "Unknown project",
+      builder_name: projectMap.get(j.project_id)?.builder_name ?? null,
+      subdivision: projectMap.get(j.project_id)?.subdivision ?? null,
     }),
   );
 
-  const recentInvoices = (recentInvoicesRes.data ?? []) as InvoiceRow[];
   const monthName = format(monthStartDate, "MMMM yyyy");
 
   // Derived stats for new widgets
@@ -249,17 +249,12 @@ export default async function DashboardPage() {
     return j.scheduled_completion < today;
   });
 
-  const highValueJobs = ((monthJobsRes.data ?? []) as JobSummaryRow[])
-    .filter((j) => (j.price_cents ?? 0) > 0)
-    .sort((a, b) => (b.price_cents ?? 0) - (a.price_cents ?? 0))
-    .slice(0, 5);
-
   const totalPipelineValue = ((monthJobsRes.data ?? []) as JobSummaryRow[])
     .filter((j) => !j.is_completed)
     .reduce((sum, j) => sum + (j.price_cents ?? 0), 0);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex min-h-full flex-col xl:h-full xl:overflow-hidden">
       <BreadcrumbSetter crumbs={[{ label: "Dashboard", href: "/" }]} />
 
       {/* ─── Page heading ─── */}
@@ -416,251 +411,39 @@ export default async function DashboardPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════
-          ROW 2 — Main content panels (fill remaining space, each scrolls internally)
+          ROW 2 — Below xl, panels stack and the app shell owns page scrolling.
+          At xl and above, panels fit the viewport and scroll internally.
          ═══════════════════════════════════════════════ */}
-      <div className="min-h-0 flex-1 grid gap-4 xl:grid-cols-[2fr_1fr] xl:grid-rows-[1fr]">
-        {/* Left column — Calendar + Invoices/High-Value stacked, scrolls internally */}
-        <div className="min-h-0 flex flex-col gap-4 overflow-y-auto pr-1">
-          {/* Jobs Calendar */}
-          <Card className="border-primary/20 shrink-0">
-            <CardHeader>
-              <CardTitle className="text-primary">
-                Jobs Calendar · Next 12 Months
-              </CardTitle>
-              <CardDescription>
-                Browse future months to view scheduled jobs, then select a date
-                for details.
-              </CardDescription>
+      <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[2fr_1fr] xl:grid-rows-[1fr]">
+        <div className="flex flex-col gap-4 xl:min-h-0 xl:overflow-hidden xl:pr-1">
+          <Card className="flex min-h-[40rem] flex-col border-primary/20 xl:min-h-0 xl:flex-1">
+            <CardHeader className="shrink-0">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-primary">Jobs Calendar</CardTitle>
+                  <CardDescription>
+                    Select a date to review scheduled jobs and completion status.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="border-primary/30 bg-primary/10">
+                  {monthJobs.length} scheduled
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-0 flex-1 overflow-hidden">
               <MonthJobsCalendar
                 jobs={monthJobs}
                 monthStart={monthStart}
-                calendarEnd={calendarEnd}
               />
             </CardContent>
           </Card>
 
-          {/* Recent Invoices + High-Value Jobs side by side */}
-          <div className="grid gap-4 shrink-0 lg:grid-cols-2">
-            {/* Recent Invoices */}
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-primary">
-                  Recent Invoices
-                </CardTitle>
-                <CardDescription>
-                  Most recently created invoices.
-                </CardDescription>
-                <CardAction>
-                  <Link href="/invoices">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-primary/30 hover:bg-primary/10"
-                    >
-                      View All
-                    </Button>
-                  </Link>
-                </CardAction>
-              </CardHeader>
-              <CardContent>
-                {recentInvoices.length === 0 ? (
-                  <div className="rounded-md border p-3 text-center text-sm text-muted-foreground">
-                    No invoices yet.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {recentInvoices.map((invoice) => (
-                      <Link key={invoice.id} href={`/invoices/${invoice.id}`}>
-                        <div className="flex items-center justify-between gap-3 rounded-md border border-primary/20 bg-primary/3 p-3 transition hover:bg-primary/10 dark:bg-primary/7 dark:hover:bg-primary/13">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">
-                              {invoice.invoice_number}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {invoice.invoice_date}
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-sm font-semibold tabular-nums">
-                            {money(invoice.subtotal_cents)}
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* High-Value Jobs */}
-            <Card className="border-primary/20">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <ArrowUpRight className="size-4 text-green-600 dark:text-green-400" />
-                  <CardTitle className="text-primary">
-                    Top Jobs by Value
-                  </CardTitle>
-                </div>
-                <CardDescription>
-                  Highest-priced jobs this period.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {highValueJobs.length === 0 ? (
-                  <div className="rounded-md border p-3 text-center text-sm text-muted-foreground">
-                    No priced jobs found. Add prices to jobs to see them here.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {highValueJobs.map((job, idx) => (
-                      <div
-                        key={job.id}
-                        className="flex items-center gap-3 rounded-md border border-primary/20 bg-primary/3 p-3 dark:bg-primary/7"
-                      >
-                        <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                          {idx + 1}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium">
-                            {job.title}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {projectMap.get(job.project_id) ?? "Unknown project"}
-                          </div>
-                        </div>
-                        <div className="shrink-0 text-sm font-semibold tabular-nums text-green-700 dark:text-green-400">
-                          {money(job.price_cents ?? 0)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Actions + Snapshot + Ideas */}
-          <div className="grid gap-4 shrink-0 sm:grid-cols-2 xl:grid-cols-3">
-            {/* Quick Actions */}
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-primary">
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  <Link href="/projects">
-                    <Button
-                      variant="outline"
-                      className="h-auto w-full flex-col gap-1 border-primary/20 py-3 hover:bg-primary/10"
-                    >
-                      <FolderKanban className="size-5 text-primary" />
-                      <span className="text-xs">New Project</span>
-                    </Button>
-                  </Link>
-                  <Link href="/invoices">
-                    <Button
-                      variant="outline"
-                      className="h-auto w-full flex-col gap-1 border-primary/20 py-3 hover:bg-primary/10"
-                    >
-                      <DollarSign className="size-5 text-primary" />
-                      <span className="text-xs">New Invoice</span>
-                    </Button>
-                  </Link>
-                  <Link href="/search">
-                    <Button
-                      variant="outline"
-                      className="h-auto w-full flex-col gap-1 border-primary/20 py-3 hover:bg-primary/10"
-                    >
-                      <BarChart3 className="size-5 text-primary" />
-                      <span className="text-xs">Search</span>
-                    </Button>
-                  </Link>
-                  <Link href="/settings">
-                    <Button
-                      variant="outline"
-                      className="h-auto w-full flex-col gap-1 border-primary/20 py-3 hover:bg-primary/10"
-                    >
-                      <CheckCircle2 className="size-5 text-primary" />
-                      <span className="text-xs">Settings</span>
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Monthly Snapshot */}
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-primary">
-                  {format(monthStartDate, "MMMM")} Snapshot
-                </CardTitle>
-                <CardDescription>At a glance for this month.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Jobs completed
-                    </span>
-                    <span className="text-sm font-semibold tabular-nums">
-                      {completedThisMonth}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Invoices issued
-                    </span>
-                    <span className="text-sm font-semibold tabular-nums">
-                      {invoiceMonthCount}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Revenue billed
-                    </span>
-                    <span className="text-sm font-semibold tabular-nums">
-                      {money(invoiceMonthTotal)}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Completion rate
-                    </span>
-                    <span className="text-sm font-semibold tabular-nums">
-                      {completionRate}%
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Ideas placeholder */}
-            <Card className="border-dashed border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-muted-foreground">
-                  💡 Widget Ideas
-                </CardTitle>
-
-              </CardHeader>
-              <CardContent>
-                Future Notifications panel: upcoming deadlines, expiring documents, etc.
-                <br />
-                Project health indicators based on job completion rates and delays.
-                <br />
-                Revenue forecasts based on open jobs and historical conversion rates.
-              </CardContent>
-            </Card>
-          </div>
         </div>
 
+        {/* Removed Quick Actions , Month overview and Futrure Ideas widget */}
+
         {/* Right column — Jobs this week + Overdue */}
-        <div className="min-h-0 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 xl:min-h-0">
           {/* Overdue alert */}
           {overdueJobs.length > 0 && (
             <Card className="border-destructive/30 bg-destructive/5 shrink-0" size="sm">
@@ -705,7 +488,7 @@ export default async function DashboardPage() {
           )}
 
           {/* Jobs This Week */}
-          <Card className="border-primary/20 min-h-0 flex flex-1 flex-col max-h-[60vh] xl:max-h-none mb-20 md:mb-0">
+          <Card className="mb-20 flex max-h-[60vh] min-h-0 flex-1 flex-col border-primary/20 md:mb-0 xl:max-h-none">
             <CardHeader className="shrink-0">
               <div className="flex items-center justify-between ">
                 <div>
@@ -724,33 +507,63 @@ export default async function DashboardPage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <CardContent className="min-h-0 flex-1 overflow-y-auto pr-1">
               {upcomingJobs.length === 0 ? (
                 <div className="rounded-md border p-3 text-center text-sm text-muted-foreground">
                   No incomplete jobs this week 🎉
                 </div>
               ) : (
-                <div className="space-y-2 pr-1 ">
+                <div className="space-y-3 pr-1">
                   {upcomingJobs.map((job) => (
                     <div
                       key={job.id}
-                      className="rounded-md border border-primary/20 bg-primary/3 p-3 dark:bg-primary/7"
+                      className="rounded-lg border border-primary/20 bg-primary/3 p-3 dark:bg-primary/7"
                     >
-                      <div className="text-sm font-medium wrap-break-word">
-                        {job.title}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {job.scheduled_completion}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {job.project_address}
-                      </div>
-                      {job.superintendent && (
-                        <div className="text-xs text-muted-foreground wrap-break-word">
-                          Supt / GC: {job.superintendent}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-2">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium wrap-break-word">
+                              {job.title}
+                            </div>
+                            <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="size-3.5" />
+                              {job.project_address}
+                            </div>
+                          </div>
+                          {/* Match the day-detail cards so the right rail uses its height
+                              for real job context instead of sparse one-line rows. */}
+                          <div className="grid gap-1.5 text-xs text-muted-foreground">
+                            <div className="inline-flex items-center gap-1">
+                              <Building2 className="size-3.5" />
+                              {job.builder_name ?? "Unknown builder"}
+                            </div>
+                            <div className="inline-flex items-center gap-1">
+                              <Home className="size-3.5" />
+                              {job.subdivision ?? "Unassigned subdivision"}
+                            </div>
+                            {job.superintendent && (
+                              <div className="inline-flex items-center gap-1 wrap-break-word">
+                                <UserRound className="size-3.5" />
+                                Supt / GC: {job.superintendent}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <span>{job.scheduled_completion}</span>
+                            <Link
+                              href={`/projects/${job.project_id}`}
+                              className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+                            >
+                              Open project
+                              <ChevronRight className="size-3.5" />
+                            </Link>
+                          </div>
                         </div>
-                      )}
-                      <ToggleJobCompleteButton jobId={job.id} />
+                        <ToggleJobCompleteButton
+                          jobId={job.id}
+                          isCompleted={job.is_completed}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

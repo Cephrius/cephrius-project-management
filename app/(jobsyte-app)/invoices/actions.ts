@@ -82,7 +82,7 @@ export async function createInvoiceForBuilder(formData: FormData) {
   // Fetch selected jobs
   const { data: jobs, error: jobsErr } = await (await supabase)
     .from("jobs")
-    .select("id, title, price_cents, is_completed, project_id")
+    .select("id, title, price_cents, is_completed, project_id, is_paid, paid_at")
     .in("id", jobIds)
     .is("deleted_at", null);
 
@@ -135,6 +135,9 @@ export async function createInvoiceForBuilder(formData: FormData) {
   );
 
   const invoice_number = formatInvoiceNumber();
+  const paidAt = new Date().toISOString();
+  const allSelectedJobsPaid =
+    selected.length > 0 && selected.every((job) => job.is_paid === true);
 
   const companyId = await getActiveCompanyId();
   if (!companyId) return { ok: false, message: "No active company found." };
@@ -157,6 +160,8 @@ export async function createInvoiceForBuilder(formData: FormData) {
       bill_to_name,
       bill_to_address,
       subtotal_cents,
+      is_paid: allSelectedJobsPaid,
+      paid_at: allSelectedJobsPaid ? paidAt : null,
     })
     .select("id")
     .single();
@@ -180,6 +185,10 @@ export async function createInvoiceForBuilder(formData: FormData) {
       builder_name_snapshot: builder.name,
       job_title_snapshot: j.title,
       job_price_cents_snapshot: j.price_cents,
+      // Jobs paid from Projects before invoicing should create paid invoice
+      // lines, while mixed paid/unpaid jobs keep the invoice partially paid.
+      is_paid: j.is_paid === true,
+      paid_at: j.is_paid === true ? j.paid_at ?? paidAt : null,
     };
   });
 
@@ -548,7 +557,7 @@ export async function editInvoiceWithJobs({
   if (addJobIds.length > 0) {
     const { data: newJobs, error: newJobsErr } = await supabase
       .from("jobs")
-      .select("id, title, price_cents, project_id, is_completed")
+      .select("id, title, price_cents, project_id, is_completed, is_paid, paid_at")
       .in("id", addJobIds)
       .is("deleted_at", null);
 
@@ -570,6 +579,7 @@ export async function editInvoiceWithJobs({
 
     const newItems = completedJobs.map((j) => {
       const p = projectMap.get(j.project_id);
+      const itemPaidAt = new Date().toISOString();
       return {
         invoice_id: invoiceId,
         job_id: j.id,
@@ -580,6 +590,10 @@ export async function editInvoiceWithJobs({
         builder_name_snapshot: p?.builder_name ?? "",
         job_title_snapshot: j.title,
         job_price_cents_snapshot: j.price_cents,
+        // Preserve payment state when a completed job was paid from Projects
+        // before being added to this invoice.
+        is_paid: j.is_paid === true,
+        paid_at: j.is_paid === true ? j.paid_at ?? itemPaidAt : null,
       };
     });
 
@@ -600,7 +614,7 @@ export async function editInvoiceWithJobs({
   // Recalculate subtotal from all remaining items
   const { data: allItems, error: allItemsErr } = await supabase
     .from("invoice_items")
-    .select("job_price_cents_snapshot")
+    .select("job_price_cents_snapshot, is_paid")
     .eq("invoice_id", invoiceId);
 
   if (allItemsErr) return { ok: false, message: allItemsErr.message };
@@ -609,6 +623,9 @@ export async function editInvoiceWithJobs({
     (sum, i) => sum + (i.job_price_cents_snapshot ?? 0),
     0,
   );
+  const allItemsPaid =
+    (allItems ?? []).length > 0 && (allItems ?? []).every((i) => i.is_paid);
+  const paidAt = new Date().toISOString();
 
   // Update header
   const { error: updateErr } = await supabase
@@ -622,6 +639,8 @@ export async function editInvoiceWithJobs({
       invoice_date: invoiceDate,
       due_date: dueDate || null,
       subtotal_cents: subtotalCents,
+      is_paid: allItemsPaid,
+      paid_at: allItemsPaid ? paidAt : null,
     })
     .eq("id", invoiceId)
     .eq("user_id", user.id);

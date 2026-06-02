@@ -28,6 +28,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -55,7 +59,7 @@ import {
   addPayrollPayment,
   deletePayrollPayment,
   refundPayrollPayment,
-} from "@/app/(jobsyte-app)/(app)/payroll/actions";
+} from "@/app/(jobsyte-app)/payroll/actions";
 
 
 export type PayrollAssignment = {
@@ -354,6 +358,11 @@ export function PayrollPageClient({
     { key: "active", label: "Active", count: paymentCounts.active },
     { key: "refunded", label: "Refunded", count: paymentCounts.refunded },
   ] as const;
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(statusFilter !== "all") +
+    Number(payeeFilter !== "all") +
+    Number(dateRange !== "90d");
 
   return (
     <div className="space-y-6">
@@ -495,67 +504,109 @@ export function PayrollPageClient({
                 {filteredPayments.length} payment{filteredPayments.length === 1 ? "" : "s"} in current view
               </div>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
-              <Download className="mr-1 size-4" />
-              Export CSV
-            </Button>
-          </div>
+            <div className="flex items-center gap-2">
+              <FilterDialog
+                title="Payroll Filters"
+                description="Filter payment history without taking space from the ledger."
+                activeCount={activeFilterCount}
+                onClear={() => {
+                  setQuery("");
+                  setStatusFilter("all");
+                  setPayeeFilter("all");
+                  setDateRange("90d");
+                }}
+              >
+                <FilterDialogSection title="Search">
+                  <InputGroup>
+                    <InputGroupAddon>
+                      <Search className="size-4" />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search payee, job, project, reference..."
+                    />
+                  </InputGroup>
+                </FilterDialogSection>
 
-          <div className="mt-4 flex flex-wrap items-center gap-1 sm:gap-2">
-            {filterTabs.map((tab) => {
-              const active = statusFilter === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setStatusFilter(tab.key)}
-                  className={active ? "inline-flex items-center gap-1.5 border-b-2 border-primary px-2 py-1 text-sm font-medium text-foreground" : "inline-flex items-center gap-1.5 border-b-2 border-transparent px-2 py-1 text-sm text-muted-foreground hover:text-foreground"}
-                >
-                  <span>{tab.label}</span>
-                  <span className={active ? "text-xs text-primary" : "text-xs text-muted-foreground"}>{tab.count}</span>
-                </button>
-              );
-            })}
-          </div>
+                <FilterDialogSection title="Payment Status">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                    {filterTabs.map((tab) => {
+                      const active = statusFilter === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setStatusFilter(tab.key)}
+                          className={
+                            active
+                              ? "inline-flex items-center gap-1.5 border-b-2 border-primary px-2 py-1 text-sm font-medium text-foreground"
+                              : "inline-flex items-center gap-1.5 border-b-2 border-transparent px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
+                          }
+                        >
+                          <span>{tab.label}</span>
+                          <span
+                            className={
+                              active
+                                ? "text-xs text-primary"
+                                : "text-xs text-muted-foreground"
+                            }
+                          >
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FilterDialogSection>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem_12rem]">
-            <InputGroup>
-              <InputGroupAddon>
-                <Search className="size-4" />
-              </InputGroupAddon>
-              <InputGroupInput
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search payee, job, project, reference..."
-              />
-            </InputGroup>
+                <FilterDialogSection title="Payee Type">
+                  <Select
+                    value={payeeFilter}
+                    onValueChange={(value) =>
+                      setPayeeFilter(value as "all" | "employee" | "crew")
+                    }
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Select payee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="all">All Payees</SelectItem>
+                        <SelectItem value="employee">Employees</SelectItem>
+                        <SelectItem value="crew">Crews</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
 
-            <Select value={payeeFilter} onValueChange={(value) => setPayeeFilter(value as "all" | "employee" | "crew")}>
-              <SelectTrigger className="w-[180px] text-sm">
-                <SelectValue placeholder="Select payee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">All Payees</SelectItem>
-                  <SelectItem value="employee">Employees</SelectItem>
-                  <SelectItem value="crew">Crews</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+                <FilterDialogSection title="Date Range">
+                  <Select
+                    value={dateRange}
+                    onValueChange={(value) =>
+                      setDateRange(value as "all" | "30d" | "90d" | "365d")
+                    }
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Select date range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="all">All Time</SelectItem>
+                        <SelectItem value="30d">Last 30 Days</SelectItem>
+                        <SelectItem value="90d">Last 90 Days</SelectItem>
+                        <SelectItem value="365d">Last 365 Days</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+              </FilterDialog>
 
-            <Select value={dateRange} onValueChange={(value) => setDateRange(value as "all" | "30d" | "90d" | "365d")}>
-              <SelectTrigger className="w-[180px] text-sm">
-                <SelectValue placeholder="Select date range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="30d">Last 30 Days</SelectItem>
-                  <SelectItem value="90d">Last 90 Days</SelectItem>
-                  <SelectItem value="365d">Last 365 Days</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+              <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
+                <Download className="mr-1 size-4" />
+                Export CSV
+              </Button>
+            </div>
           </div>
         </div>
 

@@ -28,7 +28,7 @@ import {
   createEmployee,
   resetEmployeePassword,
   updateEmployee,
-} from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
+} from "@/app/(jobsyte-app)/employees-crews/actions";
 import { toast } from "sonner";
 import {
   EMPLOYMENT_TYPE_LABELS,

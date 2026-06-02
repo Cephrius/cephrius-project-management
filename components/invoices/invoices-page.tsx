@@ -1,13 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ArrowRight,
+  Building2,
   CalendarDays,
-  Filter,
+  ChevronDown,
+  List,
   ReceiptText,
   UserRound,
 } from "lucide-react";
@@ -22,10 +25,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
 import { cn } from "@/lib/utils";
 
 type InvoiceStatus = "issued" | "due" | "overdue" | "paid";
 type StatusFilter = "all" | InvoiceStatus;
+type ViewMode = "list" | "grouped";
+
+const INVOICES_VIEW_STORAGE_KEY = "invoices:view";
+const INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY =
+  "invoices:expanded-recipients";
+const UNASSIGNED_RECIPIENT_LABEL = "Unassigned";
 
 export type InvoiceListItem = {
   id: string;
@@ -37,6 +50,16 @@ export type InvoiceListItem = {
   contractor_name: string | null;
   created_at: string | null;
   is_paid: boolean | null;
+};
+
+type RecipientInvoiceGroup = {
+  key: string;
+  label: string;
+  invoices: InvoiceListItem[];
+  invoiceCount: number;
+  totalCents: number;
+  paidCount: number;
+  overdueCount: number;
 };
 
 function money(cents: number | null) {
@@ -94,6 +117,22 @@ function statusClasses(status: InvoiceStatus): string {
   return "border-blue-300 bg-blue-100 text-blue-800";
 }
 
+function parseStoredKeys(raw: string | null): string[] | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((value): value is string => typeof value === "string");
+  } catch {
+    return null;
+  }
+}
+
+function getRecipientLabel(invoice: InvoiceListItem): string {
+  return invoice.bill_to_name?.trim() || UNASSIGNED_RECIPIENT_LABEL;
+}
+
 export function InvoicesPageClient({
   invoices,
 }: {
@@ -102,11 +141,40 @@ export function InvoicesPageClient({
   const [query, setQuery] = useState("");
   const [billToFilter, setBillToFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [view, setView] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "list";
+    const savedView = window.localStorage.getItem(INVOICES_VIEW_STORAGE_KEY);
+    return savedView === "grouped" ? "grouped" : "list";
+  });
+  const [expandedRecipients, setExpandedRecipients] = useState<string[] | null>(
+    () => {
+      if (typeof window === "undefined") return null;
+      return parseStoredKeys(
+        window.localStorage.getItem(INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY),
+      );
+    },
+  );
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
     invoices[0]?.id ?? null,
   );
   const isMobile = useIsMobile();
   const router = useRouter();
+
+  useEffect(() => {
+    window.localStorage.setItem(INVOICES_VIEW_STORAGE_KEY, view);
+  }, [view]);
+
+  useEffect(() => {
+    if (expandedRecipients === null) {
+      window.localStorage.removeItem(INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY,
+      JSON.stringify(expandedRecipients),
+    );
+  }, [expandedRecipients]);
 
   const billToOptions = useMemo(() => {
     const set = new Set<string>();
@@ -124,7 +192,7 @@ export function InvoicesPageClient({
       .filter((invoice) => {
         const status = getInvoiceStatus(invoice.due_date, invoice.is_paid);
         const matchesBillTo =
-          billToFilter === "all" || invoice.bill_to_name === billToFilter;
+          billToFilter === "all" || getRecipientLabel(invoice) === billToFilter;
         const matchesStatus = statusFilter === "all" || statusFilter === status;
         const matchesQuery =
           q.length === 0 ||
@@ -140,6 +208,57 @@ export function InvoicesPageClient({
         return bCreated.localeCompare(aCreated);
       });
   }, [invoices, query, billToFilter, statusFilter]);
+
+  const groupedInvoices = useMemo<RecipientInvoiceGroup[]>(() => {
+    const recipientMap = new Map<string, InvoiceListItem[]>();
+
+    // Build the grouped invoice view from the already-filtered list so search,
+    // recipient, and status filters apply identically in both views.
+    for (const invoice of filteredInvoices) {
+      const label = getRecipientLabel(invoice);
+      const key = label.toLowerCase();
+      const recipientInvoices = recipientMap.get(key) ?? [];
+      recipientInvoices.push(invoice);
+      recipientMap.set(key, recipientInvoices);
+    }
+
+    return Array.from(recipientMap.entries())
+      .map(([key, recipientInvoices]) => {
+        const sortedInvoices = [...recipientInvoices].sort((a, b) => {
+          const aCreated = a.created_at ?? "";
+          const bCreated = b.created_at ?? "";
+          return bCreated.localeCompare(aCreated);
+        });
+
+        return {
+          key,
+          label: sortedInvoices[0]
+            ? getRecipientLabel(sortedInvoices[0])
+            : UNASSIGNED_RECIPIENT_LABEL,
+          invoices: sortedInvoices,
+          invoiceCount: sortedInvoices.length,
+          totalCents: sortedInvoices.reduce(
+            (sum, invoice) => sum + (invoice.subtotal_cents ?? 0),
+            0,
+          ),
+          paidCount: sortedInvoices.filter((invoice) =>
+            getInvoiceStatus(invoice.due_date, invoice.is_paid) === "paid",
+          ).length,
+          overdueCount: sortedInvoices.filter((invoice) =>
+            getInvoiceStatus(invoice.due_date, invoice.is_paid) === "overdue",
+          ).length,
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [filteredInvoices]);
+
+  const effectiveExpandedRecipients = useMemo(() => {
+    const recipientKeys = new Set(groupedInvoices.map((group) => group.key));
+    const defaultExpanded = groupedInvoices[0] ? [groupedInvoices[0].key] : [];
+    const currentExpanded = expandedRecipients ?? defaultExpanded;
+
+    return currentExpanded.filter((key) => recipientKeys.has(key));
+  }, [expandedRecipients, groupedInvoices]);
 
   const effectiveSelectedInvoiceId = useMemo(() => {
     if (filteredInvoices.length === 0) return null;
@@ -159,13 +278,28 @@ export function InvoicesPageClient({
     );
   }, [filteredInvoices, effectiveSelectedInvoiceId]);
 
-  const hasActiveFilters =
-    query.trim().length > 0 || billToFilter !== "all" || statusFilter !== "all";
+  const activeFilterCount =
+    Number(query.trim().length > 0) +
+    Number(billToFilter !== "all") +
+    Number(statusFilter !== "all");
 
   function resetFilters() {
     setQuery("");
     setBillToFilter("all");
     setStatusFilter("all");
+  }
+
+  function toggleRecipient(recipientKey: string) {
+    setExpandedRecipients((prev) => {
+      const defaultExpanded = groupedInvoices[0] ? [groupedInvoices[0].key] : [];
+      const currentExpanded = prev ?? defaultExpanded;
+
+      if (currentExpanded.includes(recipientKey)) {
+        return currentExpanded.filter((key) => key !== recipientKey);
+      }
+
+      return [...currentExpanded, recipientKey];
+    });
   }
 
   if (invoices.length === 0) {
@@ -179,9 +313,14 @@ export function InvoicesPageClient({
         </div>
         <Card className="p-8">
           <div className="flex justify-center">
-          <img src={"empty_project.png"} alt="Project" className="w-48 h-48"/>
+            <Image
+              src="/empty_project.png"
+              alt="Invoice"
+              width={192}
+              height={192}
+            />
           </div>
-          <div className="text-lg text-muted-foreground text-center">You currently don't have any invoices.</div>
+          <div className="text-lg text-muted-foreground text-center">You currently don&apos;t have any invoices.</div>
           <div className="text-md text-center"> Want to create an invoice? <br/> Create one here.</div>
         <div className="flex justify-center">
           <Link href="/invoices/new" className="w-full sm:w-auto">
@@ -205,68 +344,84 @@ export function InvoicesPageClient({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {hasActiveFilters && (
-              <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary dark:text-white">
-                <Filter className="size-3" />
-                Filters Active
+          <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+              <FilterDialog
+                title="Invoice Filters"
+                description="Search and narrow invoices from a single modal."
+                activeCount={activeFilterCount}
+                onClear={resetFilters}
+              >
+                <FilterDialogSection title="Search">
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search invoices..."
+                  />
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Bill To">
+                  <Select value={billToFilter} onValueChange={setBillToFilter}>
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Builders" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Builders</SelectItem>
+                      {billToOptions.map((builderName) => (
+                        <SelectItem key={builderName} value={builderName}>
+                          {builderName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+
+                <FilterDialogSection title="Status">
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+                  >
+                    <SelectTrigger className="w-full justify-between">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="issued">Issued</SelectItem>
+                      <SelectItem value="due">Due</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FilterDialogSection>
+              </FilterDialog>
+              <div className="ml-auto inline-flex overflow-hidden rounded-md border bg-background sm:ml-0">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant={view === "list" ? "default" : "ghost"}
                   size="sm"
-                  className="gap-2"
-                  onClick={resetFilters}
-                  disabled={!hasActiveFilters}
+                  className="rounded-none border-0 cursor-pointer"
+                  onClick={() => setView("list")}
+                  aria-label="List view"
                 >
-                  <Filter className="size-4  " />
-                  Clear Filters
+                  <List className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={view === "grouped" ? "default" : "ghost"}
+                  size="sm"
+                  className="rounded-none border-0 cursor-pointer"
+                  onClick={() => setView("grouped")}
+                  aria-label="Grouped view"
+                >
+                  <Building2 className="size-4" />
                 </Button>
               </div>
-            )}
-
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search invoices..."
-              className="w-full sm:w-72"
-            />
+            </div>
 
             <Link href="/invoices/new" className="w-full sm:w-auto">
               <Button className="w-full sm:w-auto">Create Invoice</Button>
             </Link>
           </div>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Select value={billToFilter} onValueChange={setBillToFilter}>
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Builders" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Builders</SelectItem>
-              {billToOptions.map((builderName) => (
-                <SelectItem key={builderName} value={builderName}>
-                  {builderName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
-          >
-            <SelectTrigger className="w-full justify-between">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="issued">Issued</SelectItem>
-              <SelectItem value="due">Due</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
@@ -278,6 +433,116 @@ export function InvoicesPageClient({
                 No invoices match the current filters.
               </div>
             </Card>
+          ) : view === "grouped" ? (
+            <div className="space-y-3">
+              {groupedInvoices.map((recipientGroup) => {
+                const isRecipientExpanded =
+                  effectiveExpandedRecipients.includes(recipientGroup.key);
+
+                return (
+                  <Card
+                    key={recipientGroup.key}
+                    className="overflow-hidden border-primary/20"
+                  >
+                    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+                      <button
+                        type="button"
+                        className="flex flex-1 flex-col items-start gap-2 text-left transition-colors hover:text-primary cursor-pointer sm:flex-row sm:items-center sm:justify-between"
+                        onClick={() => toggleRecipient(recipientGroup.key)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <ChevronDown
+                            className={cn(
+                              "size-4 shrink-0 transition-transform cursor-pointer",
+                              isRecipientExpanded && "rotate-180",
+                            )}
+                          />
+                          <div className="text-base font-semibold">
+                            {recipientGroup.label}
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground sm:text-right">
+                          {recipientGroup.invoiceCount}{" "}
+                          {recipientGroup.invoiceCount === 1
+                            ? "invoice"
+                            : "invoices"}{" "}
+                          • {money(recipientGroup.totalCents)} total •{" "}
+                          {recipientGroup.paidCount} paid
+                          {recipientGroup.overdueCount > 0
+                            ? ` • ${recipientGroup.overdueCount} overdue`
+                            : ""}
+                        </div>
+                      </button>
+                    </div>
+
+                    {isRecipientExpanded && (
+                      <div className="space-y-2 border-t p-3 sm:p-4">
+                        {recipientGroup.invoices.map((invoice) => {
+                          const status = getInvoiceStatus(
+                            invoice.due_date,
+                            invoice.is_paid,
+                          );
+                          const isSelected =
+                            effectiveSelectedInvoiceId === invoice.id;
+
+                          return (
+                            <Card
+                              key={invoice.id}
+                              className={cn(
+                                "border-primary/10 p-3 transition-colors cursor-pointer",
+                                isSelected
+                                  ? "bg-primary/[0.03] ring-2 ring-primary/20"
+                                  : "hover:bg-primary/5",
+                              )}
+                              onClick={() => {
+                                setSelectedInvoiceId(invoice.id);
+                                if (isMobile) {
+                                  router.push(`/invoices/${invoice.id}`);
+                                }
+                              }}
+                            >
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0 space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <div className="break-words font-medium">
+                                      {invoice.invoice_number}
+                                    </div>
+                                    <Badge
+                                      variant="outline"
+                                      className={statusClasses(status)}
+                                    >
+                                      {statusLabel(status)}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {money(invoice.subtotal_cents)} • Invoice{" "}
+                                    {formatDate(invoice.invoice_date)} • Due{" "}
+                                    {formatDate(invoice.due_date)}
+                                  </div>
+                                </div>
+
+                                <div
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  <Button asChild variant="outline" size="sm">
+                                    <Link
+                                      href={`/invoices/${invoice.id}`}
+                                      onClick={() => setSelectedInvoiceId(invoice.id)}
+                                    >
+                                      View Invoice
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
             filteredInvoices.map((invoice) => {
               const status = getInvoiceStatus(invoice.due_date, invoice.is_paid);
@@ -336,9 +601,12 @@ export function InvoicesPageClient({
                         </div>
                       </div>
 
-                      <div>
+                      <div onClick={(event) => event.stopPropagation()}>
                         <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${invoice.id}`}>
+                          <Link
+                            href={`/invoices/${invoice.id}`}
+                            onClick={() => setSelectedInvoiceId(invoice.id)}
+                          >
                             View Invoice
                           </Link>
                         </Button>
@@ -349,6 +617,10 @@ export function InvoicesPageClient({
                       <Link
                         href={`/invoices/${invoice.id}`}
                         className="inline-flex items-center gap-1 text-lg font-medium text-primary dark:text-white dark:hover:text-muted-foreground/90 transition delay-100"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedInvoiceId(invoice.id);
+                        }}
                       >
                         Open Invoice
                         <ArrowRight className="size-5" />

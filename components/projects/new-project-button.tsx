@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NewProjectDialog } from "./new-project-dialog";
 
+
 type Item = { id: string; name: string };
 
 export function NewProjectButton({
   initialBuilders,
   initialSubdivisions,
+  initialBuilderId,
   initialSubdivisionId,
   initialHouseNumber,
   initialStreetAddress,
@@ -18,6 +20,7 @@ export function NewProjectButton({
 }: {
   initialBuilders: Item[];
   initialSubdivisions: Item[];
+  initialBuilderId?: string;
   initialSubdivisionId?: string;
   initialHouseNumber?: string;
   initialStreetAddress?: string;
@@ -44,6 +47,7 @@ export function NewProjectButton({
         onOpenChange={setOpen}
         initialBuilders={initialBuilders}
         initialSubdivisions={initialSubdivisions}
+        initialBuilderId={initialBuilderId}
         initialSubdivisionId={initialSubdivisionId}
         initialHouseNumber={initialHouseNumber}
         initialStreetAddress={initialStreetAddress}

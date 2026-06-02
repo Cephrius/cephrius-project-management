@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildWorkforceDashboardModel } from "./dashboard-data";
+import { buildWorkforceDashboardModel } from "@/components/employees/dashboard-data";
 import type {
   CrewProfile,
   EmployeeProfile,
   WorkforceJob,
   WorkforcePayment,
-} from "./types";
+} from "@/components/employees/types";
 
 const employees: EmployeeProfile[] = [
   {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Trash2, Wand2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +11,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
+import { useCompany } from "@/lib/company-context";
 import {
   createBuilder,
   createSubdivision,
   createProject,
-} from "@/app/(jobsyte-app)/(app)/projects/actions";
+} from "@/app/(jobsyte-app)/projects/actions";
 import {
   CreatableCombobox,
   type ComboboxItem,
@@ -35,10 +46,49 @@ function normalizeStreetNumber(value: string) {
 }
 
 type Item = { id: string; name: string };
+type PresetJobDraft = {
+  id: string;
+  title: string;
+  price: string;
+};
+type ProjectPreset = {
+  id: string;
+  name: string;
+  jobs: PresetJobDraft[];
+};
+
+type PresetRow = {
+  id: string;
+  name: string;
+};
+
+type PresetJobRow = {
+  id: string;
+  preset_id: string;
+  title: string;
+  price_cents: number;
+  sort_order: number | null;
+};
 
 function findItemById(items: ComboboxItem[], id: string | null) {
   if (!id) return null;
   return items.find((item) => item.id === id) ?? null;
+}
+
+function centsToPriceInput(cents: number | null | undefined) {
+  if (typeof cents !== "number") return "";
+  return (cents / 100).toFixed(2);
+}
+
+function createEmptyPresetJob(): PresetJobDraft {
+  return {
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`,
+    title: "",
+    price: "",
+  };
 }
 
 export function NewProjectDialog({
@@ -46,6 +96,7 @@ export function NewProjectDialog({
   onOpenChange,
   initialBuilders = [],
   initialSubdivisions = [],
+  initialBuilderId = "",
   initialSubdivisionId = "",
   initialHouseNumber = "",
   initialStreetAddress = "",
@@ -54,12 +105,14 @@ export function NewProjectDialog({
   onOpenChange: (v: boolean) => void;
   initialBuilders?: Item[];
   initialSubdivisions?: Item[];
+  initialBuilderId?: string;
   initialSubdivisionId?: string;
   initialHouseNumber?: string;
   initialStreetAddress?: string;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { activeCompany } = useCompany();
 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -75,10 +128,17 @@ export function NewProjectDialog({
   const [subdivisions, setSubdivisions] =
     useState<ComboboxItem[]>(initialSubdivisions);
 
-  const [builder, setBuilder] = useState<ComboboxItem | null>(null);
+  const [builder, setBuilder] = useState<ComboboxItem | null>(
+    findItemById(initialBuilders, initialBuilderId),
+  );
   const [subdivision, setSubdivision] = useState<ComboboxItem | null>(
     findItemById(initialSubdivisions, initialSubdivisionId),
   );
+  const [presets, setPresets] = useState<ProjectPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState("");
+  const [presetJobs, setPresetJobs] = useState<PresetJobDraft[]>([]);
+  const [saveAsPreset, setSaveAsPreset] = useState(false);
+  const [presetName, setPresetName] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -100,7 +160,14 @@ export function NewProjectDialog({
 
       if (!isActive) return;
       if (needsBuilders && buildersRes.data) {
-        setBuilders(buildersRes.data as ComboboxItem[]);
+        const loadedBuilders = buildersRes.data as ComboboxItem[];
+        setBuilders(loadedBuilders);
+        if (initialBuilderId) {
+          const initialBuilder = findItemById(loadedBuilders, initialBuilderId);
+          if (initialBuilder) {
+            setBuilder((current) => current ?? initialBuilder);
+          }
+        }
       }
       if (needsSubdivisions && subdivisionsRes.data) {
         const loadedSubdivisions = subdivisionsRes.data as ComboboxItem[];
@@ -124,9 +191,60 @@ export function NewProjectDialog({
     open,
     initialBuilders,
     initialSubdivisions,
+    initialBuilderId,
     initialSubdivisionId,
     supabase,
   ]);
+
+  useEffect(() => {
+    if (!open || !activeCompany?.id) return;
+    let isActive = true;
+
+    (async () => {
+      const [presetsRes, jobsRes] = await Promise.all([
+        supabase
+          .from("project_presets")
+          .select("id, name")
+          .eq("company_id", activeCompany.id)
+          .is("deleted_at", null)
+          .order("name"),
+        supabase
+          .from("project_preset_jobs")
+          .select("id, preset_id, title, price_cents, sort_order")
+          .order("sort_order", { ascending: true }),
+      ]);
+
+      if (!isActive) return;
+      if (presetsRes.error || jobsRes.error) {
+        setPresets([]);
+        return;
+      }
+
+      const jobRows = (jobsRes.data ?? []) as PresetJobRow[];
+      const jobsByPreset = new Map<string, PresetJobDraft[]>();
+      for (const job of jobRows) {
+        const list = jobsByPreset.get(job.preset_id) ?? [];
+        list.push({
+          id: job.id,
+          title: job.title,
+          price: centsToPriceInput(job.price_cents),
+        });
+        jobsByPreset.set(job.preset_id, list);
+      }
+
+      setPresets(
+        ((presetsRes.data ?? []) as PresetRow[]).map((preset) => ({
+          id: preset.id,
+          name: preset.name,
+          jobs: jobsByPreset.get(preset.id) ?? [],
+        })),
+      );
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeCompany?.id, open, supabase]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -136,6 +254,10 @@ export function NewProjectDialog({
       !!subdivision
     );
   }, [houseNumber, streetAddress, builder, subdivision]);
+
+  const presetJobCount = presetJobs.filter(
+    (job) => job.title.trim() || job.price.trim(),
+  ).length;
 
   async function onCreateBuilder(name: string) {
     const res = await createBuilder(name);
@@ -159,8 +281,64 @@ export function NewProjectDialog({
     return res.data;
   }
 
+  function applyPreset(presetId: string) {
+    setSelectedPresetId(presetId);
+
+    const selected = presets.find((preset) => preset.id === presetId);
+    if (!selected) {
+      setPresetJobs([]);
+      return;
+    }
+
+    setPresetName(selected.name);
+    setPresetJobs(
+      selected.jobs.map((job) => ({
+        ...job,
+        id: createEmptyPresetJob().id,
+      })),
+    );
+  }
+
+  function updatePresetJob(
+    rowId: string,
+    field: "title" | "price",
+    value: string,
+  ) {
+    setPresetJobs((current) =>
+      current.map((job) =>
+        job.id === rowId
+          ? {
+              ...job,
+              [field]: field === "title" ? value : value.replace(/[^0-9.]/g, ""),
+            }
+          : job,
+      ),
+    );
+  }
+
+  function removePresetJob(rowId: string) {
+    setPresetJobs((current) => current.filter((job) => job.id !== rowId));
+  }
+
+  function resetPresetDraft() {
+    setSelectedPresetId("");
+    setPresetJobs([]);
+    setSaveAsPreset(false);
+    setPresetName("");
+    setError(null);
+  }
+
   function onSubmit() {
     setError(null);
+
+    if (saveAsPreset && !presetName.trim()) {
+      setError("Enter a preset name before saving this job set.");
+      return;
+    }
+    if (saveAsPreset && presetJobCount === 0) {
+      setError("Add at least one job before saving a preset.");
+      return;
+    }
 
     const fd = new FormData();
     fd.set("house_number", normalizeStreetNumber(houseNumber));
@@ -172,10 +350,24 @@ export function NewProjectDialog({
 
     if (subdivision?.id) fd.set("subdivision_id", subdivision.id);
 
+    for (const job of presetJobs) {
+      if (!job.title.trim() && !job.price.trim()) continue;
+      fd.append("preset_job_title", job.title);
+      fd.append("preset_job_price", job.price);
+    }
+
+    if (saveAsPreset && presetName.trim()) {
+      fd.set("save_preset_name", presetName);
+    }
+
     startTransition(async () => {
       const res = await createProject(fd);
       if (!res.ok) {
         setError(res.message ?? "Failed to create project.");
+        return;
+      }
+      if (!("projectId" in res)) {
+        setError("Project was created, but no project ID was returned.");
         return;
       }
 
@@ -186,8 +378,14 @@ export function NewProjectDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) resetPresetDraft();
+        onOpenChange(nextOpen);
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>New Project</DialogTitle>
         </DialogHeader>
@@ -251,6 +449,124 @@ export function NewProjectDialog({
               );
             }}
           />
+
+          <section className="rounded-lg border border-border/80 bg-muted/20 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Wand2 className="size-4 text-primary" />
+                  Project Presets
+                  {presetJobCount > 0 ? (
+                    <Badge variant="outline">{presetJobCount} jobs</Badge>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Add repeatable jobs now; scheduled dates can be assigned later.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() =>
+                  setPresetJobs((current) => [...current, createEmptyPresetJob()])
+                }
+              >
+                <Plus className="size-4" />
+                Add Job
+              </Button>
+            </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <Select value={selectedPresetId} onValueChange={applyPreset}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Apply a saved preset..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {presets.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={presetJobs.length === 0}
+                onClick={() => {
+                  setSelectedPresetId("");
+                  setPresetJobs([]);
+                  setSaveAsPreset(false);
+                  setPresetName("");
+                }}
+              >
+                Clear
+              </Button>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {presetJobs.length === 0 ? (
+                <div className="rounded-md border border-dashed border-border/80 bg-background/70 p-3 text-xs text-muted-foreground">
+                  No preset jobs selected.
+                </div>
+              ) : (
+                presetJobs.map((job, index) => (
+                  <div
+                    key={job.id}
+                    className="grid gap-2 rounded-md border border-border/80 bg-background/80 p-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]"
+                  >
+                    <Input
+                      value={job.title}
+                      onChange={(event) =>
+                        updatePresetJob(job.id, "title", event.target.value)
+                      }
+                      onBlur={() =>
+                        updatePresetJob(job.id, "title", toTitleCase(job.title))
+                      }
+                      placeholder={`Job ${index + 1} title`}
+                    />
+                    <Input
+                      value={job.price}
+                      onChange={(event) =>
+                        updatePresetJob(job.id, "price", event.target.value)
+                      }
+                      placeholder="Price"
+                      inputMode="decimal"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => removePresetJob(job.id)}
+                    >
+                      <Trash2 className="size-4" />
+                      <span className="sr-only">Remove preset job</span>
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2 rounded-md border border-border/70 bg-background/70 p-2 sm:flex-row sm:items-center">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={saveAsPreset}
+                  onCheckedChange={(checked) => setSaveAsPreset(checked === true)}
+                />
+                Save these jobs as a preset
+              </label>
+              <Input
+                value={presetName}
+                onChange={(event) => setPresetName(event.target.value)}
+                disabled={!saveAsPreset}
+                placeholder="Preset name"
+                className="sm:max-w-64"
+              />
+            </div>
+          </section>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { FilterChip } from "./filter-chip";
+import { FilterChip } from "@/components/employees/filter-chip";
 
 describe("FilterChip", () => {
   it("renders the count inside a centered badge so it stays aligned with the label", () => {

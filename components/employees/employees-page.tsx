@@ -59,6 +59,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
+  FilterDialog,
+  FilterDialogSection,
+} from "@/components/ui/filter-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -66,7 +70,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteCrew, deleteEmployee } from "@/app/(jobsyte-app)/(app)/employees-crews/actions";
+import { deleteCrew, deleteEmployee } from "@/app/(jobsyte-app)/employees-crews/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { buildWorkforceDashboardModel } from "./dashboard-data";
@@ -284,6 +288,10 @@ export function EmployeesPageClient({
       return haystack.includes(q);
     });
   }, [deferredCrewQuery, model.crewOverview, crewById]);
+  const employeeFilterCount =
+    Number(employeeQuery.trim().length > 0) +
+    Number(employeeFilter !== "all");
+  const crewFilterCount = Number(crewQuery.trim().length > 0);
 
   const utilizationPct =
     model.summary.activeEmployees > 0
@@ -570,30 +578,47 @@ export function EmployeesPageClient({
                 </div>
 
                 <div className="flex w-full flex-col gap-3 lg:ml-auto lg:items-end">
-                  <InputGroup className="w-full sm:ml-auto sm:w-80">
-                    <InputGroupAddon>
-                      <Search className="size-4" />
-                    </InputGroupAddon>
-                    <InputGroupInput
-                      value={employeeQuery}
-                      onChange={(event) => setEmployeeQuery(event.target.value)}
-                      placeholder="Search employees, crews, roles..."
-                    />
-                  </InputGroup>
-                  <div className="flex flex-wrap items-center gap-1 sm:justify-end">
-                    {employeeFilterTabs.map((tab) => {
-                      const active = employeeFilter === tab.key;
-                      return (
-                        <FilterChip
-                          key={tab.key}
-                          active={active}
-                          label={tab.label}
-                          count={tab.count}
-                          onClick={() => setEmployeeFilter(tab.key)}
+                  {/* Keep the roster dialog focused on roster state only. */}
+                  <FilterDialog
+                    title="Employee Roster Filters"
+                    description="Search and filter the roster from a modal."
+                    activeCount={employeeFilterCount}
+                    onClear={() => {
+                      setEmployeeQuery("");
+                      setEmployeeFilter("all");
+                    }}
+                    triggerClassName="w-full sm:w-auto"
+                  >
+                    <FilterDialogSection title="Search">
+                      <InputGroup>
+                        <InputGroupAddon>
+                          <Search className="size-4" />
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          value={employeeQuery}
+                          onChange={(event) => setEmployeeQuery(event.target.value)}
+                          placeholder="Search employees, crews, roles..."
                         />
-                      );
-                    })}
-                  </div>
+                      </InputGroup>
+                    </FilterDialogSection>
+
+                    <FilterDialogSection title="Status">
+                      <div className="flex flex-wrap items-center gap-1 sm:justify-end">
+                        {employeeFilterTabs.map((tab) => {
+                          const active = employeeFilter === tab.key;
+                          return (
+                            <FilterChip
+                              key={tab.key}
+                              active={active}
+                              label={tab.label}
+                              count={tab.count}
+                              onClick={() => setEmployeeFilter(tab.key)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </FilterDialogSection>
+                  </FilterDialog>
                 </div>
               </div>
             </div>
@@ -759,18 +784,29 @@ export function EmployeesPageClient({
                       Crew size, leads, jobs, and payroll.
                     </div>
                   </div>
-                  <Badge variant="outline">{model.summary.totalCrews} crews</Badge>
+                  <div className="flex items-center gap-2">
+                    <FilterDialog
+                      title="Crew Overview Filters"
+                      description="Search crew cards from a modal."
+                      activeCount={crewFilterCount}
+                      onClear={() => setCrewQuery("")}
+                    >
+                      <FilterDialogSection title="Search">
+                        <InputGroup>
+                          <InputGroupAddon>
+                            <Search className="size-4" />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            value={crewQuery}
+                            onChange={(e) => setCrewQuery(e.target.value)}
+                            placeholder="Search crews, leads, members..."
+                          />
+                        </InputGroup>
+                      </FilterDialogSection>
+                    </FilterDialog>
+                    <Badge variant="outline">{model.summary.totalCrews} crews</Badge>
+                  </div>
                 </div>
-                <InputGroup className="w-full sm:ml-auto sm:w-80">
-                  <InputGroupAddon>
-                    <Search className="size-4" />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    value={crewQuery}
-                    onChange={(e) => setCrewQuery(e.target.value)}
-                    placeholder="Search crews, leads, members..."
-                  />
-                </InputGroup>
               </div>
             </div>
 

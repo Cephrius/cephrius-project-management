@@ -10,6 +10,7 @@ type SuggestionType =
   | "project"
   | "job"
   | "invoice"
+  | "accounting"
   | "employee"
   | "crew"
   | "payment"
@@ -40,6 +41,7 @@ type InvoiceRow = {
   invoice_number: string;
   bill_to_name: string | null;
   contractor_name: string | null;
+  project_id: string | null;
 };
 type EmployeeRow = {
   id: string;
@@ -57,6 +59,7 @@ type CrewRow = {
 };
 type PaymentRow = {
   id: string;
+  job_id: string | null;
   reference_number: string | null;
   payment_method: string | null;
   paid_to_type: string | null;
@@ -65,18 +68,30 @@ type PaymentRow = {
 };
 type ExpenseRow = {
   id: string;
+  name: string | null;
   description: string | null;
   project_id: string;
   amount_cents: number | null;
+  category: string | null;
   cost_type: string | null;
 };
 
 const PER_TYPE_LIMIT = 5;
 const TOTAL_LIMIT = 20; // bumped: 7 types now
 
-function normalizePattern(value: string) {
+function searchPatterns(value: string) {
   const normalized = value.trim().replace(/[(),]/g, " ").replace(/\s+/g, " ");
-  return `%${normalized}%`;
+  const splitCompactAddress = normalized.replace(/^(\d+)([A-Za-z])/, "$1 $2");
+
+  return Array.from(new Set([normalized, splitCompactAddress]))
+    .filter((term) => term.length > 0)
+    .map((term) => `%${term}%`);
+}
+
+function ilikeAny(fields: string[], patterns: string[]) {
+  return fields
+    .flatMap((field) => patterns.map((pattern) => `${field}.ilike.${pattern}`))
+    .join(",");
 }
 
 function compact(parts: Array<string | null | undefined>) {
@@ -114,7 +129,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ suggestions: [] as SearchSuggestion[] });
   }
 
-  const pattern = normalizePattern(q);
+  const patterns = searchPatterns(q);
 
   // Fire all 7 lookups in parallel
   const [
@@ -131,9 +146,7 @@ export async function GET(request: NextRequest) {
       .select("id, project_address, builder_name, subdivision")
       .eq("company_id", companyId)
       .is("deleted_at", null)
-      .or(
-        `project_address.ilike.${pattern},builder_name.ilike.${pattern},subdivision.ilike.${pattern}`,
-      )
+      .or(ilikeAny(["project_address", "builder_name", "subdivision"], patterns))
       .order("created_at", { ascending: false })
       .limit(PER_TYPE_LIMIT),
     supabase
@@ -141,17 +154,15 @@ export async function GET(request: NextRequest) {
       .select("id, title, project_id, superintendent")
       .eq("company_id", companyId)
       .is("deleted_at", null)
-      .or(`title.ilike.${pattern},superintendent.ilike.${pattern}`)
+      .or(ilikeAny(["title", "superintendent"], patterns))
       .order("created_at", { ascending: false })
       .limit(PER_TYPE_LIMIT),
     supabase
       .from("invoices")
-      .select("id, invoice_number, bill_to_name, contractor_name")
+      .select("id, invoice_number, bill_to_name, contractor_name, project_id")
       .eq("company_id", companyId)
       .is("deleted_at", null)
-      .or(
-        `invoice_number.ilike.${pattern},bill_to_name.ilike.${pattern},contractor_name.ilike.${pattern}`,
-      )
+      .or(ilikeAny(["invoice_number", "bill_to_name", "contractor_name"], patterns))
       .order("created_at", { ascending: false })
       .limit(PER_TYPE_LIMIT),
     // NEW: employees — match on identifying fields users recognize
@@ -160,9 +171,7 @@ export async function GET(request: NextRequest) {
       .select("id, name, email, phone, role, job_title")
       .eq("company_id", companyId)
       .is("deleted_at", null)
-      .or(
-        `name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},role.ilike.${pattern},job_title.ilike.${pattern}`,
-      )
+      .or(ilikeAny(["name", "email", "phone", "role", "job_title"], patterns))
       .order("created_at", { ascending: false })
       .limit(PER_TYPE_LIMIT),
     // NEW: crews
@@ -171,48 +180,123 @@ export async function GET(request: NextRequest) {
       .select("id, name, specialization, description")
       .eq("company_id", companyId)
       .is("deleted_at", null)
-      .or(
-        `name.ilike.${pattern},specialization.ilike.${pattern},description.ilike.${pattern}`,
-      )
+      .or(ilikeAny(["name", "specialization", "description"], patterns))
       .order("created_at", { ascending: false })
       .limit(PER_TYPE_LIMIT),
     // NEW: payroll payments — searchable by reference # / method
     supabase
       .from("payments")
       .select(
-        "id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents",
+        "id, job_id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents",
       )
       .eq("company_id", companyId)
-      .or(`reference_number.ilike.${pattern},payment_method.ilike.${pattern}`)
+      .or(ilikeAny(["reference_number", "payment_method", "paid_to_type"], patterns))
       .order("paid_at", { ascending: false })
       .limit(PER_TYPE_LIMIT),
     // NEW: accounting expenses — searchable by description
     supabase
       .from("project_expenses")
-      .select("id, description, project_id, amount_cents, cost_type")
+      .select("id, name, description, project_id, amount_cents, category, cost_type")
       .eq("company_id", companyId)
-      .ilike("description", pattern)
+      .or(ilikeAny(["name", "description", "category", "cost_type"], patterns))
       .order("created_at", { ascending: false })
       .limit(PER_TYPE_LIMIT),
   ]);
 
   const projects = (projectsRes.data ?? []) as ProjectRow[];
-  const jobs = (jobsRes.data ?? []) as JobRow[];
-  const invoices = (invoicesRes.data ?? []) as InvoiceRow[];
+  let jobs = (jobsRes.data ?? []) as JobRow[];
+  let invoices = (invoicesRes.data ?? []) as InvoiceRow[];
   const employees = (employeesRes.data ?? []) as EmployeeRow[];
   const crews = (crewsRes.data ?? []) as CrewRow[];
-  const payments = (paymentsRes.data ?? []) as PaymentRow[];
-  const expenses = (expensesRes.data ?? []) as ExpenseRow[];
+  let payments = (paymentsRes.data ?? []) as PaymentRow[];
+  let expenses = (expensesRes.data ?? []) as ExpenseRow[];
+
+  const directProjectIds = projects.map((project) => project.id);
+  const directEmployeeIds = employees.map((employee) => employee.id);
+  const directCrewIds = crews.map((crew) => crew.id);
+  const relatedLookups: PromiseLike<unknown>[] = [];
+
+  if (directProjectIds.length > 0) {
+    relatedLookups.push(
+      supabase
+        .from("jobs")
+        .select("id, title, project_id, superintendent")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .in("project_id", directProjectIds)
+        .order("created_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT)
+        .then((res) => {
+          jobs = [...new Map([...jobs, ...((res.data ?? []) as JobRow[])].map((row) => [row.id, row])).values()];
+        }),
+    );
+    relatedLookups.push(
+      supabase
+        .from("invoices")
+        .select("id, invoice_number, bill_to_name, contractor_name, project_id")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .in("project_id", directProjectIds)
+        .order("created_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT)
+        .then((res) => {
+          invoices = [...new Map([...invoices, ...((res.data ?? []) as InvoiceRow[])].map((row) => [row.id, row])).values()];
+        }),
+    );
+    relatedLookups.push(
+      supabase
+        .from("project_expenses")
+        .select("id, name, description, project_id, amount_cents, category, cost_type")
+        .eq("company_id", companyId)
+        .in("project_id", directProjectIds)
+        .order("created_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT)
+        .then((res) => {
+          expenses = [...new Map([...expenses, ...((res.data ?? []) as ExpenseRow[])].map((row) => [row.id, row])).values()];
+        }),
+    );
+  }
+
+  if (directEmployeeIds.length > 0) {
+    relatedLookups.push(
+      supabase
+        .from("payments")
+        .select("id, job_id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents")
+        .eq("company_id", companyId)
+        .eq("paid_to_type", "employee")
+        .in("paid_to_id", directEmployeeIds)
+        .order("paid_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT)
+        .then((res) => {
+          payments = [...new Map([...payments, ...((res.data ?? []) as PaymentRow[])].map((row) => [row.id, row])).values()];
+        }),
+    );
+  }
+
+  if (directCrewIds.length > 0) {
+    relatedLookups.push(
+      supabase
+        .from("payments")
+        .select("id, job_id, reference_number, payment_method, paid_to_type, paid_to_id, amount_cents")
+        .eq("company_id", companyId)
+        .eq("paid_to_type", "crew")
+        .in("paid_to_id", directCrewIds)
+        .order("paid_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT)
+        .then((res) => {
+          payments = [...new Map([...payments, ...((res.data ?? []) as PaymentRow[])].map((row) => [row.id, row])).values()];
+        }),
+    );
+  }
+
+  await Promise.all(relatedLookups);
 
   // Resolve joined names (project addresses for jobs/expenses, employee/crew names for payments)
-  const jobProjectIds = Array.from(
-    new Set(jobs.map((j) => j.project_id).filter(Boolean)),
-  );
-  const expenseProjectIds = Array.from(
-    new Set(expenses.map((e) => e.project_id).filter(Boolean)),
-  );
+  const jobProjectIds = Array.from(new Set(jobs.map((j) => j.project_id).filter(Boolean)));
+  const invoiceProjectIds = Array.from(new Set(invoices.map((invoice) => invoice.project_id).filter(Boolean))) as string[];
+  const expenseProjectIds = Array.from(new Set(expenses.map((e) => e.project_id).filter(Boolean)));
   const allProjectIds = Array.from(
-    new Set([...jobProjectIds, ...expenseProjectIds]),
+    new Set([...directProjectIds, ...jobProjectIds, ...invoiceProjectIds, ...expenseProjectIds]),
   );
 
   const paymentEmployeeIds = payments
@@ -225,6 +309,7 @@ export async function GET(request: NextRequest) {
     .filter(Boolean) as string[];
 
   let projectAddressMap = new Map<string, string>();
+  let projectInfoMap = new Map<string, ProjectRow>();
   let empNameMap = new Map<string, string>();
   let crewNameMap = new Map<string, string>();
 
@@ -233,15 +318,14 @@ export async function GET(request: NextRequest) {
     joinPromises.push(
       supabase
         .from("projects")
-        .select("id, project_address")
+        .select("id, project_address, builder_name, subdivision")
         .in("id", allProjectIds)
         .then((r) => {
+          const projectRows = (r.data ?? []) as ProjectRow[];
           projectAddressMap = new Map(
-            (r.data ?? []).map((p) => [
-              String(p.id),
-              String(p.project_address ?? ""),
-            ]),
+            projectRows.map((p) => [p.id, p.project_address ?? ""]),
           );
+          projectInfoMap = new Map(projectRows.map((p) => [p.id, p]));
         }),
     );
   }
@@ -294,9 +378,29 @@ export async function GET(request: NextRequest) {
     id: `invoice:${i.id}`,
     type: "invoice",
     title: i.invoice_number,
-    subtitle: compact([i.bill_to_name, i.contractor_name]) || null,
+    subtitle:
+      compact([
+        i.bill_to_name,
+        i.contractor_name,
+        i.project_id ? projectAddressMap.get(i.project_id) : null,
+      ]) || null,
     href: `/invoices/${i.id}`,
   }));
+
+  const accountingProjectIds = Array.from(
+    new Set([...directProjectIds, ...jobProjectIds, ...invoiceProjectIds, ...expenseProjectIds]),
+  );
+  const accountingSuggestions: SearchSuggestion[] = accountingProjectIds
+    .map((projectId) => projectInfoMap.get(projectId))
+    .filter((project): project is ProjectRow => Boolean(project))
+    .slice(0, PER_TYPE_LIMIT)
+    .map((project) => ({
+      id: `accounting:${project.id}`,
+      type: "accounting",
+      title: project.project_address,
+      subtitle: compact([project.builder_name, project.subdivision, "Accounting"]) || null,
+      href: `/accounting?highlight=${project.id}`,
+    }));
 
   // NEW: employee suggestions → roster (no per-employee detail page exists)
   const employeeSuggestions: SearchSuggestion[] = employees.map((e) => ({
@@ -380,6 +484,7 @@ export async function GET(request: NextRequest) {
       projectSuggestions,
       jobSuggestions,
       invoiceSuggestions,
+      accountingSuggestions,
       employeeSuggestions,
       crewSuggestions,
       paymentSuggestions,

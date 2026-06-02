@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Menu } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -22,14 +22,21 @@ export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const routeKey = `${pathname}?${searchParams.toString()}`;
+  const [openedRouteKey, setOpenedRouteKey] = useState(routeKey);
 
-  // Collapse the sheet whenever the user navigates.
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname, searchParams]);
+  const isOpen = open && openedRouteKey === routeKey;
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setOpenedRouteKey(routeKey);
+        }
+        setOpen(nextOpen);
+      }}
+    >
       <SheetTrigger asChild>
         <Button
           type="button"

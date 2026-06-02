@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { createExpense } from "@/app/(jobsyte-app)/(app)/accounting/actions";
+import { createExpense } from "@/app/(jobsyte-app)/accounting/actions";
 import { EXPENSE_CATEGORIES } from "@/components/accounting/types";
 import { Button } from "@/components/ui/button";
 import {

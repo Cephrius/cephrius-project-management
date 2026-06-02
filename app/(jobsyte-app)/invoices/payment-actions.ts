@@ -38,6 +38,26 @@ export async function markInvoiceItemPaid(
   if (itemFetchErr) return { ok: false, message: itemFetchErr.message };
   if (!item) return { ok: false, message: "Invoice item not found." };
 
+  if (isPaid && item.job_id) {
+    const { data: job, error: jobFetchErr } = await supabase
+      .from("jobs")
+      .select("id, is_completed")
+      .eq("id", item.job_id)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (jobFetchErr) return { ok: false, message: jobFetchErr.message };
+    if (!job) return { ok: false, message: "Linked job not found." };
+    // Paid status is only valid after the job has been completed. Invoice
+    // controls still own the write path, but incomplete jobs are blocked here.
+    if (!job.is_completed) {
+      return {
+        ok: false,
+        message: "Only completed jobs can be marked as paid.",
+      };
+    }
+  }
+
   const now = new Date().toISOString();
 
   // ── Update the invoice item ──────────────────────────────────────────
@@ -131,10 +151,10 @@ export async function markInvoiceItemPaid(
 }
 
 /**
- * Mark an entire invoice (and all its items + associated jobs) as paid.
- * Called after user confirms the bulk-pay confirmation dialog.
+ * Mark an entire invoice (and all its items + associated jobs) as paid or unpaid.
+ * Called after user confirms the bulk payment-status confirmation dialog.
  */
-export async function markInvoicePaid(invoiceId: string) {
+export async function markInvoicePaid(invoiceId: string, isPaid = true) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -168,10 +188,38 @@ export async function markInvoicePaid(invoiceId: string) {
     .map((i) => i.job_id)
     .filter((id): id is string => Boolean(id));
 
-  // ── Mark all invoice items as paid ───────────────────────────────────
+  if (isPaid && jobIds.length > 0) {
+    const { data: linkedJobs, error: linkedJobsErr } = await supabase
+      .from("jobs")
+      .select("id, is_completed")
+      .in("id", jobIds)
+      .is("deleted_at", null);
+
+    if (linkedJobsErr) return { ok: false, message: linkedJobsErr.message };
+
+    const completedJobIds = new Set(
+      (linkedJobs ?? [])
+        .filter((job) => job.is_completed)
+        .map((job) => job.id),
+    );
+    const allLinkedJobsCompleted = jobIds.every((jobId) =>
+      completedJobIds.has(jobId),
+    );
+
+    // Keep the bulk action aligned with per-line payment: invoices remain the
+    // place to mark paid, but every linked job must already be completed.
+    if (!allLinkedJobsCompleted) {
+      return {
+        ok: false,
+        message: "Only completed jobs can be marked as paid.",
+      };
+    }
+  }
+
+  // ── Mark all invoice items with the requested paid state ─────────────
   const { data: updatedItems, error: itemsUpdateErr } = await supabase
     .from("invoice_items")
-    .update({ is_paid: true, paid_at: now })
+    .update({ is_paid: isPaid, paid_at: isPaid ? now : null })
     .eq("invoice_id", invoiceId)
     .select("id");
 
@@ -188,11 +236,11 @@ export async function markInvoicePaid(invoiceId: string) {
     };
   }
 
-  // ── Mark all associated jobs as paid ─────────────────────────────────
+  // ── Mark all associated jobs with the same paid state ────────────────
   if (jobIds.length > 0) {
     const { data: updatedJobs, error: jobsUpdateErr } = await supabase
       .from("jobs")
-      .update({ is_paid: true, paid_at: now })
+      .update({ is_paid: isPaid, paid_at: isPaid ? now : null })
       .in("id", jobIds)
       .select("id");
 
@@ -205,15 +253,15 @@ export async function markInvoicePaid(invoiceId: string) {
       return {
         ok: false,
         message:
-          "Could not mark jobs as paid. Please add an UPDATE policy for jobs in your Supabase RLS settings.",
+        "Could not mark jobs as paid. Please add an UPDATE policy for jobs in your Supabase RLS settings.",
       };
     }
   }
 
-  // ── Mark the invoice itself as paid ──────────────────────────────────
+  // ── Mark the invoice itself with the requested paid state ────────────
   const { data: updatedInvoice, error: invoiceUpdateErr } = await supabase
     .from("invoices")
-    .update({ is_paid: true, paid_at: now })
+    .update({ is_paid: isPaid, paid_at: isPaid ? now : null })
     .eq("id", invoiceId)
     .select("id")
     .maybeSingle();
