@@ -6,6 +6,7 @@
 import Link from "next/link";
 import {
   Briefcase,
+  Calculator,
   ChevronsLeft,
   ChevronsRight,
   FileText,
@@ -37,7 +38,7 @@ import { useSidebarState } from "./sidebar-state";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { MobileSidebar } from "./mobile-sidebar";
 
-type SuggestionType = "project" | "job" | "invoice" | "employee" | "crew" | "payment" | "expense";
+type SuggestionType = "project" | "job" | "invoice" | "accounting" | "employee" | "crew" | "payment" | "expense";
 
 type SearchSuggestion = {
   id: string;
@@ -57,6 +58,7 @@ function suggestionTypeLabel(type: SuggestionType) {
   if (type === "project") return "Project";
   if (type === "job") return "Job";
   if (type === "invoice") return "Invoice";
+  if (type === "accounting") return "Accounting";
   if (type === "employee") return "Employee";
   if (type === "crew") return "Crew";
   if (type === "payment") return "Payment";
@@ -417,6 +419,9 @@ export function Header() {
                             )}
                             {suggestion.type === "invoice" && (
                               <FileText className="mt-0.5 size-4 shrink-0 text-primary" />
+                            )}
+                            {suggestion.type === "accounting" && (
+                              <Calculator className="mt-0.5 size-4 shrink-0 text-primary" />
                             )}
                             {suggestion.type === "employee" && (
                               <UserRound className="mt-0.5 size-4 shrink-0 text-primary" />

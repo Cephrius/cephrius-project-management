@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  addMonths,
   endOfMonth,
   endOfWeek,
   format,
@@ -90,10 +89,8 @@ export default async function DashboardPage() {
 
   const monthStartDate = startOfMonth(now);
   const monthEndDate = endOfMonth(now);
-  const calendarEndDate = endOfMonth(addMonths(now, 12));
   const monthStart = format(monthStartDate, "yyyy-MM-dd");
   const monthEnd = format(monthEndDate, "yyyy-MM-dd");
-  const calendarEnd = format(calendarEndDate, "yyyy-MM-dd");
 
   const [
     projectsRes,
@@ -132,8 +129,10 @@ export default async function DashboardPage() {
       )
       .eq("company_id", companyId)
       .is("deleted_at", null)
+      // The dashboard calendar is intentionally scoped to the current month so
+      // the month widget always matches the surrounding dashboard metrics.
       .gte("scheduled_completion", monthStart)
-      .lte("scheduled_completion", calendarEnd)
+      .lte("scheduled_completion", monthEnd)
       .order("scheduled_completion", { ascending: true }),
     supabase
       .from("jobs")
@@ -435,7 +434,6 @@ export default async function DashboardPage() {
               <MonthJobsCalendar
                 jobs={monthJobs}
                 monthStart={monthStart}
-                calendarEnd={calendarEnd}
               />
             </CardContent>
           </Card>

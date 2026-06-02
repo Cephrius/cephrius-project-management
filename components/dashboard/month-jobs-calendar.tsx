@@ -45,11 +45,9 @@ function formatCurrency(cents: number | null | undefined) {
 export function MonthJobsCalendar({
   jobs,
   monthStart,
-  calendarEnd,
 }: {
   jobs: CalendarJob[];
   monthStart: string;
-  calendarEnd: string;
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,10 +57,6 @@ export function MonthJobsCalendar({
   const currentMonth = useMemo(
     () => startOfMonth(parseYmd(monthStart)),
     [monthStart],
-  );
-  const lastCalendarMonth = useMemo(
-    () => startOfMonth(parseYmd(calendarEnd)),
-    [calendarEnd],
   );
 
   // Group jobs by date once so the calendar highlights and detail panel can read
@@ -215,7 +209,8 @@ export function MonthJobsCalendar({
           ref={calendarRailRef}
           className="flex min-h-0 flex-1 flex-col gap-3 p-3"
         >
-          {/* DayPicker shows the current month first, then lets users browse upcoming scheduled months. */}
+          {/* Keep the dashboard widget pinned to one month with no month
+              navigation; the dedicated calendar page owns browsing controls. */}
           <Calendar
             className={cn(
               "mx-auto w-full rounded-xl bg-muted/20 p-1.5 text-card-foreground dark:bg-white/[0.03] dark:text-foreground [&_[data-day]]:text-foreground [&_[data-day]]:hover:bg-muted/55 dark:[&_[data-day]]:hover:bg-white/[0.06] [&_[data-selected-single=true]]:bg-primary/14 [&_[data-selected-single=true]]:text-foreground [&_[data-selected-single=true]]:ring-1 [&_[data-selected-single=true]]:ring-primary/30 dark:[&_[data-selected-single=true]]:bg-primary/24 dark:[&_[data-selected-single=true]]:text-primary-foreground dark:[&_[data-selected-single=true]]:ring-primary/35",
@@ -231,7 +226,7 @@ export function MonthJobsCalendar({
             required
             defaultMonth={currentMonth}
             fromMonth={currentMonth}
-            toMonth={lastCalendarMonth}
+            toMonth={currentMonth}
             showOutsideDays={false}
             selected={selectedDate}
             onSelect={handleDateSelect}
@@ -245,11 +240,10 @@ export function MonthJobsCalendar({
               root: "relative w-full max-w-full",
               months: "flex w-full justify-center",
               month: "flex w-full max-w-full flex-col gap-1.5",
-              month_caption:
-                "relative flex h-8 items-center justify-center px-8",
+              month_caption: "flex h-8 items-center justify-center",
               caption_label:
                 "truncate text-xs font-semibold text-foreground dark:text-foreground sm:text-sm",
-              nav: "absolute inset-x-0 top-0 z-10 flex h-8 items-center justify-between px-1",
+              nav: "hidden",
               button_previous:
                 "size-7 rounded-full bg-transparent p-0 text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground disabled:pointer-events-none disabled:opacity-30 dark:text-muted-foreground dark:hover:bg-transparent dark:hover:text-foreground [&_svg]:size-4",
               button_next:

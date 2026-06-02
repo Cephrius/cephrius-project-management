@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  CalendarDays,
   DollarSign,
   FileText,
   FolderKanban,
@@ -24,6 +25,7 @@ function getActiveHref(pathname: string) {
     return "/accounting";
   }
   if (pathname.startsWith("/projects")) return "/projects";
+  if (pathname.startsWith("/calendar")) return "/calendar";
   if (pathname.startsWith("/invoices")) return "/invoices";
   if (pathname.startsWith("/employees-crews")) return "/employees-crews";
   if (pathname.startsWith("/payroll")) return "/payroll";
@@ -34,6 +36,7 @@ function getActiveHref(pathname: string) {
 const navItems = [
   { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
   { href: "/projects",   label: "Projects",   icon: FolderKanban },
+  { href: "/calendar",   label: "Calendar",   icon: CalendarDays },
   { href: "/invoices",   label: "Invoices",   icon: FileText },
   { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },
   { href: "/accounting", label: "Accounting", icon: DollarSign },
@@ -53,7 +56,7 @@ export function SidebarNav({
 
   if (mobile) {
     return (
-      <nav className="grid grid-cols-7 gap-1 ">
+      <nav className="grid grid-cols-4 gap-1">
         {navItems.map((item) => {
           const isActive = activeHref === item.href;
           const Icon = item.icon;
