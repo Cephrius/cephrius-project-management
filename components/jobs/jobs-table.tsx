@@ -56,7 +56,7 @@ export type JobRow = {
 
 function formatMoney(cents: number) {
   const dollars = cents / 100;
-  return dollars.toLocaleString(undefined, {
+  return dollars.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });

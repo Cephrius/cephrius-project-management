@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useBrowserStoredState } from "@/hooks/use-browser-storage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ArrowRight,
@@ -64,7 +65,7 @@ type RecipientInvoiceGroup = {
 
 function money(cents: number | null) {
   const value = cents ?? 0;
-  return (value / 100).toLocaleString(undefined, {
+  return (value / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });
@@ -74,7 +75,7 @@ function formatDate(value: string | null): string {
   if (!value) return "N/A";
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return "N/A";
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -84,6 +85,7 @@ function formatDate(value: string | null): string {
 function getInvoiceStatus(
   dueDate: string | null,
   isPaid: boolean | null,
+  todayKey: string,
 ): InvoiceStatus {
   if (isPaid) return "paid";
   if (!dueDate) return "issued";
@@ -91,7 +93,7 @@ function getInvoiceStatus(
   const due = new Date(`${dueDate}T00:00:00`);
   if (Number.isNaN(due.getTime())) return "issued";
 
-  const today = new Date();
+  const today = new Date(`${todayKey}T00:00:00`);
   today.setHours(0, 0, 0, 0);
 
   return due < today ? "overdue" : "due";
@@ -129,52 +131,47 @@ function parseStoredKeys(raw: string | null): string[] | null {
   }
 }
 
+function parseInvoicesView(raw: string | null): ViewMode {
+  return raw === "grouped" ? "grouped" : "list";
+}
+
+function serializeStoredKeys(value: string[] | null) {
+  return value === null ? null : JSON.stringify(value);
+}
+
 function getRecipientLabel(invoice: InvoiceListItem): string {
   return invoice.bill_to_name?.trim() || UNASSIGNED_RECIPIENT_LABEL;
 }
 
 export function InvoicesPageClient({
   invoices,
+  todayKey,
 }: {
   invoices: InvoiceListItem[];
+  todayKey: string;
 }) {
   const [query, setQuery] = useState("");
   const [billToFilter, setBillToFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [view, setView] = useState<ViewMode>(() => {
-    if (typeof window === "undefined") return "list";
-    const savedView = window.localStorage.getItem(INVOICES_VIEW_STORAGE_KEY);
-    return savedView === "grouped" ? "grouped" : "list";
+  const [view, setView] = useBrowserStoredState<ViewMode>({
+    key: INVOICES_VIEW_STORAGE_KEY,
+    defaultValue: "list",
+    parse: parseInvoicesView,
+    serialize: (value) => value,
   });
-  const [expandedRecipients, setExpandedRecipients] = useState<string[] | null>(
-    () => {
-      if (typeof window === "undefined") return null;
-      return parseStoredKeys(
-        window.localStorage.getItem(INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY),
-      );
-    },
-  );
+  const [expandedRecipients, setExpandedRecipients] = useBrowserStoredState<
+    string[] | null
+  >({
+    key: INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY,
+    defaultValue: null,
+    parse: parseStoredKeys,
+    serialize: serializeStoredKeys,
+  });
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
     invoices[0]?.id ?? null,
   );
   const isMobile = useIsMobile();
   const router = useRouter();
-
-  useEffect(() => {
-    window.localStorage.setItem(INVOICES_VIEW_STORAGE_KEY, view);
-  }, [view]);
-
-  useEffect(() => {
-    if (expandedRecipients === null) {
-      window.localStorage.removeItem(INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY);
-      return;
-    }
-
-    window.localStorage.setItem(
-      INVOICES_EXPANDED_RECIPIENTS_STORAGE_KEY,
-      JSON.stringify(expandedRecipients),
-    );
-  }, [expandedRecipients]);
 
   const billToOptions = useMemo(() => {
     const set = new Set<string>();
@@ -190,7 +187,7 @@ export function InvoicesPageClient({
 
     return invoices
       .filter((invoice) => {
-        const status = getInvoiceStatus(invoice.due_date, invoice.is_paid);
+        const status = getInvoiceStatus(invoice.due_date, invoice.is_paid, todayKey);
         const matchesBillTo =
           billToFilter === "all" || getRecipientLabel(invoice) === billToFilter;
         const matchesStatus = statusFilter === "all" || statusFilter === status;
@@ -207,7 +204,7 @@ export function InvoicesPageClient({
         const bCreated = b.created_at ?? "";
         return bCreated.localeCompare(aCreated);
       });
-  }, [invoices, query, billToFilter, statusFilter]);
+  }, [invoices, query, billToFilter, statusFilter, todayKey]);
 
   const groupedInvoices = useMemo<RecipientInvoiceGroup[]>(() => {
     const recipientMap = new Map<string, InvoiceListItem[]>();
@@ -242,15 +239,15 @@ export function InvoicesPageClient({
             0,
           ),
           paidCount: sortedInvoices.filter((invoice) =>
-            getInvoiceStatus(invoice.due_date, invoice.is_paid) === "paid",
+            getInvoiceStatus(invoice.due_date, invoice.is_paid, todayKey) === "paid",
           ).length,
           overdueCount: sortedInvoices.filter((invoice) =>
-            getInvoiceStatus(invoice.due_date, invoice.is_paid) === "overdue",
+            getInvoiceStatus(invoice.due_date, invoice.is_paid, todayKey) === "overdue",
           ).length,
         };
       })
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [filteredInvoices]);
+  }, [filteredInvoices, todayKey]);
 
   const effectiveExpandedRecipients = useMemo(() => {
     const recipientKeys = new Set(groupedInvoices.map((group) => group.key));
@@ -481,6 +478,7 @@ export function InvoicesPageClient({
                           const status = getInvoiceStatus(
                             invoice.due_date,
                             invoice.is_paid,
+                            todayKey,
                           );
                           const isSelected =
                             effectiveSelectedInvoiceId === invoice.id;
@@ -545,7 +543,11 @@ export function InvoicesPageClient({
             </div>
           ) : (
             filteredInvoices.map((invoice) => {
-              const status = getInvoiceStatus(invoice.due_date, invoice.is_paid);
+              const status = getInvoiceStatus(
+                invoice.due_date,
+                invoice.is_paid,
+                todayKey,
+              );
               const isSelected = effectiveSelectedInvoiceId === invoice.id;
 
               return (

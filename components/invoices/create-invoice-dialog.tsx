@@ -49,7 +49,7 @@ const CONTRACTOR_PRESETS_STORAGE_KEY = "invoice:contractor-presets";
 const BILL_TO_PRESETS_STORAGE_KEY = "invoice:bill-to-presets";
 
 function money(cents: number) {
-  return (cents / 100).toLocaleString(undefined, {
+  return (cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });

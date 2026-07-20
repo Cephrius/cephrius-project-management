@@ -7,6 +7,7 @@ import {
   FileText,
   FolderKanban,
   LayoutDashboard,
+  Map as MapIcon,
   Settings,
   Users,
   Wallet,
@@ -25,6 +26,7 @@ function getActiveHref(pathname: string) {
     return "/accounting";
   }
   if (pathname.startsWith("/projects")) return "/projects";
+  if (pathname.startsWith("/map")) return "/map";
   if (pathname.startsWith("/calendar")) return "/calendar";
   if (pathname.startsWith("/invoices")) return "/invoices";
   if (pathname.startsWith("/employees-crews")) return "/employees-crews";
@@ -36,6 +38,7 @@ function getActiveHref(pathname: string) {
 const navItems = [
   { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
   { href: "/projects",   label: "Projects",   icon: FolderKanban },
+  { href: "/map",        label: "Map",        icon: MapIcon },
   { href: "/calendar",   label: "Calendar",   icon: CalendarDays },
   { href: "/invoices",   label: "Invoices",   icon: FileText },
   { href: "/employees-crews",  label: "Employees & Crews",  icon: Users },

@@ -7,6 +7,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
 import { resolveInvoiceDueDate } from "@/lib/settings/preferences";
+import { getProjectStreetTitle } from "@/components/projects/project-location";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -180,7 +181,7 @@ export async function createInvoiceForBuilder(formData: FormData) {
       invoice_id: invoice.id,
       job_id: j.id,
       project_id_snapshot: p.id,
-      project_address_snapshot: p.project_address,
+      project_address_snapshot: getProjectStreetTitle(p),
       subdivision_name_raw_snapshot: subdivisionNameRawSnapshot,
       builder_name_snapshot: builder.name,
       job_title_snapshot: j.title,
@@ -584,7 +585,7 @@ export async function editInvoiceWithJobs({
         invoice_id: invoiceId,
         job_id: j.id,
         project_id_snapshot: j.project_id,
-        project_address_snapshot: p?.project_address ?? "",
+        project_address_snapshot: p ? getProjectStreetTitle(p) : "",
         subdivision_name_raw_snapshot:
           (p?.subdivision ?? "").trim() || "Unassigned",
         builder_name_snapshot: p?.builder_name ?? "",

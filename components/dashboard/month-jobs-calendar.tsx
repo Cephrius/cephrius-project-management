@@ -36,7 +36,7 @@ function parseYmd(value: string): Date {
 
 function formatCurrency(cents: number | null | undefined) {
   if (!cents) return "$0.00";
-  return (cents / 100).toLocaleString(undefined, {
+  return (cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });
@@ -45,9 +45,11 @@ function formatCurrency(cents: number | null | undefined) {
 export function MonthJobsCalendar({
   jobs,
   monthStart,
+  todayKey,
 }: {
   jobs: CalendarJob[];
   monthStart: string;
+  todayKey: string;
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,7 +104,6 @@ export function MonthJobsCalendar({
   // Selected date handling stays inside the current month now that future-month
   // navigation is intentionally disabled.
   const initialSelectedDate = useMemo(() => {
-    const todayKey = format(new Date(), "yyyy-MM-dd");
     if (jobsByDate.has(todayKey)) {
       const parsedToday = parseYmd(todayKey);
       if (isSameMonth(parsedToday, currentMonth)) return parsedToday;
@@ -111,7 +112,7 @@ export function MonthJobsCalendar({
     if (firstCurrentMonthJobDate) return firstCurrentMonthJobDate;
 
     return currentMonth;
-  }, [currentMonth, firstCurrentMonthJobDate, jobsByDate]);
+  }, [currentMonth, firstCurrentMonthJobDate, jobsByDate, todayKey]);
 
   const [selectedDate, setSelectedDate] = useState<Date>(initialSelectedDate);
 

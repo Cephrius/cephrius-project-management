@@ -101,7 +101,7 @@ export function DesktopSidebar() {
             >
               Cephrius Technologies
             </a>
-            <a>© {new Date().getFullYear()}</a>
+            <a>© JobSyte</a>
           </>
         )}
       </div>

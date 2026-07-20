@@ -77,7 +77,7 @@ export function MobileSidebar() {
           >
             Cephrius Technologies
           </a>
-          <span>© {new Date().getFullYear()}</span>
+          <span>© JobSyte</span>
         </div>
       </SheetContent>
     </Sheet>

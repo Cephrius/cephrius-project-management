@@ -1,6 +1,7 @@
 // Onboarding: accounting overview server page. Project-level accounting reuses
 // the same data types and client components under `components/accounting/*`.
 import { redirect } from "next/navigation";
+import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
@@ -21,6 +22,8 @@ function buildOverviewRow(
   project: {
     id: string;
     project_address: string;
+    project_city: string | null;
+    project_state: string | null;
     builder_name: string | null;
     subdivision: string | null;
   },
@@ -67,6 +70,8 @@ function buildOverviewRow(
   return {
     project_id: project.id,
     project_address: project.project_address,
+    project_city: project.project_city,
+    project_state: project.project_state,
     builder_name: project.builder_name,
     subdivision: project.subdivision,
     status,
@@ -99,7 +104,7 @@ export default async function AccountingOverviewPage() {
   // Fetch all non-deleted projects for the company
   const { data: projects, error: projectsErr } = await supabase
     .from("projects")
-    .select("id, project_address, builder_name, subdivision")
+    .select("id, project_address, project_city, project_state, builder_name, subdivision")
     .eq("company_id", companyId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -199,7 +204,13 @@ export default async function AccountingOverviewPage() {
         </p>
       </div>
 
-      <AccountingOverviewClient rows={rows} jobs={jobs} expenses={expenses} invoices={invoices} />
+      <AccountingOverviewClient
+        rows={rows}
+        jobs={jobs}
+        expenses={expenses}
+        invoices={invoices}
+        todayKey={format(new Date(), "yyyy-MM-dd")}
+      />
     </div>
   );
 }

@@ -16,7 +16,7 @@ import { markProjectJobPaid } from "@/components/projects/actions";
 
 function formatPrice(cents: number | null): string {
   if (cents === null) return "0";
-  return (cents / 100).toLocaleString(undefined, {
+  return (cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });

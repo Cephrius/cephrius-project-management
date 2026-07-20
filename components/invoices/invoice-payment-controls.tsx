@@ -38,7 +38,7 @@ export type InvoiceItemWithPayment = {
 };
 
 function money(cents: number) {
-  return (cents / 100).toLocaleString(undefined, {
+  return (cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });

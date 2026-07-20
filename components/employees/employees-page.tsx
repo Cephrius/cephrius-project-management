@@ -100,7 +100,7 @@ type EmployeeFilterKey =
   | "on_jobs";
 
 function money(cents: number) {
-  return (cents / 100).toLocaleString(undefined, {
+  return (cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
@@ -110,7 +110,7 @@ function money(cents: number) {
 
 function formatDate(value: string | null) {
   if (!value) return "No date";
-  return new Date(value).toLocaleDateString(undefined, {
+  return new Date(value).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -131,7 +131,7 @@ function payDisplay(employee: EmployeeProfile) {
   const suffix = employee.pay_type === "salary" ? "/yr" : "/hr";
   const value =
     employee.pay_type === "salary"
-      ? employee.hourly_rate.toLocaleString(undefined, {
+      ? employee.hourly_rate.toLocaleString("en-US", {
           maximumFractionDigits: 0,
         })
       : employee.hourly_rate.toFixed(2);
@@ -160,14 +160,15 @@ export function EmployeesPageClient({
   jobs,
   payments,
   employeePayments,
+  nowIso,
 }: {
   employees: EmployeeProfile[];
   crews: CrewProfile[];
   jobs: WorkforceJob[];
   payments: WorkforcePayment[];
   employeePayments: EmployeePaymentRecord[];
+  nowIso: string;
 }) {
-  const [nowIso] = useState(() => new Date().toISOString());
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [crewDialogOpen, setCrewDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] =

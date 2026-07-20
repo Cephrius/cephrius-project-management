@@ -10,6 +10,12 @@ import { AddJobButton } from "@/components/jobs/add-job-button";
 import { JobsTable } from "@/components/jobs/jobs-table";
 import { createClient } from "@/lib/supabase/server";
 import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
+import { ProjectMapCard } from "@/components/projects/project-map-card";
+import {
+  getProjectLocationSubtitle,
+  getProjectStreetTitle,
+} from "@/components/projects/project-location";
+import { getPublicMapboxAccessToken } from "@/lib/maps/mapbox";
 import type { ProjectProfitability, ProjectStatus } from "@/components/accounting/types";
 
 function formatMoney(cents: number) {
@@ -18,6 +24,15 @@ function formatMoney(cents: number) {
     style: "currency",
     currency: "USD",
   });
+}
+
+function isMissingProjectLocationColumnError(message: string | undefined) {
+  const normalized = (message ?? "").toLowerCase();
+  return (
+    normalized.includes("project_city") ||
+    normalized.includes("project_state") ||
+    (normalized.includes("schema cache") && normalized.includes("projects"))
+  );
 }
 
 function SmallMetricCard({
@@ -101,12 +116,33 @@ export default async function ProjectDashboardPage({
 
   if (userError || !user) redirect("/login");
 
-  const { data: project } = await supabase
+  let projectRes = await supabase
     .from("projects")
-    .select("id, project_address, builder_name, subdivision")
+    .select("id, project_address, project_city, project_state, builder_name, subdivision")
     .is("deleted_at", null)
     .eq("id", id)
     .single();
+
+  if (
+    projectRes.error &&
+    isMissingProjectLocationColumnError(projectRes.error.message)
+  ) {
+    projectRes = await supabase
+      .from("projects")
+      .select("id, project_address, builder_name, subdivision")
+      .is("deleted_at", null)
+      .eq("id", id)
+      .single();
+  }
+
+  const project = projectRes.data
+    ? {
+        ...projectRes.data,
+        project_city: "project_city" in projectRes.data ? projectRes.data.project_city : null,
+        project_state:
+          "project_state" in projectRes.data ? projectRes.data.project_state : null,
+      }
+    : null;
 
   if (!project) {
     return (
@@ -155,6 +191,8 @@ export default async function ProjectDashboardPage({
   const profitability: ProjectProfitability = {
     project_id:              project.id,
     project_address:         project.project_address,
+    project_city:            project.project_city,
+    project_state:           project.project_state,
     builder_name:            project.builder_name,
     subdivision:             project.subdivision,
     status:                  projStatus,
@@ -217,21 +255,25 @@ export default async function ProjectDashboardPage({
       : profitability.est_net_profit_cents;
   const marginPct =
     revenueForDisplay > 0 ? Math.round((netProfitForDisplay / revenueForDisplay) * 100) : 0;
+  const projectStreetTitle = getProjectStreetTitle(project);
+  const projectLocationSubtitle = getProjectLocationSubtitle(project);
+  const mapboxToken = getPublicMapboxAccessToken();
 
   return (
     <div className="space-y-6">
       <BreadcrumbSetter
         crumbs={[
           { label: "Projects", href: "/projects" },
-          { label: project.project_address },
+          { label: projectStreetTitle },
         ]}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold">{project.project_address}</h1>
+          <h1 className="text-xl font-semibold">{projectStreetTitle}</h1>
           <p className="text-sm text-muted-foreground">
           Builder: {project.builder_name} • Subdivision: {project.subdivision}
+          {projectLocationSubtitle ? ` • Location: ${projectLocationSubtitle}` : ""}
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
@@ -341,18 +383,28 @@ export default async function ProjectDashboardPage({
         </Card>
       </div>
 
-      <Card className="p-4">
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm font-semibold">Jobs</div>
-            <div className="text-xs text-muted-foreground">
-              Add jobs, then mark them complete for invoicing.
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+        <Card className="min-w-0 p-4">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold">Jobs</div>
+              <div className="text-xs text-muted-foreground">
+                Add jobs, then mark them complete for invoicing.
+              </div>
             </div>
           </div>
-        </div>
 
-        <JobsTable jobs={allJobs} projectId={project.id} />
-      </Card>
+          <JobsTable jobs={allJobs} projectId={project.id} />
+        </Card>
+
+        <ProjectMapCard
+          address={project.project_address}
+          city={project.project_city}
+          mapboxToken={mapboxToken}
+          state={project.project_state}
+          subdivision={project.subdivision}
+        />
+      </div>
     </div>
   );
 }

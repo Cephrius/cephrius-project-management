@@ -7,8 +7,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
+import { useBrowserStoredState } from "@/hooks/use-browser-storage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ArrowRight,
@@ -19,6 +20,7 @@ import {
   Home,
   List,
   ListTodo,
+  MapPin,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -28,6 +30,11 @@ import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog";
 import { ImportProjectJobsButton } from "@/components/projects/import-project-jobs-button";
 import { NewProjectButton } from "@/components/projects/new-project-button";
+import { ProjectMapCard } from "@/components/projects/project-map-card";
+import {
+  getProjectLocationSubtitle,
+  getProjectStreetTitle,
+} from "@/components/projects/project-location";
 import type {
   LookupItem,
   ProjectBillingStatus,
@@ -110,7 +117,7 @@ function formatRelativeTime(value: string | null): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "No activity yet";
 
-  return formatDistanceToNow(date, { addSuffix: true });
+  return format(date, "MMM d, yyyy");
 }
 
 function statusLabel(status: ProjectListItem["status"]): string {
@@ -176,8 +183,19 @@ function parseStoredKeys(raw: string | null): string[] | null {
   }
 }
 
+function parseProjectsView(raw: string | null): ViewMode {
+  if (raw === "list" || raw === "grouped") return raw;
+  return "list";
+}
+
+function serializeStoredKeys(value: string[] | null) {
+  return value === null ? null : JSON.stringify(value);
+}
+
 function getStreetFolderLabel(projectAddress: string): string {
-  const normalized = projectAddress.trim().replace(/\s+/g, " ");
+  const normalized = (projectAddress.split(",")[0] ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
   if (!normalized) return "Unassigned Street";
 
   const match = normalized.match(/^\d+\s+(.+)$/);
@@ -296,10 +314,12 @@ function ProjectCardActionsDropdown({
 export function ProjectsPageClient({
   projects,
   builders,
+  mapboxToken,
   subdivisions,
 }: {
   projects: ProjectListItem[];
   builders: LookupItem[];
+  mapboxToken: string;
   subdivisions: LookupItem[];
 }) {
   const [query, setQuery] = useState("");
@@ -307,59 +327,50 @@ export function ProjectsPageClient({
   const [builderFilter, setBuilderFilter] = useState("all");
   const [subdivisionFilter, setSubdivisionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [view, setView] = useState<ViewMode>(() => {
-    if (typeof window === "undefined") return "list";
-    const savedView = window.localStorage.getItem(PROJECTS_VIEW_STORAGE_KEY);
-    if (savedView === "list" || savedView === "grouped") return savedView;
-    if (savedView === "grid" || savedView === "cards") return "list";
-    if (savedView === "table") return "list";
-    return "list";
+  const [view, setView] = useBrowserStoredState<ViewMode>({
+    key: PROJECTS_VIEW_STORAGE_KEY,
+    defaultValue: "list",
+    parse: parseProjectsView,
+    serialize: (value) => value,
   });
-  const [expandedSubdivisions, setExpandedSubdivisions] = useState<
+  const [expandedSubdivisions, setExpandedSubdivisions] = useBrowserStoredState<
     string[] | null
-  >(() => {
-    if (typeof window === "undefined") return null;
-    return parseStoredKeys(
-      window.localStorage.getItem(PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY),
-    );
+  >({
+    key: PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY,
+    defaultValue: null,
+    parse: parseStoredKeys,
+    serialize: serializeStoredKeys,
   });
-  const [expandedBuilders, setExpandedBuilders] = useState<string[] | null>(
-    () => {
-      if (typeof window === "undefined") return null;
-      return parseStoredKeys(
-        window.localStorage.getItem(PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY),
-      );
-    },
-  );
-  const [expandedStreets, setExpandedStreets] = useState<string[] | null>(() => {
-    if (typeof window === "undefined") return null;
-    return parseStoredKeys(
-      window.localStorage.getItem(PROJECTS_EXPANDED_STREETS_STORAGE_KEY),
-    );
+  const [expandedBuilders, setExpandedBuilders] = useBrowserStoredState<
+    string[] | null
+  >({
+    key: PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY,
+    defaultValue: null,
+    parse: parseStoredKeys,
+    serialize: serializeStoredKeys,
   });
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    () => {
-      if (typeof window === "undefined") return projects[0]?.id ?? null;
-      const savedProjectId = window.sessionStorage.getItem(
-        PROJECTS_SELECTED_STORAGE_KEY,
-      );
-      return savedProjectId || projects[0]?.id || null;
-    },
-  );
+  const [expandedStreets, setExpandedStreets] = useBrowserStoredState<
+    string[] | null
+  >({
+    key: PROJECTS_EXPANDED_STREETS_STORAGE_KEY,
+    defaultValue: null,
+    parse: parseStoredKeys,
+    serialize: serializeStoredKeys,
+  });
+  const [selectedProjectId, setSelectedProjectId] = useBrowserStoredState<
+    string | null
+  >({
+    key: PROJECTS_SELECTED_STORAGE_KEY,
+    storage: "session",
+    defaultValue: projects[0]?.id ?? null,
+    parse: (raw) => raw || projects[0]?.id || null,
+    serialize: (value) => value,
+  });
   const [selectedProjectJobs, setSelectedProjectJobs] = useState<QuickJobItem[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [quickCompleteDrawerOpen, setQuickCompleteDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
   const router = useRouter();
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!selectedProjectId) {
-      window.sessionStorage.removeItem(PROJECTS_SELECTED_STORAGE_KEY);
-      return;
-    }
-    window.sessionStorage.setItem(PROJECTS_SELECTED_STORAGE_KEY, selectedProjectId);
-  }, [selectedProjectId]);
 
   useEffect(() => {
     if (!selectedProjectId) {
@@ -405,46 +416,6 @@ export function ProjectsPageClient({
     };
   }, [selectedProjectId]);
 
-  useEffect(() => {
-    localStorage.setItem(PROJECTS_VIEW_STORAGE_KEY, view);
-  }, [view]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (expandedSubdivisions === null) {
-      window.localStorage.removeItem(PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      PROJECTS_EXPANDED_SUBDIVISIONS_STORAGE_KEY,
-      JSON.stringify(expandedSubdivisions),
-    );
-  }, [expandedSubdivisions]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (expandedBuilders === null) {
-      window.localStorage.removeItem(PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      PROJECTS_EXPANDED_BUILDERS_STORAGE_KEY,
-      JSON.stringify(expandedBuilders),
-    );
-  }, [expandedBuilders]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (expandedStreets === null) {
-      window.localStorage.removeItem(PROJECTS_EXPANDED_STREETS_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      PROJECTS_EXPANDED_STREETS_STORAGE_KEY,
-      JSON.stringify(expandedStreets),
-    );
-  }, [expandedStreets]);
-
   const crewOptions = useMemo(() => {
     const set = new Set<string>();
     for (const project of projects) {
@@ -480,7 +451,8 @@ export function ProjectsPageClient({
           project.billing_statuses.includes(statusFilter as ProjectBillingStatus);
         const matchesQuery =
           q.length === 0 ||
-          project.project_address.toLowerCase().includes(q) ||
+          getProjectStreetTitle(project).toLowerCase().includes(q) ||
+          getProjectLocationSubtitle(project).toLowerCase().includes(q) ||
           (project.builder_name ?? "").toLowerCase().includes(q) ||
           (project.subdivision ?? "").toLowerCase().includes(q) ||
           project.crew_names.some((name) => name.toLowerCase().includes(q));
@@ -583,7 +555,7 @@ export function ProjectsPageClient({
             const streets = Array.from(builderGroup.streets.values())
               .map((streetGroup) => {
                 const sortedProjects = [...streetGroup.projects].sort((a, b) =>
-                  a.project_address.localeCompare(b.project_address),
+                  getProjectStreetTitle(a).localeCompare(getProjectStreetTitle(b)),
                 );
 
                 return {
@@ -1086,6 +1058,8 @@ export function ProjectsPageClient({
                                               const isSelected =
                                                 effectiveSelectedProjectId ===
                                                 project.id;
+                                              const locationSubtitle =
+                                                getProjectLocationSubtitle(project);
 
                                               return (
                                                 <Card
@@ -1106,8 +1080,13 @@ export function ProjectsPageClient({
                                                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                     <div className="min-w-0 space-y-1">
                                                       <div className="break-words font-medium">
-                                                        {project.project_address}
+                                                        {getProjectStreetTitle(project)}
                                                       </div>
+                                                      {locationSubtitle ? (
+                                                        <div className="text-xs text-muted-foreground">
+                                                          {locationSubtitle}
+                                                        </div>
+                                                      ) : null}
                                                       <div className="text-xs text-muted-foreground">
                                                         {project.job_count} jobs •{" "}
                                                         {project.open_job_count} open
@@ -1171,6 +1150,7 @@ export function ProjectsPageClient({
           ) : (
             filteredProjects.map((project) => {
               const isSelected = effectiveSelectedProjectId === project.id;
+              const locationSubtitle = getProjectLocationSubtitle(project);
 
               return (
                 <Card
@@ -1198,11 +1178,17 @@ export function ProjectsPageClient({
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <div className="break-words text-lg font-semibold leading-tight sm:text-xl">
-                              {project.project_address}
+                              {getProjectStreetTitle(project)}
                             </div>
                             <ProjectStatusBadges project={project} />
                           </div>
                           <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                            {locationSubtitle ? (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="size-4" />
+                                Location: {locationSubtitle}
+                              </div>
+                            ) : null}
                             <div className="flex items-center gap-2">
                               <Hammer className="size-4" />
                               Builder: {project.builder_name ?? "Unassigned"}
@@ -1255,17 +1241,23 @@ export function ProjectsPageClient({
           )}
         </div>
 
-        <Card className="hidden h-fit border-primary/20 p-5 xl:sticky xl:top-4 xl:block">
-          {selectedProject ? (
-            <div className="space-y-5">
-              <div>
-                <div className="text-sm font-medium text-primary/80">
-                  Selected Project
+        <div className="hidden h-fit space-y-4 xl:sticky xl:top-4 xl:block">
+          <Card className="border-primary/20 p-5">
+            {selectedProject ? (
+              <div className="space-y-5">
+                <div>
+                  <div className="text-sm font-medium text-primary/80">
+                    Selected Project
+                  </div>
+                  <div className="mt-2 text-3xl font-semibold leading-tight">
+                    {getProjectStreetTitle(selectedProject)}
+                  </div>
+                  {getProjectLocationSubtitle(selectedProject) ? (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {getProjectLocationSubtitle(selectedProject)}
+                    </div>
+                  ) : null}
                 </div>
-                <div className="mt-2 text-3xl font-semibold leading-tight">
-                  {selectedProject.project_address}
-                </div>
-              </div>
 
               <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -1330,6 +1322,12 @@ export function ProjectsPageClient({
               </div>
 
               <div className="space-y-2 border-t pt-4 text-sm text-muted-foreground">
+                {getProjectLocationSubtitle(selectedProject) ? (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="size-4" />
+                    Location: {getProjectLocationSubtitle(selectedProject)}
+                  </div>
+                ) : null}
                 <div className="flex items-center gap-2">
                   <Building2 className="size-4" />
                   Builder: {selectedProject.builder_name ?? "Unassigned"}
@@ -1356,13 +1354,24 @@ export function ProjectsPageClient({
                   <ArrowRight className="size-4" />
                 </Link>
               </div>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">
-              Select a project to view details.
-            </div>
-          )}
-        </Card>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Select a project to view details.
+              </div>
+            )}
+          </Card>
+
+          {selectedProject ? (
+            <ProjectMapCard
+              address={selectedProject.project_address}
+              city={selectedProject.project_city}
+              mapboxToken={mapboxToken}
+              state={selectedProject.project_state}
+              subdivision={selectedProject.subdivision}
+            />
+          ) : null}
+        </div>
       </div>
 
       {/* Quick Complete Drawer for mobile/card actions */}

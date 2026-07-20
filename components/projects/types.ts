@@ -4,6 +4,8 @@ export type ProjectBillingStatus = "invoiced" | "paid";
 export type ProjectListItem = {
   id: string;
   project_address: string;
+  project_city: string | null;
+  project_state: string | null;
   builder_name: string | null;
   subdivision: string | null;
   builder_id: string | null;

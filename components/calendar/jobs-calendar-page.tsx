@@ -98,7 +98,7 @@ function parseYmd(value: string): Date {
 
 function formatCurrency(cents: number | null | undefined) {
   if (!cents) return "$0.00";
-  return (cents / 100).toLocaleString(undefined, {
+  return (cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });
@@ -165,8 +165,10 @@ function CalendarJobDayButton({
 
 function JobListPrintablePreview({
   dateGroups,
+  generatedDateKey,
 }: {
   dateGroups: CalendarReportDateGroup[];
+  generatedDateKey: string;
 }) {
   const allJobs = dateGroups.flatMap((group) => group.jobs);
   const completedJobs = allJobs.filter((job) => job.is_completed).length;
@@ -184,7 +186,7 @@ function JobListPrintablePreview({
         <div>
           <div className="text-xl font-semibold">Job List</div>
           <div className="text-sm text-muted-foreground">
-            Generated {format(new Date(), "MMMM d, yyyy")}
+            Generated {format(parseYmd(generatedDateKey), "MMMM d, yyyy")}
           </div>
         </div>
         <div className="text-sm text-muted-foreground">
@@ -301,8 +303,10 @@ function JobListPrintablePreview({
 
 export function JobsCalendarPageClient({
   jobs,
+  todayKey,
 }: {
   jobs: CalendarPageJob[];
+  todayKey: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -320,7 +324,7 @@ export function JobsCalendarPageClient({
   );
 
   const calendarBounds = useMemo(() => {
-    const currentMonth = startOfMonth(new Date());
+    const currentMonth = startOfMonth(parseYmd(todayKey));
     const earliestJobMonth = scheduledJobs[0]
       ? startOfMonth(parseYmd(scheduledJobs[0].scheduled_completion))
       : currentMonth;
@@ -340,7 +344,7 @@ export function JobsCalendarPageClient({
         latestJobMonth > currentMonth ? latestJobMonth : currentMonth,
       currentMonth,
     };
-  }, [scheduledJobs]);
+  }, [scheduledJobs, todayKey]);
 
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const { currentMonth, firstJobMonth, lastJobMonth } = calendarBounds;
@@ -908,7 +912,10 @@ export function JobsCalendarPageClient({
                       </div>
                     ) : (
                       <div className="max-h-[26rem] overflow-auto rounded-lg bg-muted/20 p-3 lg:max-h-[34rem]">
-                        <JobListPrintablePreview dateGroups={reportDateGroups} />
+                        <JobListPrintablePreview
+                          dateGroups={reportDateGroups}
+                          generatedDateKey={todayKey}
+                        />
                       </div>
                     )}
                   </div>
@@ -1000,10 +1007,10 @@ export function JobsCalendarPageClient({
 
           <Button
             type="button"
-            variant=""
+            variant="outline"
             onClick={() => {
               setVisibleMonth(calendarBounds.currentMonth);
-              setSelectedDateKey(format(new Date(), "yyyy-MM-dd"));
+              setSelectedDateKey(todayKey);
               setSelectedJobId(null);
             }}
           >

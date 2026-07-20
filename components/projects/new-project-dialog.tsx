@@ -45,6 +45,10 @@ function normalizeStreetNumber(value: string) {
   return value.replace(/\D+/g, "");
 }
 
+function normalizeState(value: string) {
+  return value.trim().replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
+}
+
 type Item = { id: string; name: string };
 type PresetJobDraft = {
   id: string;
@@ -123,6 +127,8 @@ export function NewProjectDialog({
   const [streetAddress, setStreetAddress] = useState(
     toTitleCase(initialStreetAddress),
   );
+  const [city, setCity] = useState("");
+  const [projectState, setProjectState] = useState("");
 
   const [builders, setBuilders] = useState<ComboboxItem[]>(initialBuilders);
   const [subdivisions, setSubdivisions] =
@@ -250,10 +256,11 @@ export function NewProjectDialog({
     return (
       houseNumber.trim().length > 0 &&
       streetAddress.trim().length > 0 &&
+      (projectState.trim().length === 0 || projectState.trim().length === 2) &&
       !!builder &&
       !!subdivision
     );
-  }, [houseNumber, streetAddress, builder, subdivision]);
+  }, [houseNumber, streetAddress, projectState, builder, subdivision]);
 
   const presetJobCount = presetJobs.filter(
     (job) => job.title.trim() || job.price.trim(),
@@ -343,6 +350,10 @@ export function NewProjectDialog({
     const fd = new FormData();
     fd.set("house_number", normalizeStreetNumber(houseNumber));
     fd.set("street_address", toTitleCase(streetAddress));
+    // City/state stay separate from the street title so invoices snapshot only
+    // the project address while maps can still use the extra context.
+    fd.set("city", toTitleCase(city));
+    fd.set("state", normalizeState(projectState));
 
     // We submit IDs when selected.
     if (builder?.id) fd.set("builder_id", builder.id);
@@ -363,7 +374,11 @@ export function NewProjectDialog({
     startTransition(async () => {
       const res = await createProject(fd);
       if (!res.ok) {
-        setError(res.message ?? "Failed to create project.");
+        setError(
+          "message" in res && res.message
+            ? res.message
+            : "Failed to create project.",
+        );
         return;
       }
       if (!("projectId" in res)) {
@@ -398,7 +413,7 @@ export function NewProjectDialog({
             onSubmit();
           }}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
             <div className="space-y-2">
               <div className="text-sm font-medium">Street Number</div>
               <Input
@@ -411,7 +426,7 @@ export function NewProjectDialog({
               />
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-2 sm:col-span-3">
               <div className="text-sm font-medium">Street Address</div>
               <Input
                 value={streetAddress}
@@ -420,6 +435,29 @@ export function NewProjectDialog({
                   setStreetAddress((current) => toTitleCase(current))
                 }
                 placeholder="Main St"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-1">
+              <div className="text-sm font-medium">City</div>
+              <Input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                onBlur={() => setCity((current) => toTitleCase(current))}
+                placeholder="Dallas"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-1">
+              <div className="text-sm font-medium">State</div>
+              <Input
+                value={projectState}
+                onChange={(e) => setProjectState(normalizeState(e.target.value))}
+                onBlur={() =>
+                  setProjectState((current) => normalizeState(current))
+                }
+                placeholder="TX"
+                maxLength={2}
               />
             </div>
           </div>

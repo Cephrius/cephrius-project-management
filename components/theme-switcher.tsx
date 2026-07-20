@@ -87,6 +87,11 @@ export function ThemeSwitcher({
   const [primaryColor, setPrimaryColor] = useState<PrimaryColorKey>(
     DEFAULT_PRIMARY_COLOR,
   );
+  // next-themes only knows the real theme on the client, so the server render
+  // and the first client render must be identical. `mounted` stays false until
+  // after hydration; theme-dependent output (the active icon, the swatch color)
+  // is computed from a stable default until then to avoid a hydration mismatch.
+  const [mounted, setMounted] = useState(false);
   const transitionCleanupRef = useRef<number | null>(null);
 
   const THEME_TRANSITION_MS = 180;
@@ -105,6 +110,12 @@ export function ThemeSwitcher({
       transitionCleanupRef.current = null;
     }, THEME_TRANSITION_MS + 80);
   }
+
+  // Flip to the real (client-known) theme only after hydration completes.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -146,11 +157,18 @@ export function ThemeSwitcher({
     window.localStorage.setItem(PRIMARY_COLOR_STORAGE_KEY, next);
   }
 
+  // Until mounted, mirror the SSR output: `theme` defaults to "system", which
+  // renders MonitorIcon. Only after hydration do we switch to the real theme.
   const ActiveIcon = useMemo(() => {
+    if (!mounted) return MonitorIcon;
     if (selectedTheme === "light") return SunIcon;
     if (selectedTheme === "dark") return MoonIcon;
     return MonitorIcon;
-  }, [selectedTheme]);
+  }, [mounted, selectedTheme]);
+
+  // `resolvedTheme` is undefined on the server, so light-mode swatch overrides
+  // must stay off until mounted to keep the first client render in sync.
+  const isLightMode = mounted && resolvedTheme === "light";
 
   const activePrimary = useMemo(
     () =>
@@ -178,7 +196,7 @@ export function ThemeSwitcher({
               // Reflect the adapted color in the trigger swatch —
               // black for "white" in light mode, otherwise the original.
               backgroundColor:
-                activePrimary.id === "white" && resolvedTheme === "light"
+                activePrimary.id === "white" && isLightMode
                   ? "#000000"
                   : activePrimary.primary,
             }}
@@ -228,14 +246,14 @@ export function ThemeSwitcher({
                   // Show black swatch for "white" color in light mode
                   // so the preview matches the actual applied color.
                   backgroundColor:
-                    color.id === "white" && resolvedTheme === "light"
+                    color.id === "white" && isLightMode
                       ? "#000000"
                       : color.primary,
                 }}
                 aria-hidden="true"
               />
               {/* Swap black/white swatch for "white" color in light mode */}
-              {color.id === "white" && resolvedTheme === "light" ? "Black" : color.label}
+              {color.id === "white" && isLightMode ? "Black" : color.label}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

@@ -56,7 +56,7 @@ export type EditableInvoice = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function money(cents: number | null | undefined) {
-  return ((cents ?? 0) / 100).toLocaleString(undefined, {
+  return ((cents ?? 0) / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });
@@ -507,5 +507,4 @@ export function EditInvoiceDialog({
     </Dialog>
   );
 }
-
 

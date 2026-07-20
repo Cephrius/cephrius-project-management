@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
 import { resolveInvoiceDueDate } from "@/lib/settings/preferences";
+import { getProjectStreetTitle } from "@/components/projects/project-location";
 import { redirect } from "next/navigation";
 
 function formatInvoiceNumber() {
@@ -131,7 +132,7 @@ export async function createInvoice(projectId: string, formData: FormData) {
     invoice_id: invoice.id,
     job_id: j.id,
     project_id_snapshot: project.id,
-    project_address_snapshot: project.project_address,
+    project_address_snapshot: getProjectStreetTitle(project),
     subdivision_name_raw_snapshot:
       (project.subdivision ?? "").trim() || "Unassigned",
     builder_name_snapshot: project.builder_name,
