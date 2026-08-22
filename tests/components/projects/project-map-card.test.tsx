@@ -22,7 +22,7 @@ describe("ProjectMapCard", () => {
     );
   });
 
-  it("asks Google Maps for the current project address", async () => {
+  it("asks Google Maps for only the current project's street line", async () => {
     render(
       <ProjectMapCard
         address="2065 Solstice Lndg Dr"
@@ -34,7 +34,7 @@ describe("ProjectMapCard", () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        "/api/maps/geocode?address=2065+Solstice+Lndg+Dr%2C+Katy%2C+TX",
+        "/api/maps/geocode?address=2065+Solstice+Lndg+Dr",
         { signal: expect.any(AbortSignal) },
       );
     });

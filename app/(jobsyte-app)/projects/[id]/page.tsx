@@ -402,7 +402,6 @@ export default async function ProjectDashboardPage({
           city={project.project_city}
           mapboxToken={mapboxToken}
           state={project.project_state}
-          subdivision={project.subdivision}
         />
       </div>
     </div>

@@ -34,7 +34,6 @@ type ProjectMapCardProps = {
   city?: string | null;
   mapboxToken: string;
   state?: string | null;
-  subdivision?: string | null;
 };
 
 export function ProjectMapCard({
@@ -42,7 +41,6 @@ export function ProjectMapCard({
   city,
   mapboxToken,
   state: projectState,
-  subdivision,
 }: ProjectMapCardProps) {
   const [state, setState] = useState<GeocodeState>("idle");
   const [status, setStatus] = useState<string | null>(null);
@@ -56,10 +54,10 @@ export function ProjectMapCard({
     project_state: projectState,
   };
   const streetAddress = getProjectStreetTitle(projectLocation);
-  // Google receives the complete current project address for geocoding while
-  // the card continues to show the concise street address.
+  // Geocoding intentionally receives only the street number and street name.
+  // City, state, and subdivision are excluded from the Google Maps API request.
+  const geocodeAddress = streetAddress.trim();
   const normalizedAddress = getProjectMapAddress(projectLocation);
-  const normalizedSubdivision = subdivision?.trim() ?? "";
 
   const directionsUrl = useMemo(() => {
     const url = new URL("https://www.google.com/maps/dir/");
@@ -83,7 +81,7 @@ export function ProjectMapCard({
     const controller = new AbortController();
 
     async function findCurrentProjectAddress() {
-      if (!normalizedAddress) {
+      if (!geocodeAddress) {
         setStatus("INVALID_REQUEST");
         setMapQuery("");
         setCoordinates(null);
@@ -107,10 +105,7 @@ export function ProjectMapCard({
       setCoordinates(null);
 
       try {
-        const params = new URLSearchParams({ address: normalizedAddress });
-        if (normalizedSubdivision) {
-          params.set("subdivision", normalizedSubdivision);
-        }
+        const params = new URLSearchParams({ address: geocodeAddress });
 
         const response = await fetch(`/api/maps/geocode?${params.toString()}`, {
           signal: controller.signal,
@@ -130,7 +125,7 @@ export function ProjectMapCard({
         ) {
           // Mapbox only displays the coordinate Google resolves from the
           // project's current address; there is no manual override path.
-          setMapQuery(payload.query?.trim() || normalizedAddress);
+          setMapQuery(payload.query?.trim() || geocodeAddress);
           setCoordinates(googleCoordinates);
           setState("found");
           return;
@@ -153,7 +148,7 @@ export function ProjectMapCard({
 
     void findCurrentProjectAddress();
     return () => controller.abort();
-  }, [mapboxToken, normalizedAddress, normalizedSubdivision, requestKey]);
+  }, [geocodeAddress, mapboxToken, requestKey]);
 
   const isMapReady = state === "found" && Boolean(mapImageUrl);
   const modalTitle =
