@@ -30,7 +30,9 @@ describe("mapbox helpers", () => {
       height: 480,
     });
 
-    expect(url).toContain("https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/");
+    expect(url).toContain(
+      "https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/",
+    );
     expect(url).toContain("pin-s-1+2563eb(-95.8245,29.7854)");
     expect(url).toContain("-95.8245,29.7854,16,0/640x480@2x");
     expect(url).toContain("access_token=mapbox-token");

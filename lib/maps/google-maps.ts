@@ -27,6 +27,15 @@ export type GoogleMapsGeocodeResponse = {
   error_message?: string;
 };
 
+export type MapLocationResponse = {
+  found: boolean;
+  provider?: "google-maps";
+  query?: string;
+  coordinates?: { lat: number; lng: number } | null;
+  status: string;
+  message?: string | null;
+};
+
 type GoogleMapsUrlInput = {
   address: string;
   apiKey: string;

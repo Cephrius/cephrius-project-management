@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -21,19 +22,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { getProjectMapAddress } from "@/components/projects/project-location";
+import {
+  getProjectMapAddress,
+  getProjectStreetTitle,
+} from "@/components/projects/project-location";
+import type { MapLocationResponse } from "@/lib/maps/google-maps";
 import { buildMapboxStaticImageUrl } from "@/lib/maps/mapbox";
 
 type GeocodeState = "idle" | "loading" | "found" | "not-found" | "error";
-
-type GeocodeResponse = {
-  found: boolean;
-  query?: string;
-  lat?: number | null;
-  lng?: number | null;
-  status: string;
-  message?: string | null;
-};
 
 type ProjectMapCardProps = {
   address: string;
@@ -59,11 +55,14 @@ export function ProjectMapCard({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [requestKey, setRequestKey] = useState(0);
-  const normalizedAddress = getProjectMapAddress({
+  const projectLocation = {
     project_address: address,
     project_city: city,
     project_state: projectState,
-  });
+  };
+  const streetAddress = getProjectStreetTitle(projectLocation);
+  // Google keeps city/state context for accuracy; the UI shows only the street.
+  const normalizedAddress = getProjectMapAddress(projectLocation);
   const normalizedSubdivision = subdivision?.trim() ?? "";
 
   const mapImageUrl = useMemo(() => {
@@ -121,19 +120,22 @@ export function ProjectMapCard({
           `/api/maps/geocode?${params.toString()}`,
           { signal: controller.signal },
         );
-        const payload = (await response.json()) as GeocodeResponse;
+        const payload = (await response.json()) as MapLocationResponse;
 
         if (controller.signal.aborted) return;
 
         setStatus(payload.status);
+        const googleCoordinates = payload.coordinates;
         if (
           response.ok &&
           payload.found &&
-          typeof payload.lat === "number" &&
-          typeof payload.lng === "number"
+          payload.provider === "google-maps" &&
+          typeof googleCoordinates?.lat === "number" &&
+          typeof googleCoordinates.lng === "number"
         ) {
           setMapQuery(payload.query?.trim() || normalizedAddress);
-          setCoordinates({ lat: payload.lat, lng: payload.lng });
+          // Mapbox receives only the coordinates resolved by Google Maps.
+          setCoordinates(googleCoordinates);
           setState("found");
           return;
         }
@@ -162,28 +164,35 @@ export function ProjectMapCard({
   const modalTitle =
     status === "MAPBOX_CONFIGURATION_ERROR"
       ? "Mapbox is not configured"
+      : status === "MAPBOX_IMAGE_ERROR"
+      ? "Mapbox map could not load"
       : status === "CONFIGURATION_ERROR"
       ? "Google address search is not configured"
       : "Address Not Found";
   const modalDescription =
     status === "MAPBOX_CONFIGURATION_ERROR"
       ? "Add NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN to enable project map views."
+      : status === "MAPBOX_IMAGE_ERROR"
+      ? "Mapbox rejected or could not deliver the project map image. Check the access token restrictions and try again."
       : status === "CONFIGURATION_ERROR"
       ? "Add GOOGLE_MAPS_API_KEY to enable project address search."
-      : `Google Maps API could not find "${normalizedAddress}". Check the project address and try again.`;
+      : `Google Maps API could not find "${streetAddress}". Check the project address and try again.`;
+
+  function handleMapImageError() {
+    setStatus("MAPBOX_IMAGE_ERROR");
+    setState("error");
+    setFullscreenOpen(false);
+    setDialogOpen(true);
+  }
 
   return (
     <>
       <Card className="flex flex-col p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold">Project Map</div>
+            <div className="text-sm font-semibold">Project Satellite Map</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              {mapQuery && mapQuery !== normalizedAddress
-                ? `${mapQuery} from ${normalizedAddress}`
-                : normalizedSubdivision
-                ? `${normalizedAddress} · ${normalizedSubdivision}`
-                : normalizedAddress}
+              {streetAddress}
             </div>
           </div>
           <Button
@@ -200,11 +209,17 @@ export function ProjectMapCard({
         <div className="relative mt-4 flex aspect-[4/3] overflow-hidden rounded-md border bg-muted/40">
           {isMapReady ? (
             <>
-              <div
-                role="img"
-                aria-label={`Mapbox map for ${normalizedAddress}`}
-                className="h-full w-full bg-cover bg-center"
-                style={{ backgroundImage: `url(${mapImageUrl})` }}
+              {/* Mapbox marker URLs contain parentheses, which are invalid in an
+                  unquoted CSS url(). An image source avoids that parsing failure. */}
+              <Image
+                src={mapImageUrl}
+                alt={`Mapbox map for ${streetAddress}`}
+                fill
+                priority={false}
+                sizes="(max-width: 1024px) 100vw, 33vw"
+                className="object-cover"
+                unoptimized
+                onError={handleMapImageError}
               />
               <Button
                 type="button"
@@ -244,7 +259,9 @@ export function ProjectMapCard({
 
         <div className="mt-3 flex items-center justify-between gap-3 border-t pt-3">
           <span className="text-xs text-muted-foreground">
-            {status ? `Google search: ${status} · Mapbox view` : "Mapbox view"}
+            {status
+              ? `Google search: ${status} · Mapbox satellite view`
+              : "Mapbox satellite view"}
           </span>
           <Button
             asChild
@@ -282,13 +299,16 @@ export function ProjectMapCard({
           showCloseButton
           className="h-[100dvh] max-h-[100dvh] max-w-[100vw] gap-0 overflow-hidden rounded-none border-0 p-0 ring-0 sm:max-w-[100vw]"
         >
-          <div className="h-full w-full bg-muted/40">
+          <div className="relative h-full w-full bg-muted/40">
             {isMapReady ? (
-              <div
-                role="img"
-                aria-label={`Fullscreen Mapbox map for ${normalizedAddress}`}
-                className="h-full w-full bg-cover bg-center"
-                style={{ backgroundImage: `url(${mapImageUrl})` }}
+              <Image
+                src={mapImageUrl}
+                alt={`Fullscreen Mapbox map for ${streetAddress}`}
+                fill
+                sizes="100vw"
+                className="object-cover"
+                unoptimized
+                onError={handleMapImageError}
               />
             ) : (
               <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">

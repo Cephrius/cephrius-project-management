@@ -4,6 +4,10 @@ export type MapboxEnv = {
   NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN?: string;
 };
 
+// Satellite Streets renders imagery consistently in both GL JS and Static Images.
+export const MAPBOX_STYLE_ID = "satellite-streets-v12";
+export const MAPBOX_STYLE_URL = `mapbox://styles/mapbox/${MAPBOX_STYLE_ID}`;
+
 type MapboxMarker = {
   lat: number;
   lng: number;
@@ -83,7 +87,7 @@ export function buildMapboxStaticImageUrl({
       : "auto";
 
   const url = new URL(
-    `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlays}/${center}/${width}x${height}@2x`,
+    `https://api.mapbox.com/styles/v1/mapbox/${MAPBOX_STYLE_ID}/static/${overlays}/${center}/${width}x${height}@2x`,
   );
   url.searchParams.set("access_token", accessToken.trim());
   if (validMarkers.length > 1) {

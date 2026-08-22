@@ -136,13 +136,27 @@ export async function GET(request: Request) {
           continue;
         }
 
+        const lat = result.geometry?.location?.lat;
+        const lng = result.geometry?.location?.lng;
+        if (
+          typeof lat !== "number" ||
+          !Number.isFinite(lat) ||
+          typeof lng !== "number" ||
+          !Number.isFinite(lng)
+        ) {
+          continue;
+        }
+
         return NextResponse.json({
           found: true,
+          provider: "google-maps",
           mode: "place",
           query: candidate,
           placeId: result?.place_id ?? null,
-          lat: result.geometry?.location?.lat ?? null,
-          lng: result.geometry?.location?.lng ?? null,
+          // This object is the explicit Google-to-Mapbox handoff contract.
+          coordinates: { lat, lng },
+          lat,
+          lng,
           status: geocode.status,
           message: geocode.error_message ?? null,
         });

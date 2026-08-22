@@ -24,7 +24,11 @@ import {
   getProjectMapAddress,
   getProjectStreetTitle,
 } from "@/components/projects/project-location";
-import { buildMapboxStaticImageUrl } from "@/lib/maps/mapbox";
+import {
+  buildMapboxStaticImageUrl,
+  MAPBOX_STYLE_URL,
+} from "@/lib/maps/mapbox";
+import type { MapLocationResponse } from "@/lib/maps/google-maps";
 
 export type JobsMapJob = {
   id: string;
@@ -85,13 +89,6 @@ type MapboxRuntime = {
     options: Record<string, unknown>,
   ) => MapboxMapInstance;
   Marker: new (options: Record<string, unknown>) => MapboxMarkerInstance;
-};
-
-type GeocodeResponse = {
-  found: boolean;
-  query?: string;
-  lat?: number | null;
-  lng?: number | null;
 };
 
 declare global {
@@ -182,15 +179,22 @@ async function geocodeProject(project: JobsMapProject): Promise<LocatedProject |
   const response = await fetch(`/api/maps/geocode?${params.toString()}`);
   if (!response.ok) return null;
 
-  const payload = (await response.json()) as GeocodeResponse;
-  if (!payload.found || typeof payload.lat !== "number" || typeof payload.lng !== "number") {
+  const payload = (await response.json()) as MapLocationResponse;
+  const googleCoordinates = payload.coordinates;
+  if (
+    !payload.found ||
+    payload.provider !== "google-maps" ||
+    typeof googleCoordinates?.lat !== "number" ||
+    typeof googleCoordinates.lng !== "number"
+  ) {
     return null;
   }
 
   return {
     ...project,
-    lat: payload.lat,
-    lng: payload.lng,
+    // Every Mapbox job pin originates from Google's verified coordinates.
+    lat: googleCoordinates.lat,
+    lng: googleCoordinates.lng,
     mapQuery: payload.query?.trim() || address,
   };
 }
@@ -494,7 +498,7 @@ export function JobsMapPageClient({
       mapRef.current ??
       new mapboxgl.Map({
         container: mapElement,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: MAPBOX_STYLE_URL,
         center: [center.lng, center.lat],
         zoom: 11,
       });
@@ -690,7 +694,7 @@ export function JobsMapPageClient({
               <div className="text-sm text-muted-foreground">Preparing pins...</div>
             ) : shouldShowStaticMap ? (
               <div className="text-sm text-muted-foreground">
-                Showing Mapbox static view
+                Showing Mapbox satellite static view
               </div>
             ) : null}
           </div>
