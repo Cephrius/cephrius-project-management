@@ -30,7 +30,6 @@ import { AddJobDialog } from "@/components/jobs/add-job-dialog";
 import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog";
 import { ImportProjectJobsButton } from "@/components/projects/import-project-jobs-button";
 import { NewProjectButton } from "@/components/projects/new-project-button";
-import { ProjectMapCard } from "@/components/projects/project-map-card";
 import {
   getProjectLocationSubtitle,
   getProjectStreetTitle,
@@ -314,12 +313,10 @@ function ProjectCardActionsDropdown({
 export function ProjectsPageClient({
   projects,
   builders,
-  mapboxToken,
   subdivisions,
 }: {
   projects: ProjectListItem[];
   builders: LookupItem[];
-  mapboxToken: string;
   subdivisions: LookupItem[];
 }) {
   const [query, setQuery] = useState("");
@@ -1361,16 +1358,6 @@ export function ProjectsPageClient({
               </div>
             )}
           </Card>
-
-          {selectedProject ? (
-            <ProjectMapCard
-              address={selectedProject.project_address}
-              city={selectedProject.project_city}
-              mapboxToken={mapboxToken}
-              state={selectedProject.project_state}
-              subdivision={selectedProject.subdivision}
-            />
-          ) : null}
         </div>
       </div>
 

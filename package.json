@@ -25,7 +25,6 @@
     "framer-motion": "^11.18.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.563.0",
-    "mapbox-gl": "^3.29.0",
     "next": "16.1.6",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",

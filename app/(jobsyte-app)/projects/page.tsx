@@ -4,7 +4,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/active-company";
-import { getPublicMapboxAccessToken } from "@/lib/maps/mapbox";
 import { BreadcrumbSetter } from "@/components/app-shell/breadcrumb-setter";
 import { ProjectsPageClient } from "@/components/projects/projects-page";
 import type {
@@ -212,7 +211,6 @@ export default async function ProjectsPage() {
 
   const { projects, builders, subdivisions } =
     await getProjectsPageData(supabase, companyId);
-  const mapboxToken = getPublicMapboxAccessToken();
 
   return (
     <div className="space-y-6">
@@ -220,7 +218,6 @@ export default async function ProjectsPage() {
       <ProjectsPageClient
         projects={projects}
         builders={builders}
-        mapboxToken={mapboxToken}
         subdivisions={subdivisions}
       />
     </div>

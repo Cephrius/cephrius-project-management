@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectMapCard } from "@/components/projects/project-map-card";
 
@@ -22,7 +22,25 @@ describe("ProjectMapCard", () => {
     );
   });
 
-  it("renders the Mapbox Static URL as an image source after geocoding", async () => {
+  it("asks Google Maps for the current project address", async () => {
+    render(
+      <ProjectMapCard
+        address="2065 Solstice Lndg Dr"
+        city="Katy"
+        mapboxToken="mapbox-token"
+        state="TX"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/maps/geocode?address=2065+Solstice+Lndg+Dr%2C+Katy%2C+TX",
+        { signal: expect.any(AbortSignal) },
+      );
+    });
+  });
+
+  it("renders a read-only satellite image at Google's coordinates", async () => {
     render(
       <ProjectMapCard
         address="2065 Solstice Lndg Dr"
@@ -33,18 +51,14 @@ describe("ProjectMapCard", () => {
     );
 
     const map = await screen.findByRole("img", {
-      name: "Mapbox map for 2065 Solstice Lndg Dr",
+      name: "Satellite map for 2065 Solstice Lndg Dr",
     });
-
-    expect(map).toHaveAttribute(
-      "src",
-      expect.stringContaining(
-        "api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static",
-      ),
+    expect(decodeURIComponent(map.getAttribute("src") ?? "")).toContain(
+      "-95.8245,29.7854",
     );
   });
 
-  it("reports a Mapbox error when the static image cannot load", async () => {
+  it("reports when Mapbox cannot load the satellite image", async () => {
     render(
       <ProjectMapCard
         address="2065 Solstice Lndg Dr"
@@ -56,12 +70,31 @@ describe("ProjectMapCard", () => {
 
     fireEvent.error(
       await screen.findByRole("img", {
-        name: "Mapbox map for 2065 Solstice Lndg Dr",
+        name: "Satellite map for 2065 Solstice Lndg Dr",
       }),
     );
 
     expect(
       await screen.findByRole("heading", { name: "Mapbox map could not load" }),
     ).toBeInTheDocument();
+  });
+
+  it("does not render any pin adjustment controls", async () => {
+    render(
+      <ProjectMapCard
+        address="2065 Solstice Lndg Dr"
+        city="Katy"
+        mapboxToken="mapbox-token"
+        state="TX"
+      />,
+    );
+
+    await screen.findByRole("img", {
+      name: "Satellite map for 2065 Solstice Lndg Dr",
+    });
+    expect(screen.queryByRole("button", { name: "Save pin" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open map fullscreen" })).toBeNull();
+    expect(screen.queryByText(/double-click/i)).toBeNull();
   });
 });
