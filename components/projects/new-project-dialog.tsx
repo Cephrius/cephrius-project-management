@@ -413,7 +413,7 @@ export function NewProjectDialog({
             onSubmit();
           }}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
             <div className="space-y-2">
               <div className="text-sm font-medium">Street Number</div>
               <Input
@@ -426,7 +426,7 @@ export function NewProjectDialog({
               />
             </div>
 
-            <div className="space-y-2 sm:col-span-3">
+            <div className="space-y-2 sm:col-span-2">
               <div className="text-sm font-medium">Street Address</div>
               <Input
                 value={streetAddress}
