@@ -70,7 +70,7 @@ function applyPrimaryColor(key: PrimaryColorKey, resolvedTheme?: string) {
   root.style.setProperty("--sidebar-primary-foreground", foreground);
 }
 
-export function ThemeSwitcher({
+export function ThemeSwitcherWithColors({
   hideLabel = false,
 }: {
   hideLabel?: boolean;
@@ -187,7 +187,21 @@ export function ThemeSwitcher({
           className="cursor-pointer border-primary/30 hover:bg-primary/10"
         >
           <ActiveIcon className="size-4" />
-
+          <span className={cn(hideLabel ? "hidden" : "hidden sm:inline")}>
+            Theme
+          </span>
+          <span
+            className="size-3 rounded-full border"
+            style={{
+              // Reflect the adapted color in the trigger swatch —
+              // black for "white" in light mode, otherwise the original.
+              backgroundColor:
+                activePrimary.id === "white" && isLightMode
+                  ? "#000000"
+                  : activePrimary.primary,
+            }}
+            aria-hidden="true"
+          />
         </Button>
       </DropdownMenuTrigger>
 
@@ -211,6 +225,37 @@ export function ThemeSwitcher({
             <MonitorIcon className="size-4" />
             Auto
           </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Primary Color</DropdownMenuLabel>
+
+        <DropdownMenuRadioGroup
+          value={primaryColor}
+          onValueChange={(value) => {
+            if (PRIMARY_COLORS.some((c) => c.id === value)) {
+              setPrimaryColorSmooth(value as PrimaryColorKey);
+            }
+          }}
+        >
+          {PRIMARY_COLORS.map((color) => (
+            <DropdownMenuRadioItem key={color.id} value={color.id}>
+              <span
+                className="size-3 rounded-full border"
+                style={{
+                  // Show black swatch for "white" color in light mode
+                  // so the preview matches the actual applied color.
+                  backgroundColor:
+                    color.id === "white" && isLightMode
+                      ? "#000000"
+                      : color.primary,
+                }}
+                aria-hidden="true"
+              />
+              {/* Swap black/white swatch for "white" color in light mode */}
+              {color.id === "white" && isLightMode ? "Black" : color.label}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

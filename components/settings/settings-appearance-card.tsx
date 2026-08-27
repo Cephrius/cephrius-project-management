@@ -1,6 +1,6 @@
 import { Palette } from "lucide-react";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Card } from "@/components/ui/card";
+import { ThemeSwitcherWithColors } from "../theme-switcher-withcolors ";
 
 export function SettingsAppearanceCard() {
   return (
@@ -15,7 +15,7 @@ export function SettingsAppearanceCard() {
       </p>
 
       <div>
-        <ThemeSwitcher />
+        <ThemeSwitcherWithColors />
       </div>
     </Card>
   );
